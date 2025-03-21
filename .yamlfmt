@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/yamlfmt/refs/heads/main/schema.json
+# vi: ft=yaml
+exclude:
+  - "clusters/**/gotk-*.yaml"
+formatter:
+  type: basic
+  match_type: doublestar
+  max_line_length: 100
+  retain_line_breaks: true

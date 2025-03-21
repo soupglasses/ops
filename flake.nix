@@ -22,12 +22,17 @@
           ${pkgs.pre-commit}/bin/pre-commit install --install-hooks --overwrite
         '';
         nativeBuildInputs = with pkgs; [
+          # Formatting
           pre-commit
           alejandra
           editorconfig-checker
+          kubeconform
+          yamlfmt
+          # Kubernetes
           kubectl
           kubeseal
           fluxcd
+          kustomize
         ];
       };
     });
