@@ -11,7 +11,7 @@ spec:
     branch: main
   secretRef:
     name: flux-system
-  url: https://codeberg.org/soupglasses/ops.git
+  url: ssh://git@codeberg.org/soupglasses/ops
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
