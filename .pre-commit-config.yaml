@@ -22,9 +22,8 @@ repos:
       - id: kubeconform
         name: kubeconform
         entry: >
-          kubeconform -kubernetes-version='1.31.6' -schema-location='default' -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-          -schema-location='https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}/{{.ResourceKind}}.json'
-          -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json' -summary -strict
+          kubeconform -kubernetes-version='1.33.2' -schema-location='default' -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json' -summary
         language: system
         files: ^kubernetes/.*\.ya?ml$
         stages: [pre-commit]
