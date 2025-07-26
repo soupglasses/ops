@@ -75,6 +75,7 @@
       default = pkgs.mkShellNoCC {
         shellHook = ''
           ${pkgs.pre-commit}/bin/pre-commit install --install-hooks --overwrite
+          export KUBECONFIG=~/.kube/home
         '';
         nativeBuildInputs = with pkgs; [
           # Formatting
@@ -84,11 +85,16 @@
           kubeconform
           yamlfmt
           # Kubernetes
+          talosctl
           kubectl
+          kubecolor
           kubeseal
           fluxcd
           self.packages.${system}.flux-local
           kustomize
+          # Secrets
+          age
+          sops
         ];
       };
     });
