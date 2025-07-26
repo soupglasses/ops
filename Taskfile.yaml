@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+set: [pipefail]
+shopt: [globstar]
+
+tasks:
+  shell:
+    desc: Spawn a temporary root shell on a [NODE=required]
+    cmd: kubectl debug --profile=sysadmin --namespace kube-system -it --image alpine node/{{.NODE}}
+    interactive: true
+    requires:
+      vars: [NODE]
+    preconditions:
+      - kubectl get node {{.NODE}}
