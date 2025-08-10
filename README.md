@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 SoupGlasses
+SPDX-License-Identifier: MIT
+-->
+
 # 👩‍💻 Infra 👩‍💻
 
 ### MicroOS k3s-server with SELinux
