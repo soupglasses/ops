@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: SoupGlasses
+# SPDX-License-Identifier: CC0-1.0
 default_install_hook_types: [pre-commit]
 repos:
   - repo: local
@@ -14,4 +16,16 @@ repos:
           -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json' -summary
         language: system
         files: ^kubernetes/.*\.ya?ml$
+        stages: [pre-commit]
+      - id: reuse
+        name: reuse
+        entry: reuse
+        args: [lint-file]
+        language: system
+        stages: [pre-commit]
+      - id: yamlfmt
+        name: yamlfmt
+        entry: yamlfmt
+        language: system
+        types: [yaml]
         stages: [pre-commit]

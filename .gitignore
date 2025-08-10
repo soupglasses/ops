@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SoupGlasses
+# SPDX-License-Identifier: CC0-1.0
+
 # Secrets
 *.pub
 *.key

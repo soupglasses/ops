@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: SoupGlasses
+# SPDX-License-Identifier: CC0-1.0
 # yaml-language-server: $schema=https://raw.githubusercontent.com/google/yamlfmt/refs/heads/main/schema.json
 # vi: ft=yaml
 exclude:

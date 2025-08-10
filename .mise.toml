@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SoupGlasses
+# SPDX-License-Identifier: CC0-1.0
+
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 KUBECONFIG = "{{config_root}}/kubeconfig"
@@ -24,6 +27,9 @@ TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 "aqua:siderolabs/talos" = "1.10.5"
 "aqua:yannh/kubeconform" = "0.7.0"
 "aqua:editorconfig-checker/editorconfig-checker" = "3.3.0"
+"pipx:reuse" = "5.0.2"
+"aqua:google/yamlfmt" = "v0.17.2"
+"aqua:pre-commit/pre-commit" = "v4.3.0"
 
 [[hooks.enter]]
 shell = "bash"
