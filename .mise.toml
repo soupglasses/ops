@@ -35,18 +35,24 @@ TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 shell = "bash"
 script = '''
 source <(\kubectl completion bash)
+source <(talosctl completion bash)
 alias kubectl=kubecolor
 complete -o default -F __start_kubectl kubecolor
 alias k=kubectl
 complete -o default -F __start_kubectl k
+alias t=talosctl
+complete -o default -F __start_talosctl t
 '''
 
 [[hooks.enter]]
 shell = "zsh"
 script = '''
 source <(kubectl completion zsh)
+source <(talosctl completion zsh)
 alias kubectl=kubecolor
 compdef kubecolor=kubectl
 alias k=kubectl
 compdef k=kubectl
+alias t=talosctl
+compdef t=talosctl
 '''
