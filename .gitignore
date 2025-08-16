@@ -5,14 +5,9 @@
 *.pub
 *.key
 *.decrypted~*.yaml
-# Template config files
-/cluster.yaml
-/nodes.yaml
-# Kubernetes
-kubeconfig
-talosconfig
 # Misc.
 .private/
+.secure/
 .task/
 .venv/
 .DS_Store

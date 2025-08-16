@@ -1,5 +1,7 @@
-# SPDX-FileCopyrightText: SoupGlasses
-# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
@@ -15,3 +17,13 @@ tasks:
       vars: [NODE]
     preconditions:
       - kubectl get node {{.NODE}}
+  license-mit:
+    desc: License files as MIT
+    cmd: >
+      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=MIT
+      --merge-copyrights {{.CLI_ARGS}}
+  license-cc0:
+    desc: License files as CC0-1.0
+    cmd: >
+      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=CC0-1.0
+      --merge-copyrights {{.CLI_ARGS}}

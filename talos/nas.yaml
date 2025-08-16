@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+machine:
+  network:
+    hostname: nas
+    interfaces:
+      - deviceSelector:
+          hardwareAddr: "30:9c:23:82:38:72"
+        dhcp: true
+
+  install:
+    disk: /dev/nvme0n1
+    image: factory.talos.dev/metal-installer/c019ec4140ac7a0e5578839d30876853e14e393973869ec8edee0d76a28c9188:v1.10.6
+
+  kernel:
+    modules:
+      - name: nvidia
+      - name: nvidia_uvm
+      - name: nvidia_drm
+      - name: nvidia_modeset
+      - name: zfs
+  sysctls:
+    net.core.bpf_jit_harden: 1
