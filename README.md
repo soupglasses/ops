@@ -10,11 +10,9 @@ Just another home operations Talos Linux cluster.
 
 ## Overview
 
-- **OS**: [Talos Linux](https://www.talos.dev/)
-- **Cluster**: Kubernetes, bootstrapped following [Talos Production Notes](https://www.talos.dev/v1.10/introduction/prodnotes/)
-- **GitOps**: Flux CD
-- **Networking**: Flannel CNI
-- **Storage**: OpenEBS ZFS
+Kubernetes cluster is deployed on top of Talos Linux, bootstrapped with [Talos Production Notes](https://www.talos.dev/v1.10/introduction/prodnotes/).
+
+Applications are deployed using FluxCD.
 
 ### Network layout
 
