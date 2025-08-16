@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+# yaml-language-server: $schema=https://raw.githubusercontent.com/siderolabs/talos/refs/heads/release-1.11/website/content/v1.11/schemas/config.schema.json
 machine:
   network:
     hostname: nas
@@ -22,11 +23,11 @@ machine:
       - name: nvidia_modeset
       - name: zfs
   sysctls:
-    net.core.bpf_jit_harden: 1
+    net.core.bpf_jit_harden: "1"
 
-  # The "I dont have the money for a HA cluster at home" toggles :)
-  cluster:
-    allowSchedulingOnControlPlanes: true
   nodeLabels:
     node.kubernetes.io/exclude-from-external-load-balancers:
       $patch: delete
+
+cluster:
+  allowSchedulingOnControlPlanes: true
