@@ -31,4 +31,14 @@ tasks:
     desc: Trigger manual reconcile for Flux.
     cmd: flux reconcile kustomization flux-system --with-source
   preconditions:
+    - which flux
     - flux check
+  clean-pods:
+    desc: Delete all pods with a Failed/Pending/Succeeded status
+    cmds:
+      - for:
+          matrix:
+            PHASE: [Failed, Pending, Succeeded]
+        cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
+    preconditions:
+      - which kubectl
