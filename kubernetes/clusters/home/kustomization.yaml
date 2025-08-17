@@ -10,5 +10,4 @@ resources:
   - cluster-apps.yaml
   - cluster-repositories.yaml
   - ../../components/common/alerts
-  - ./cluster-config
   - ./flux-system

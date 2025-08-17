@@ -8,4 +8,5 @@ kind: Component
 resources:
   - ./namespace.yaml
   - ./alerts
+  - ./config
   - ./sops
