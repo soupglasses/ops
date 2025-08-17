@@ -1,11 +1,12 @@
-# SPDX-FileCopyrightText: SoupGlasses
+# SPDX-FileCopyrightText: Sofie <sofie+git@mailbox.org>
+#
 # SPDX-License-Identifier: CC0-1.0
 
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 KUBECONFIG = "{{config_root}}/.secure/kubeconfig"
 TALOSCONFIG = "{{config_root}}/.secure/talosconfig"
-SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.key"
+SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 
 [tools]
 "python" = "3.13"
