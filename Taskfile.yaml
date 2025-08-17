@@ -26,4 +26,4 @@ tasks:
     desc: License files as CC0-1.0
     cmd: >
       reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=CC0-1.0
-      --merge-copyrights {{.CLI_ARGS}}
+      --merge-copyrights --exclude-year {{.CLI_ARGS}}
