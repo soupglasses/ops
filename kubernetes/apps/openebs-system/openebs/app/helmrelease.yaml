@@ -46,6 +46,7 @@ spec:
       crds:
         csi:
           volumeSnapshots:
+            # Without this, snapshot-controller will constantly crash loop.
             enabled: true
 
     openebs-crds:
