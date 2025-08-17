@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/notification.toolkit.fluxcd.io/alert_v1beta3.json
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: gitea-status
+spec:
+  providerRef:
+    name: gitea-status
+  eventSources:
+    - kind: Kustomization
+      name: "*"
