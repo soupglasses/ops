@@ -27,3 +27,8 @@ tasks:
     cmd: >
       reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=CC0-1.0
       --merge-copyrights --exclude-year {{.CLI_ARGS}}
+  reconcile:
+    desc: Trigger manual reconcile for Flux.
+    cmd: flux reconcile kustomization flux-system --with-source
+  preconditions:
+    - flux check
