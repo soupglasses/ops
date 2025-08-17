@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: openebs-charts
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 2m
+  url: https://openebs.github.io/openebs

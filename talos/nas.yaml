@@ -25,6 +25,16 @@ machine:
   sysctls:
     net.core.bpf_jit_harden: "1"
 
+  kubelet:
+    extraMounts:
+      - destination: /var/openebs
+        type: bind
+        source: /var/openebs
+        options:
+          - rbind
+          - rshared
+          - rw
+
   nodeLabels:
     node.kubernetes.io/exclude-from-external-load-balancers:
       $patch: delete
