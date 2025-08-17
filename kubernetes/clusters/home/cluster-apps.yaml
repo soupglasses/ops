@@ -29,23 +29,21 @@ spec:
   prune: true
   wait: false
   patches:
-    - patch: |-
-        apiVersion: kustomize.toolkit.fluxcd.io/v1
-        kind: Kustomization
-        metadata:
-          name: not-used
-        spec:
-          postBuild:
-            substituteFrom:
-              - kind: ConfigMap
-                name: cluster-settings
-                namespace: flux-system
-              - kind: Secret
-                name: cluster-secrets
-                namespace: flux-system
-      target:
-        group: kustomize.toolkit.fluxcd.io
-        kind: Kustomization
+    #- patch: |-
+    #    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    #    kind: Kustomization
+    #    metadata:
+    #      name: not-used
+    #    spec:
+    #      postBuild:
+    #        substituteFrom:
+    #          - kind: ConfigMap
+    #            name: cluster-settings
+    #          - kind: Secret
+    #            name: cluster-secrets
+    #  target:
+    #    group: kustomize.toolkit.fluxcd.io
+    #    kind: Kustomization
     - patch: |-
         apiVersion: kustomize.toolkit.fluxcd.io/v1
         kind: Kustomization
