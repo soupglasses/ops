@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 creation_rules:
-  - path_regex: .*\.yaml
+  - path_regex: .*\.sops\.ya?ml
     encrypted_regex: ^(data|stringData)$
     age: age16k03wpjydrcr2wk68f0q9ypdxvh7vsy0fpx4lq72nc50zln8xf3qvkjxas
 stores:

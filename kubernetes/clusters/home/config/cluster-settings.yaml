@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+  namespace: flux-system
+data:
+  TIMEZONE: "Europe/Copenhagen"
+  CLUSTER_NAME: "home"
