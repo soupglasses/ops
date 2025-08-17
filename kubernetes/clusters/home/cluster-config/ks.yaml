@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+# SPDX-FileCopyrightText: Sofie <sofie+git@mailbox.org>
 #
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: CC0-1.0
 
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
