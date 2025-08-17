@@ -9,5 +9,6 @@ namespace: flux-system
 resources:
   - cluster-apps.yaml
   - cluster-repositories.yaml
-  - ../../components/common/alerts
   - ./flux-system
+  - ../../components/common/alerts
+  - ../../components/common/config
