@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
 SPDX-License-Identifier: MIT
 -->
 
-# 👩‍💻 Infra 👩‍💻
+# Hope Operations 👩‍💻
 
 Just another home operations Talos Linux cluster.
 
