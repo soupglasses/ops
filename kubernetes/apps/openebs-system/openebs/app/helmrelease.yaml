@@ -46,7 +46,7 @@ spec:
       crds:
         csi:
           volumeSnapshots:
-            enabled: false
+            enabled: true
 
     openebs-crds:
       csi:
