@@ -48,11 +48,11 @@ spec:
           volumeSnapshots:
             enabled: true
 
+    # crds handled by snapshot-controller
     openebs-crds:
       csi:
         volumeSnapshots:
-          enable: true
-          keep: true
+          enable: false
 
     lvm-localpv:
       enabled: false
