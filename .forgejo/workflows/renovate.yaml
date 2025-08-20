@@ -34,3 +34,4 @@ jobs:
           RENOVATE_PLATFORM: forgejo
           RENOVATE_ENDPOINT: ${{ github.server_url }}
           RENOVATE_AUTODISCOVER: "false"
+          prHourlyLimit: "0"
