@@ -17,7 +17,7 @@ jobs:
         with:
           args: soupglasses/ops
         env:
-          LOG_LEVEL: debug
+          # LOG_LEVEL: debug
           RENOVATE_GIT_AUTHOR: Ops Bot <sofie+bot@mailbox.org>
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_PLATFORM: forgejo
