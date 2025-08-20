@@ -30,7 +30,3 @@ spec:
     controller:
       serviceMonitor:
         create: false
-    webhook:
-      enabled: false
-    serviceMonitor:
-      create: false
