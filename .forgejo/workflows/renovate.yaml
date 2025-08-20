@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+name: Renovate
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 20 4 * * *
+
+jobs:
+  renovate:
+    runs-on: codeberg-tiny
+    steps:
+      - uses: docker://ghcr.io/renovatebot/renovate:latest
+        with:
+          args: soupglasses/ops
+        env:
+          RENOVATE_GIT_AUTHOR: Ops Bot <sofie+ops@mailbox.org>
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_PLATFORM: forgejo
+          RENOVATE_AUTODISCOVER: "false"
