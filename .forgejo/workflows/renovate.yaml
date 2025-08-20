@@ -4,9 +4,19 @@
 
 name: Renovate
 on:
-  workflow_dispatch:
   schedule:
     - cron: "@daily"
+
+  workflow_dispatch:
+    inputs:
+      loglevel:
+        description: "Log Level"
+        required: true
+        default: "info"
+        type: choice
+        options:
+          - info
+          - debug
 
 jobs:
   Renovate:
@@ -17,7 +27,7 @@ jobs:
         with:
           args: soupglasses/ops
         env:
-          # LOG_LEVEL: debug
+          LOG_LEVEL: ${{ inputs.loglevel }}
           RENOVATE_GIT_AUTHOR: Ops Bot <sofie+bot@mailbox.org>
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.GH_TOKEN }}
