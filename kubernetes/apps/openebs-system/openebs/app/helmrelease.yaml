@@ -46,14 +46,13 @@ spec:
       crds:
         csi:
           volumeSnapshots:
-            # Without this, snapshot-controller will constantly crash loop.
             enabled: true
 
     openebs-crds:
       csi:
         volumeSnapshots:
-          enabled: false
-          keep: false
+          enable: true
+          keep: true
 
     lvm-localpv:
       enabled: false
