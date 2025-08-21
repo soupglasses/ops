@@ -27,7 +27,7 @@ jobs:
         with:
           args: soupglasses/ops
         env:
-          LOG_LEVEL: ${{ inputs.loglevel }}
+          LOG_LEVEL: ${{ inputs.loglevel || 'info' }}
           RENOVATE_GIT_AUTHOR: Ops Bot <sofie+bot@mailbox.org>
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.GH_TOKEN }}
