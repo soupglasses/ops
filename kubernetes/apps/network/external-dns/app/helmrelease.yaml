@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: external-dns
+      version: 1.18.0
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+        namespace: flux-system
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    policy: sync
+    sources:
+      - ingress
+      - service
+    txtPrefix: "k8s-${CLUSTER_NAME}."
+    txtOwnerId: default
+    provider:
+      name: ovh
+    env:
+      - name: OVH_APPLICATION_KEY
+        valueFrom:
+          secretKeyRef:
+            name: ovh-api-key
+            key: OVH_APPLICATION_KEY
+      - name: OVH_APPLICATION_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: ovh-api-key
+            key: OVH_APPLICATION_SECRET
+      - name: OVH_CONSUMER_KEY
+        valueFrom:
+          secretKeyRef:
+            name: ovh-api-key
+            key: OVH_CONSUMER_KEY
+    image:
+      pullPolicy: Always
+    resources:
+      requests:
+        cpu: 10m
+        memory: 50Mi
+        ephemeral-storage: 100Mi
+      limits:
+        memory: 100Mi
+        ephemeral-storage: 200Mi
+    serviceMonitor:
+      enabled: true
