@@ -9,6 +9,17 @@ on:
 
   workflow_dispatch:
     inputs:
+      runner:
+        description: Runner
+        required: true
+        default: codeberg-tiny
+        type: choice
+        options:
+          - codeberg-tiny
+          - codeberg-tiny-lazy
+          - codeberg-small
+          - codeberg-small-lazy
+
       loglevel:
         description: "Log Level"
         required: true
@@ -20,7 +31,7 @@ on:
 
 jobs:
   Renovate:
-    runs-on: codeberg-tiny
+    runs-on: ${{ inputs.runner || 'codeberg-tiny-lazy' }}
     steps:
       - name: Run Renovate
         uses: docker://ghcr.io/renovatebot/renovate:latest
