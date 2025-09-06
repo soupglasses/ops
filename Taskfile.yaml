@@ -109,3 +109,13 @@ tasks:
           --branch=main \
           --path=kubernetes/clusters/home \
           --personal
+  reconcile-ks:
+    desc: Reconcile all Flux Kustomizations across all namespaces
+    cmds:
+      - cmd: |
+          kubectl get kustomizations.kustomize.toolkit.fluxcd.io --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' | \
+          while read namespace name; do
+            if [ ! -z "$namespace" ] && [ ! -z "$name" ]; then
+              flux reconcile kustomization "$name" --namespace "$namespace"
+            fi
+          done
