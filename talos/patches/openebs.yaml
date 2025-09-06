@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+machine:
+  kubelet:
+    extraMounts:
+      - destination: /var/openebs
+        type: bind
+        source: /var/openebs
+        options:
+          - rbind
+          - rshared
+          - rw

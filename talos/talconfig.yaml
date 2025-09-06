@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/budimanjojo/talhelper/master/pkg/config/schemas/talconfig.json
+# renovate: datasource=docker depName=ghcr.io/siderolabs/installer
+talosVersion: v1.10.7
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.33.4
+
+clusterName: home
+endpoint: https://k8s.home.arpa:6443
+
+cniConfig:
+  name: none
+
+nodes:
+  - hostname: nas
+    controlPlane: true
+    ipAddress: "172.21.69.10"
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "30:9c:23:82:38:72"
+        dhcp: true
+
+    installDisk: /dev/nvme0n1
+
+    patches:
+      - "@./patches/nvidia.yaml"
+
+    schematic:
+      customization:
+        extraKernelArgs:
+          # Ryzen 1000-series soft locks on C6 sleep states. Disable it explicitly.
+          - rcu_nocbs=0-11
+          - processor.max_cstate=5
+        systemExtensions:
+          officialExtensions:
+            - siderolabs/amd-ucode
+            - siderolabs/nvidia-container-toolkit-production
+            - siderolabs/nvidia-open-gpu-kernel-modules-production
+            - siderolabs/zfs
+
+    kernelModules:
+      - name: zfs
+
+patches:
+  - "@./patches/cilium.yaml"
+  - "@./patches/openebs.yaml"
+
+controlPlane:
+  patches:
+    - "@./patches/cluster.yaml"
+    - "@./patches/cluster-machine.yaml"

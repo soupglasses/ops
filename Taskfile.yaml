@@ -42,3 +42,70 @@ tasks:
         cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
     preconditions:
       - which kubectl
+  reset-node:
+    desc: Reset a single node [NODE=required]
+    requires:
+      vars: [NODE]
+    preconditions:
+      - talosctl --nodes {{.NODE}} get machineconfig
+      - which talosctl
+    prompt: Are you sure you want to PERMANENTLY reset Talos node '{{.NODE}}'?
+    cmds:
+      - talosctl reset --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false
+        --reboot --nodes {{.NODE}}
+  instantiate-node:
+    desc: Instantiace a single node [NODE=required] [NAME=required]
+    preconditions:
+      - which talosctl
+      - test -f "talos/clusterconfig/home-{{.NAME}}.yaml"
+    requires:
+      vars: [NODE, NAME]
+    cmds:
+      - talosctl apply-config --nodes {{.NODE}} --file talos/clusterconfig/home-{{.NAME}}.yaml --insecure
+  bootstrap-cluster:
+    desc: Bootstrap kubernetes cluster, should only be run once. [NODE=required]
+    preconditions:
+      - which talosctl
+    requires:
+      vars: [NODE]
+    cmds:
+      - talosctl bootstrap --nodes {{.NODE}}
+  genconfig:
+    desc: Generate talos configurations
+    cmds:
+      - pushd talos/ && talhelper genconfigsassc-sass popd
+  kubeconfig:
+    desc: Generate talos kubeconfig [NODE=required]
+    preconditions:
+      - test ! -e ".secure/kubeconfig"
+    requires:
+      vars: [NODE]
+    cmds:
+      - mkdir -p .secure
+      - talosctl kubeconfig .secure/kubeconfig --nodes {{.NODE}}
+  fetch-agekey:
+    desc: Fetch agekey from the cluster
+    preconditions:
+      - test ! -e ".secure/age.agekey"
+    cmds:
+      - kubectl
+  bootstrap-flux:
+    desc: Bootstrap flux on the cluster, should only be run once.
+    preconditions:
+      - test -f ".secure/age.agekey"
+    prompt: Are you sure you want to (RE)INSTALL Flux?
+    cmds:
+      - flux uninstall --namespace=flux-system || true
+      - kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
+      - sops -d kubernetes/clusters/home/secret.sops.yaml | kubectl apply -n flux-system -f -
+      - sops -d kubernetes/components/common/sops/secret.sops.yaml | kubectl apply -n flux-system -f -
+      - |
+        export GITEA_TOKEN=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.password)
+        flux bootstrap gitea \
+          --token-auth \
+          --hostname=codeberg.org \
+          --owner=soupglasses \
+          --repository=ops \
+          --branch=main \
+          --path=kubernetes/clusters/home \
+          --personal

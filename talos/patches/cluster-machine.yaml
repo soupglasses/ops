@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+- op: remove
+  path: /machine/nodeLabels/node.kubernetes.io~1exclude-from-external-load-balancers

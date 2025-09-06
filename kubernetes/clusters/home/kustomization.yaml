@@ -9,6 +9,8 @@ namespace: flux-system
 resources:
   - cluster-apps.yaml
   - cluster-repositories.yaml
+  - secret.sops.yaml
   - ./flux-system
+  # Use parts of components directly, gotk defines flux-system directly causing a conflict otherwise.
   - ../../components/common/alerts
   - ../../components/common/config
