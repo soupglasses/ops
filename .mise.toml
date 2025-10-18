@@ -10,7 +10,7 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 
 [tools]
 "python" = "3.13"
-"aqua:budimanjojo/talhelper" = "3.0.37"
+"aqua:budimanjojo/talhelper" = "3.0.38"
 "aqua:cilium/cilium-cli" = "0.18.7"
 "aqua:FiloSottile/age" = "1.2.1"
 "aqua:fluxcd/flux2" = "2.7.2"
