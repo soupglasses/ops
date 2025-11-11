@@ -93,6 +93,8 @@ cluster:
                   - --set
                   - kubeProxyReplacement=true
                   - --set
+                  - socketLB.hostNamespaceOnly=true
+                  - --set
                   - loadBalancer.mode=dsr
                   - --set
                   - loadBalancer.dsrDispatch=opt

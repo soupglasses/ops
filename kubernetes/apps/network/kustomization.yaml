@@ -10,3 +10,4 @@ components:
   - ../../components/common
 resources:
   - ./external-dns/ks.yaml
+  - ./tailscale-operator/ks.yaml
