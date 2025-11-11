@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
 #
 # SPDX-License-Identifier: MIT
-
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
