@@ -25,6 +25,7 @@ spec:
       strategy: rollback
       retries: 3
   values:
+    configVersion: 0.0.2
     groupName: acme.${SECRET_DOMAIN}
     certManager:
       namespace: cert-manager
