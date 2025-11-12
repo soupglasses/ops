@@ -31,7 +31,7 @@ spec:
       service:
         enabled: true
         annotations:
-          tailscale.com/hostname: "ingress-nginx"
+          tailscale.com/hostname: "nginx-tailscale"
         type: LoadBalancer
         loadBalancerClass: tailscale
         externalTrafficPolicy: Local
