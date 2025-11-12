@@ -39,6 +39,16 @@ spec:
         email: acme@${SECRET_DOMAIN}
         ovhEndpointName: ovh-eu
         ovhAuthenticationMethod: application
+        ovhAuthenticationRef:
+          applicationKeyRef:
+            name: ovh-credentials
+            key: applicationKey
+          applicationSecretRef:
+            name: ovh-credentials
+            key: applicationSecret
+          applicationConsumerKeyRef:
+            name: ovh-credentials
+            key: applicationConsumerKey
       - name: ovh-dns01-staging
         create: true
         kind: ClusterIssuer
@@ -47,3 +57,13 @@ spec:
         email: acme@${SECRET_DOMAIN}
         ovhEndpointName: ovh-eu
         ovhAuthenticationMethod: application
+        ovhAuthenticationRef:
+          applicationKeyRef:
+            name: ovh-credentials
+            key: applicationKey
+          applicationSecretRef:
+            name: ovh-credentials
+            key: applicationSecret
+          applicationConsumerKeyRef:
+            name: ovh-credentials
+            key: applicationConsumerKey
