@@ -8,17 +8,6 @@ kind: Kustomization
 namespace: openebs-system
 components:
   - ../../components/common
+  - ../../components/privileged
 resources:
   - ./openebs/ks.yaml
-patches:
-  - patch: |-
-      apiVersion: v1
-      kind: Namespace
-      metadata:
-        labels:
-          pod-security.kubernetes.io/audit: privileged
-          pod-security.kubernetes.io/enforce: privileged
-          pod-security.kubernetes.io/warn: privileged
-        name: not-used
-    target:
-      kind: Namespace
