@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager-webhook-ovh
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: cert-manager-webhook-ovh
+      version: 0.8.0
+      sourceRef:
+        kind: HelmRepository
+        name: cert-manager-webhook-ovh
+        namespace: flux-system
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    groupName: acme.${SECRET_DOMAIN}
+    certManager:
+      namespace: cert-manager
+      serviceAccountName: cert-manager
+    issuers:
+      - name: ovh-dns01-production
+        create: true
+        kind: ClusterIssuer
+        acmeServerUrl: https://acme-v02.api.letsencrypt.org/directory
+        profile: tlsserver
+        email: acme@${SECRET_DOMAIN}
+        ovhEndpointName: ovh-eu
+        ovhAuthenticationMethod: application
+      - name: ovh-dns01-staging
+        create: true
+        kind: ClusterIssuer
+        acmeServerUrl: https://acme-staging-v02.api.letsencrypt.org/directory
+        profile: tlsserver
+        email: acme@${SECRET_DOMAIN}
+        ovhEndpointName: ovh-eu
+        ovhAuthenticationMethod: application
