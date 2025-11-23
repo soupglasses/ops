@@ -59,10 +59,13 @@ spec:
           - no-chat-reports
         downloadDependencies: none
         allowedVersionType: release
+      gamemode: survival
       difficulty: hard
+      levelType: normal
       allowNether: true
       spawnAnimals: true
       spawnMonsters: true
+      motd: "&d&lS&5&lo&9&lf&b&li&a&le&e&l'&6&ls &c&lC&d&lo&5&lr&9&ln&b&le&a&lr"
       maxPlayers: 20
       viewDistance: 16
       spawnProtection: 0
