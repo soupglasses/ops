@@ -96,5 +96,7 @@ spec:
       dataDir:
         enabled: true
         Size: 10Gi
+        annotations:
+          helm.sh/resource-policy: keep
         accessModes:
           - ReadWriteOnce
