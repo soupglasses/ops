@@ -51,14 +51,19 @@ spec:
       version: 1.21.10
       modrinth:
         projects:
+          # Dependencies
           - fabric-api
+          - fabric-language-kotlin
+          # Optimization mods
           - lithium
           - scalablelux
           - c2me-fabric
           - krypton
           - ferrite-core
+          # QoL
           - no-chat-reports
           - simple-voice-chat
+          - ledger
         downloadDependencies: none
         allowedVersionType: release
       gamemode: survival
