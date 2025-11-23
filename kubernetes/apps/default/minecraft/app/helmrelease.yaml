@@ -95,7 +95,7 @@ spec:
       storageClass: openebs-hostpath
       dataDir:
         enabled: true
-        Size: 10Gi
+        Size: 50Gi
         annotations:
           helm.sh/resource-policy: keep
         accessModes:
