@@ -57,6 +57,7 @@ spec:
           - c2me-fabric
           - ferrite-core
           - no-chat-reports
+          - simple-voice-chat
         downloadDependencies: none
         allowedVersionType: release
       gamemode: survival
