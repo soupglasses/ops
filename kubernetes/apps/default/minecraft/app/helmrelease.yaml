@@ -51,7 +51,6 @@ spec:
       version: 1.21.10
       modrinth:
         projects:
-          - fabric-api
           - lithium
           - scalablelux
           - c2me-fabric
