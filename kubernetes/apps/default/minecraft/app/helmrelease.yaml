@@ -95,6 +95,6 @@ spec:
       storageClass: openebs-hostpath
       dataDir:
         enabled: true
-        size: 10Gi
+        Size: 10Gi
         accessModes:
           - ReadWriteOnce
