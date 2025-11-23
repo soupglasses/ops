@@ -65,7 +65,8 @@ spec:
       allowNether: true
       spawnAnimals: true
       spawnMonsters: true
-      motd: "&d&lS&5&lo&9&lf&b&li&a&le&e&l'&6&ls &c&lC&d&lo&5&lr&9&ln&b&le&a&lr"
+      motd: |
+        \u00A7d\u00A7lS\u00A75\u00A7lo\u00A79\u00A7lf\u00A7b\u00A7li\u00A7a\u00A7le\u00A7e\u00A7l'\u00A76\u00A7ls \u00A7c\u00A7lC\u00A7d\u00A7lo\u00A75\u00A7lr\u00A79\u00A7ln\u00A7b\u00A7le\u00A7a\u00A7lr
       maxPlayers: 20
       viewDistance: 16
       spawnProtection: 0
