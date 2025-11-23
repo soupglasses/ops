@@ -55,6 +55,7 @@ spec:
           - lithium
           - scalablelux
           - c2me-fabric
+          - krypton
           - ferrite-core
           - no-chat-reports
           - simple-voice-chat
@@ -75,16 +76,16 @@ spec:
       overrideServerProperties: true
       serviceType: LoadBalancer
       loadBalancerClass: tailscale
+      extraPorts:
+        - name: simple-voice-chat
+          containerPort: 24454
+          protocol: UDP
+          service:
+            enabled: true
+            embedded: true
+            port: 24454
     serviceAnnotations:
       external-dns.alpha.kubernetes.io/hostname: mc.${SECRET_DOMAIN}
-    extraPorts:
-      - name: simple-voice-chat
-        containerPort: 24454
-        protocol: UDP
-        service:
-          enabled: true
-          embedded: true
-          port: 24454
     persistence:
       storageClass: openebs-hostpath
       dataDir:
