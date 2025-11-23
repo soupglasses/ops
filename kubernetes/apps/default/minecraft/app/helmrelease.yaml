@@ -77,7 +77,7 @@ spec:
       serviceType: LoadBalancer
       loadBalancerClass: tailscale
       extraPorts:
-        - name: simple-voice-chat
+        - name: voice-chat
           containerPort: 24454
           protocol: UDP
           service:
