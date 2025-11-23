@@ -77,6 +77,14 @@ spec:
       loadBalancerClass: tailscale
     serviceAnnotations:
       external-dns.alpha.kubernetes.io/hostname: mc.${SECRET_DOMAIN}
+    extraPorts:
+      - name: simple-voice-chat
+        containerPort: 24454
+        protocol: UDP
+        service:
+          enabled: true
+          embedded: true
+          port: 24454
     persistence:
       storageClass: openebs-hostpath
       dataDir:
