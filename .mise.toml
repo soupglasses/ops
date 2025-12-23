@@ -29,11 +29,15 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 "aqua:google/yamlfmt" = "v0.20.0"
 "aqua:pre-commit/pre-commit" = "4.4.0"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
+"github:fenio/pv-mounter" = "25.50.0"
+"github:utkuozdemir/pv-migrate" = "2.2.1"
 
 [[hooks.enter]]
 shell = "bash"
 script = '''
 source <(\kubectl completion bash)
+source <(pv-mounter completion bash)
+source <(pv-migrate completion bash)
 source <(talosctl completion bash)
 source <(task --completion bash)
 source <(flux completion bash)
@@ -50,6 +54,8 @@ complete -o default -F __start_talosctl t
 shell = "zsh"
 script = '''
 source <(kubectl completion zsh)
+source <(kubectl pv-mounter completion zsh)
+source <(kubectl pv-migrate completion zsh)
 source <(talosctl completion zsh)
 source <(task --completion zsh)
 source <(flux completion zsh)
