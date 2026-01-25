@@ -35,6 +35,7 @@ jobs:
     steps:
       - name: Run Renovate
         uses: docker://ghcr.io/renovatebot/renovate:latest
+        timeout-minutes: 10
         with:
           args: ${{ forge.repository }}
         env:
@@ -47,3 +48,4 @@ jobs:
           RENOVATE_ENDPOINT: ${{ forge.server_url }}
           RENOVATE_AUTODISCOVER: "false"
           RENOVATE_PR_HOURLY_LIMIT: "0"
+          RENOVATE_PR_CONCURRENT_LIMIT: "0"
