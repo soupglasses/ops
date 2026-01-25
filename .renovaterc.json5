@@ -21,17 +21,17 @@
     "kubernetes/clusters/*/flux-system/**",
   ],
   flux: {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+    managerFilePatterns: ["kubernetes/.+\\.ya?ml$"],
   },
   "helm-values": {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+    managerFilePatterns: ["kubernetes/.+\\.ya?ml$"],
   },
   kubernetes: {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+    managerFilePatterns: ["kubernetes/.+\\.ya?ml$"],
   },
-  kustomize: {
-    managerFilePatterns: ["/^kustomization\\.ya?ml$/"],
-  },
+  // kustomize: {
+  //   managerFilePatterns: ["^kustomization\\.ya?ml$"],
+  // },
   packageRules: [
     {
       "matchPackageNames": ["/pre-commit/"],
