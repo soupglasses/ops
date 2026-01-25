@@ -8,14 +8,10 @@ metadata:
   name: volsync
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: volsync
-      version: 0.14.0
-      sourceRef:
-        kind: HelmRepository
-        name: backube
-        namespace: flux-system
+  chartRef:
+    kind: OCIRepository
+    name: volsync
+    namespace: flux-system
   install:
     remediation:
       retries: -1
