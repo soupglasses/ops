@@ -7,6 +7,7 @@ _.python.venv = { path = "{{config_root}}/.venv", create = true }
 KUBECONFIG = "{{config_root}}/.secure/kubeconfig"
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
+MISE_EXPERIMENTAL = true # for krew plugin
 
 [plugins]
 krew="https://github.com/soupglasses/mise-krew"
