@@ -8,6 +8,9 @@ KUBECONFIG = "{{config_root}}/.secure/kubeconfig"
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 
+[plugins]
+krew="https://github.com/soupglasses/mise-krew"
+
 [tools]
 "python" = "3.14.3"
 "aqua:budimanjojo/talhelper" = "3.1.6"
@@ -29,8 +32,8 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 "aqua:google/yamlfmt" = "v0.21.0"
 "aqua:pre-commit/pre-commit" = "4.4.0"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
-"github:fenio/pv-mounter" = "25.50.0"
-"github:utkuozdemir/pv-migrate" = "2.2.1"
+"krew:pv-migrate" = "v3.0.0"
+"krew:pv-mounter" = "v26.10.0"
 
 [[hooks.enter]]
 shell = "bash"
