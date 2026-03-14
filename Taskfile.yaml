@@ -80,6 +80,27 @@ tasks:
       vars: [NODE]
     cmds:
       - talosctl bootstrap --nodes {{.NODE}}
+  rebootstrap:
+    desc: Recover node by wiping EPHEMERAL and re-bootstrapping the cluster [NODE=required]
+    requires:
+      vars: [NODE]
+    preconditions:
+      - which talosctl
+      - talosctl --nodes {{.NODE}} get machineconfig
+    prompt: Are you sure you want to WIPE EPHEMERAL and rebootstrap node '{{.NODE}}'?
+    cmds:
+      - talosctl reset --system-labels-to-wipe EPHEMERAL --graceful=false --reboot --nodes {{.NODE}}
+      - sleep 10
+      - |
+        echo "Waiting for node to become reachable..."
+        until talosctl --nodes {{.NODE}} get machinestatus >/dev/null 2>&1; do sleep 5; done
+      - task: bootstrap-cluster
+        vars:
+          NODE: "{{.NODE}}"
+      - |
+        echo "Waiting for cluster to become healthy..."
+        talosctl health --control-plane-nodes {{.NODE}} --nodes {{.NODE}} --wait-timeout 10m
+      - task --yes bootstrap-flux
   genconfig:
     desc: Generate talos configurations
     cmds:
@@ -105,7 +126,7 @@ tasks:
       - test -f ".secure/age.agekey"
     prompt: Are you sure you want to (RE)INSTALL Flux?
     cmds:
-      - flux uninstall --namespace=flux-system || true
+      - flux uninstall --namespace=flux-system --silent || true
       - kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
       - sops -d kubernetes/clusters/home/secret.sops.yaml | kubectl apply -n flux-system -f -
       - sops -d kubernetes/components/common/sops/secret.sops.yaml | kubectl apply -n flux-system -f -
