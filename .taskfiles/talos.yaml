@@ -13,6 +13,7 @@ tasks:
     requires:
       vars: [NODE]
     preconditions:
+      - test -f "$TALOSCONFIG"
       - talosctl --nodes {{.NODE}} get machineconfig
       - which talosctl
     prompt: Are you sure you want to PERMANENTLY reset Talos node '{{.NODE}}'?
@@ -31,6 +32,7 @@ tasks:
   bootstrap:
     desc: Bootstrap kubernetes cluster, should only be run once [NODE=required]
     preconditions:
+      - test -f "$TALOSCONFIG"
       - which talosctl
     requires:
       vars: [NODE]
@@ -41,6 +43,7 @@ tasks:
     requires:
       vars: [NODE]
     preconditions:
+      - test -f "$TALOSCONFIG"
       - which talosctl
       - talosctl --nodes {{.NODE}} get machineconfig
     prompt: Are you sure you want to WIPE STATE and EPHEMERAL and rebootstrap node '{{.NODE}}'?
@@ -61,10 +64,11 @@ tasks:
   genconfig:
     desc: Generate talos configurations
     cmds:
-      - pushd talos/ && talhelper genconfigsassc-sass popd
+      - pushd talos/ && talhelper genconfig; popd
   kubeconfig:
     desc: Generate talos kubeconfig [NODE=required]
     preconditions:
+      - test -f "$TALOSCONFIG"
       - test ! -e ".secure/kubeconfig"
     requires:
       vars: [NODE]

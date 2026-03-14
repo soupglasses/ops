@@ -63,6 +63,27 @@ task --list
 | `license:mit` | License files as MIT |
 | `license:0bsd` | License files as 0BSD |
 
+## Getting started on a new machine
+
+When setting up the repository on a new machine, you need to generate the client configurations:
+
+1. **Generate talosconfig** - Creates the Talos client configuration:
+   ```bash
+   task talos:genconfig
+   ```
+
+2. **Generate kubeconfig** - Fetches the Kubernetes config from the cluster:
+   ```bash
+   task talos:kubeconfig NODE=172.21.69.10
+   ```
+
+3. **Fetch age key** - Retrieves the SOPS encryption key:
+   ```bash
+   task kube:fetch-agekey
+   ```
+
+After these steps, all kubectl and talosctl commands will work correctly.
+
 ## Configure new cluster
 
 1. **Install Talos Linux** on each control-plane and worker node. Generate `.secure/kubeconfig`, `.secure/talosconfig` using [Talos: Production Notes](https://www.talos.dev/v1.10/introduction/prodnotes/). After install, put each created machine patch into the `talos/` folder for safekeeping. You should also use Talos bootstrap script to set up the kubernetes cluster.

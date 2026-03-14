@@ -17,10 +17,12 @@ tasks:
         cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
     preconditions:
       - which kubectl
+      - test -f "$KUBECONFIG"
   fetch-agekey:
     desc: Fetch agekey from the cluster
     preconditions:
       - test ! -e ".secure/age.agekey"
+      - test -f "$KUBECONFIG"
     cmds:
       - mkdir -p .secure
       - kubectl get secret sops-age -n flux-system -o jsonpath='{.data.age\.agekey}' | base64 -d > .secure/age.agekey
@@ -41,4 +43,5 @@ tasks:
     requires:
       vars: [NODE]
     preconditions:
+      - test -f "$KUBECONFIG"
       - kubectl get node {{.NODE}}
