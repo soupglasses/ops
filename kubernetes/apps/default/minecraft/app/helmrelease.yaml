@@ -69,7 +69,6 @@ spec:
     minecraftServer:
       rcon:
         enabled: true
-        withGeneratedPassword: true
       memory: 4096M
       pvp: true
       eula: true
