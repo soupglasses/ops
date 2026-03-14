@@ -47,6 +47,7 @@ spec:
       enabled: true
       backupInterval: 24h
       pauseIfNoPlayers: "true"
+      backupMethod: "restic"
       resticRepository: "${SECRET_RESTIC_S3_ENDPOINT}/minecraft"
       resticHostname: "minecraft"
       resticEnvs:
