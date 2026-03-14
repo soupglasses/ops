@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+tasks:
+  mit:
+    desc: License files as MIT
+    cmd: >
+      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=MIT
+      --merge-copyrights {{.CLI_ARGS}}
+  0bsd:
+    desc: License files as 0BSD
+    cmd: >
+      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=0BSD
+      --merge-copyrights {{.CLI_ARGS}}

@@ -5,149 +5,16 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-set: [pipefail]
-shopt: [globstar]
-
-tasks:
-  shell:
-    desc: Spawn a temporary root shell on a [NODE=required]
-    cmd: |
-      kubectl debug --profile=sysadmin --namespace kube-system -it --image debian node/{{.NODE}} -- bash -c '
-      cat > /tmp/.bashrc <<"EOF"
-      for dir in /host/bin /host/sbin /host/usr/local/sbin /host/usr/local/bin /host/usr/bin /host/usr/sbin; do
-        for bin in "$dir"/*; do
-          [ -x "$bin" ] && alias "$(basename "$bin")"="chroot /host $(basename "$bin")"
-        done
-      done
-      EOF
-      exec bash --rcfile /tmp/.bashrc
-      '
-    interactive: true
-    requires:
-      vars: [NODE]
-    preconditions:
-      - kubectl get node {{.NODE}}
-  license-mit:
-    desc: License files as MIT
-    cmd: >
-      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=MIT
-      --merge-copyrights {{.CLI_ARGS}}
-  license-0bsd:
-    desc: License files as 0BSD
-    cmd: >
-      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=0BSD
-      --merge-copyrights {{.CLI_ARGS}}
-  reconcile:
-    desc: Trigger manual reconcile for Flux.
-    cmd: flux reconcile kustomization flux-system --with-source
-  preconditions:
-    - which flux
-    - flux check
-  clean-pods:
-    desc: Delete all pods with a Failed/Pending/Succeeded status
-    cmds:
-      - for:
-          matrix:
-            PHASE: [Failed, Pending, Succeeded]
-        cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
-    preconditions:
-      - which kubectl
-  reset-node:
-    desc: Reset a single node [NODE=required]
-    requires:
-      vars: [NODE]
-    preconditions:
-      - talosctl --nodes {{.NODE}} get machineconfig
-      - which talosctl
-    prompt: Are you sure you want to PERMANENTLY reset Talos node '{{.NODE}}'?
-    cmds:
-      - talosctl reset --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false
-        --reboot --nodes {{.NODE}}
-  instantiate-node:
-    desc: Instantiace a single node [NODE=required] [NAME=required]
-    preconditions:
-      - which talosctl
-      - test -f "talos/clusterconfig/home-{{.NAME}}.yaml"
-    requires:
-      vars: [NODE, NAME]
-    cmds:
-      - talosctl apply-config --nodes {{.NODE}} --file talos/clusterconfig/home-{{.NAME}}.yaml --insecure
-  bootstrap-cluster:
-    desc: Bootstrap kubernetes cluster, should only be run once. [NODE=required]
-    preconditions:
-      - which talosctl
-    requires:
-      vars: [NODE]
-    cmds:
-      - talosctl bootstrap --nodes {{.NODE}}
-  rebootstrap:
-    desc: Recover node by wiping EPHEMERAL and re-bootstrapping the cluster [NODE=required]
-    requires:
-      vars: [NODE]
-    preconditions:
-      - which talosctl
-      - talosctl --nodes {{.NODE}} get machineconfig
-    prompt: Are you sure you want to WIPE EPHEMERAL and rebootstrap node '{{.NODE}}'?
-    cmds:
-      - talosctl reset --system-labels-to-wipe EPHEMERAL --graceful=false --reboot --nodes {{.NODE}}
-      - sleep 10
-      - |
-        echo "Waiting for node to become reachable..."
-        until talosctl --nodes {{.NODE}} get machinestatus >/dev/null 2>&1; do sleep 5; done
-      - task: bootstrap-cluster
-        vars:
-          NODE: "{{.NODE}}"
-      - |
-        echo "Waiting for cluster to become healthy..."
-        talosctl health --control-plane-nodes {{.NODE}} --nodes {{.NODE}} --wait-timeout 10m
-      - task --yes bootstrap-flux
-  genconfig:
-    desc: Generate talos configurations
-    cmds:
-      - pushd talos/ && talhelper genconfigsassc-sass popd
-  kubeconfig:
-    desc: Generate talos kubeconfig [NODE=required]
-    preconditions:
-      - test ! -e ".secure/kubeconfig"
-    requires:
-      vars: [NODE]
-    cmds:
-      - mkdir -p .secure
-      - talosctl kubeconfig .secure/kubeconfig --nodes {{.NODE}}
-  fetch-agekey:
-    desc: Fetch agekey from the cluster
-    preconditions:
-      - test ! -e ".secure/age.agekey"
-    cmds:
-      - kubectl
-  bootstrap-flux:
-    desc: Bootstrap flux on the cluster, should only be run once.
-    preconditions:
-      - test -f ".secure/age.agekey"
-    prompt: Are you sure you want to (RE)INSTALL Flux?
-    cmds:
-      - flux uninstall --namespace=flux-system --silent || true
-      - kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
-      - sops -d kubernetes/clusters/home/secret.sops.yaml | kubectl apply -n flux-system -f -
-      - sops -d kubernetes/components/common/sops/secret.sops.yaml | kubectl apply -n flux-system -f -
-      - |
-        export GITEA_TOKEN=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.password)
-        flux bootstrap gitea \
-          --token-auth \
-          --hostname=codeberg.org \
-          --owner=soupglasses \
-          --repository=ops \
-          --branch=main \
-          --path=kubernetes/clusters/home \
-          --personal
-  reconcile-ks:
-    desc: Reconcile all Flux Kustomizations across all namespaces
-    cmds:
-      - flux reconcile kustomization flux-system --namespace flux-system --with-source
-      - |
-        kubectl get kustomizations.kustomize.toolkit.fluxcd.io --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' | \
-        while read namespace name; do
-          if [ ! -z "$namespace" ] && [ ! -z "$name" ]; then
-            flux reconcile kustomization "$name" --namespace "$namespace"
-          fi
-        done
+includes:
+  talos:
+    taskfile: .taskfiles/talos.yaml
+    dir: .
+  flux:
+    taskfile: .taskfiles/flux.yaml
+    dir: .
+  kube:
+    taskfile: .taskfiles/kubernetes.yaml
+    dir: .
+  license:
+    taskfile: .taskfiles/license.yaml
+    dir: .

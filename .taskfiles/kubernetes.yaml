@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+set: [pipefail]
+shopt: [globstar]
+
+tasks:
+  clean-pods:
+    desc: Delete all pods with a Failed/Pending/Succeeded status
+    cmds:
+      - for:
+          matrix:
+            PHASE: [Failed, Pending, Succeeded]
+        cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
+    preconditions:
+      - which kubectl
+  fetch-agekey:
+    desc: Fetch agekey from the cluster
+    preconditions:
+      - test ! -e ".secure/age.agekey"
+    cmds:
+      - kubectl
+  shell:
+    desc: Spawn a temporary root shell on a [NODE=required]
+    cmd: |
+      kubectl debug --profile=sysadmin --namespace kube-system -it --image debian node/{{.NODE}} -- bash -c '
+      cat > /tmp/.bashrc <<"EOF"
+      for dir in /host/bin /host/sbin /host/usr/local/sbin /host/usr/local/bin /host/usr/bin /host/usr/sbin; do
+        for bin in "$dir"/*; do
+          [ -x "$bin" ] && alias "$(basename "$bin")"="chroot /host $(basename "$bin")"
+        done
+      done
+      EOF
+      exec bash --rcfile /tmp/.bashrc
+      '
+    interactive: true
+    requires:
+      vars: [NODE]
+    preconditions:
+      - kubectl get node {{.NODE}}

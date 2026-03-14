@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+set: [pipefail]
+shopt: [globstar]
+
+tasks:
+  reset:
+    desc: Reset a single node [NODE=required]
+    requires:
+      vars: [NODE]
+    preconditions:
+      - talosctl --nodes {{.NODE}} get machineconfig
+      - which talosctl
+    prompt: Are you sure you want to PERMANENTLY reset Talos node '{{.NODE}}'?
+    cmds:
+      - talosctl reset --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false
+        --reboot --nodes {{.NODE}}
+  instantiate:
+    desc: Instantiate a single node [NODE=required] [NAME=required]
+    preconditions:
+      - which talosctl
+      - test -f "talos/clusterconfig/home-{{.NAME}}.yaml"
+    requires:
+      vars: [NODE, NAME]
+    cmds:
+      - talosctl apply-config --nodes {{.NODE}} --file talos/clusterconfig/home-{{.NAME}}.yaml --insecure
+  bootstrap:
+    desc: Bootstrap kubernetes cluster, should only be run once [NODE=required]
+    preconditions:
+      - which talosctl
+    requires:
+      vars: [NODE]
+    cmds:
+      - talosctl bootstrap --nodes {{.NODE}}
+  rebootstrap:
+    desc: Rebootstrap cluster from control plane node by wiping STATE and EPHEMERAL [NODE=required]
+    requires:
+      vars: [NODE]
+    preconditions:
+      - which talosctl
+      - talosctl --nodes {{.NODE}} get machineconfig
+    prompt: Are you sure you want to WIPE STATE and EPHEMERAL and rebootstrap node '{{.NODE}}'?
+    cmds:
+      - talosctl reset --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false
+        --reboot --nodes {{.NODE}}
+      - sleep 10
+      - |
+        echo "Waiting for node to become reachable..."
+        until talosctl --nodes {{.NODE}} get machinestatus >/dev/null 2>&1; do sleep 5; done
+      - task: bootstrap
+        vars:
+          NODE: "{{.NODE}}"
+      - |
+        echo "Waiting for cluster to become healthy..."
+        talosctl health --control-plane-nodes {{.NODE}} --nodes {{.NODE}} --wait-timeout 10m
+      - task --yes flux:bootstrap
+  genconfig:
+    desc: Generate talos configurations
+    cmds:
+      - pushd talos/ && talhelper genconfigsassc-sass popd
+  kubeconfig:
+    desc: Generate talos kubeconfig [NODE=required]
+    preconditions:
+      - test ! -e ".secure/kubeconfig"
+    requires:
+      vars: [NODE]
+    cmds:
+      - mkdir -p .secure
+      - talosctl kubeconfig .secure/kubeconfig --nodes {{.NODE}}
