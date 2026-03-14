@@ -22,7 +22,8 @@ tasks:
     preconditions:
       - test ! -e ".secure/age.agekey"
     cmds:
-      - kubectl
+      - mkdir -p .secure
+      - kubectl get secret sops-age -n flux-system -o jsonpath='{.data.age\.agekey}' | base64 -d > .secure/age.agekey
   shell:
     desc: Spawn a temporary root shell on a [NODE=required]
     cmd: |
