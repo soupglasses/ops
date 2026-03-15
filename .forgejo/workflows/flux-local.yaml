@@ -47,21 +47,25 @@ jobs:
       - name: Test
         run: |
           flux-local test --enable-helm --all-namespaces --path $CLUSTER_PATH -v
+      - name: Checkout base branch
+        if: always() && forge.event_name == 'pull_request'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ forge.base_ref }}
+          path: base
       - name: Diff
         if: always() && forge.event_name == 'pull_request'
-        id: diff
-        uses: github.com/allenporter/flux-local/action/diff@4.3.1
-        with:
-          live-branch: ${{ forge.base_ref }}
-          path: ${{ env.CLUSTER_PATH }}
-          strip-attrs: ${{ env.STRIP_ATTRS }}
+        run: |
+          flux-local diff kustomization --path $CLUSTER_PATH --path-orig base/$CLUSTER_PATH \
+            --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt
+          flux-local diff helmrelease --path $CLUSTER_PATH --path-orig base/$CLUSTER_PATH \
+            --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt
       - name: Comment on PR
         if: always() && forge.event_name == 'pull_request'
         env:
           FORGEJO_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
-          DIFF: ${{ steps.diff.outputs.diff }}
         run: |
-          if [ -z "$DIFF" ]; then
+          if [ ! -s diff.txt ]; then
             echo "No diff output, skipping comment."
             exit 0
           fi
@@ -70,7 +74,7 @@ jobs:
             echo "## Flux Local Diff"
             echo ""
             echo '```diff'
-            echo "$DIFF"
+            cat diff.txt
             echo '```'
           } > body.md
 
