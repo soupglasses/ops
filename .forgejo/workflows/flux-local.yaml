@@ -49,9 +49,9 @@ jobs:
       - name: Diff
         if: always() && forge.event_name == 'pull_request'
         run: |
-          flux-local diff kustomization --branch ${{ forge.base_ref }} --path $CLUSTER_PATH \
+          flux-local diff kustomization --branch-orig ${{ forge.base_ref }} --path $CLUSTER_PATH \
             --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt || true
-          flux-local diff helmrelease --branch ${{ forge.base_ref }} --path $CLUSTER_PATH \
+          flux-local diff helmrelease --branch-orig ${{ forge.base_ref }} --path $CLUSTER_PATH \
             --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt || true
       - name: Comment on PR
         if: always() && forge.event_name == 'pull_request'
