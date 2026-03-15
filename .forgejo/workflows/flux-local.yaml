@@ -43,7 +43,7 @@ jobs:
           curl -s https://fluxcd.io/install.sh | bash
       - name: Install flux-local
         run: |
-          pip install flux-local==4.3.1
+          pip install flux-local==8.1.0
       - name: Test
         run: |
           flux-local test --enable-helm --all-namespaces --path $CLUSTER_PATH -v
