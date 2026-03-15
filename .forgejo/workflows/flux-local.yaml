@@ -25,7 +25,9 @@ jobs:
       - name: Test
         uses: docker://ghcr.io/allenporter/flux-local:v8.1.0
         with:
-          args: test --enable-helm --all-namespaces --path kubernetes/clusters/home -v
+          entrypoint: /bin/sh
+          args: -c "git config --global --add safe.directory ${{ forge.workspace }} && flux-local test
+            --enable-helm --all-namespaces --path kubernetes/clusters/home -v"
       - name: Diff
         if: always() && github.event_name == 'pull_request'
         uses: docker://ghcr.io/allenporter/flux-local:v8.1.0
