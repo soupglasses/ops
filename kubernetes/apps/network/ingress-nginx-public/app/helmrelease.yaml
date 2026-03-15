@@ -37,7 +37,7 @@ spec:
           bgp: "enabled"
         type: LoadBalancer
         loadBalancerClass: io.cilium/bgp-control-plane
-        externalTrafficPolicy: Local
+        externalTrafficPolicy: Cluster
       publishService:
         enabled: true
       ingressClassResource:
