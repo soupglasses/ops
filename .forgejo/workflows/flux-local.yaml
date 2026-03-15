@@ -30,12 +30,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          # Install kustomize
+          # Export token for install scripts
+          export GITHUB_TOKEN
+          echo "Token length: ${#GITHUB_TOKEN}"
+          # Install kustomize (downloads from GitHub releases)
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           mv kustomize /usr/local/bin/
-          # Install helm
+          # Install helm (uses get.helm.sh, no GitHub API)
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          # Install flux
+          # Install flux (downloads from GitHub releases)
           curl -s https://fluxcd.io/install.sh | bash
       - name: Install flux-local
         run: |
