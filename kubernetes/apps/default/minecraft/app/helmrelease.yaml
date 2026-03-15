@@ -107,8 +107,6 @@ spec:
       overrideServerProperties: true
       serviceType: LoadBalancer
       loadBalancerClass: io.cilium/bgp-control-plane
-      serviceLabels:
-        bgp: "enabled"
       extraPorts:
         - name: voice-chat
           containerPort: 24454
@@ -121,6 +119,8 @@ spec:
       external-dns.alpha.kubernetes.io/hostname: mc.${SECRET_DOMAIN}
       lbipam.cilium.io/sharing-key: public-services
       lbipam.cilium.io/sharing-cross-namespace: network
+    serviceLabels:
+      bgp: "enabled"
     persistence:
       storageClass: openebs-hostpath
       dataDir:
