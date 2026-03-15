@@ -12,6 +12,9 @@ includes:
   flux:
     taskfile: .taskfiles/flux.yaml
     dir: .
+  flux-local:
+    taskfile: .taskfiles/flux-local.yaml
+    dir: .
   kube:
     taskfile: .taskfiles/kubernetes.yaml
     dir: .

@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+set: [pipefail]
+shopt: [globstar]
+
+vars:
+  CLUSTER_PATH: kubernetes/clusters/home
+
+tasks:
+  test:
+    desc: Validate all Kustomizations and HelmReleases locally
+    cmds:
+      - flux-local test --enable-helm --all-namespaces --path {{.CLUSTER_PATH}} -v 2> >(grep -v SubstituteReference
+        >&2)
+
+  diff:
+    desc: Show diff of rendered manifests against HEAD
+    cmds:
+      - flux-local diff kustomization --path {{.CLUSTER_PATH}} --strip-attrs "helm.sh/chart,checksum/config,app.kubernetes.io/version,chart"
+        --all-namespaces 2> >(grep -v SubstituteReference >&2) | delta --default-language yaml
+      - flux-local diff helmrelease --path {{.CLUSTER_PATH}} --strip-attrs "helm.sh/chart,checksum/config,app.kubernetes.io/version,chart"
+        --all-namespaces 2> >(grep -v SubstituteReference >&2) | delta --default-language yaml
+
+  build:
+    desc: Build all Kustomizations and show resource counts
+    cmds:
+      - flux-local build kustomization --path {{.CLUSTER_PATH}} | kustomize cfg count
+
+  get-ks:
+    desc: List all Kustomizations
+    cmds:
+      - flux-local get kustomization --path {{.CLUSTER_PATH}} -o wide 2> >(grep -v SubstituteReference
+        >&2)
+
+  get-hr:
+    desc: List all HelmReleases
+    cmds:
+      - flux-local get helmrelease --path {{.CLUSTER_PATH}} -A 2> >(grep -v SubstituteReference >&2)

@@ -48,6 +48,18 @@ task --list
 | `flux:reconcile` | Trigger manual reconcile for Flux |
 | `flux:reconcile-ks` | Reconcile all Flux Kustomizations |
 
+### Flux Local Validation
+
+Validate Flux configurations locally before committing:
+
+| Task | Description |
+|---|---|
+| `flux-local:test` | Validate all Kustomizations and HelmReleases |
+| `flux-local:diff` | Show diff of rendered manifests against HEAD |
+| `flux-local:build` | Build all Kustomizations and count resources |
+| `flux-local:get-ks` | List all Kustomizations |
+| `flux-local:get-hr` | List all HelmReleases |
+
 ### Kubernetes
 
 | Task | Description |

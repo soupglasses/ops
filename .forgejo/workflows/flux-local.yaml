@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+name: Flux Local Validation
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flux-local-test:
+    name: Flux Local Test
+    runs-on: codeberg-tiny
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run flux-local test
+        uses: docker://ghcr.io/allenporter/flux-local:v8.1.0
+        with:
+          args: test --enable-helm --all-namespaces --path kubernetes/clusters/home -v
