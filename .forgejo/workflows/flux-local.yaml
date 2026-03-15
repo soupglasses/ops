@@ -50,9 +50,9 @@ jobs:
         if: always() && github.event_name == 'pull_request'
         run: |
           flux-local diff kustomization --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces > diff.txt 2>/dev/null || true
+            --all-namespaces | tee -a diff.txt || true
           flux-local diff helmrelease --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces >> diff.txt 2>/dev/null || true
+            --all-namespaces | tee -a diff.txt || true
       - name: Comment on PR
         if: always() && github.event_name == 'pull_request'
         env:
