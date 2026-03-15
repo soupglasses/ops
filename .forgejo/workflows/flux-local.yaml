@@ -31,9 +31,10 @@ jobs:
         uses: docker://ghcr.io/allenporter/flux-local:v8.1.0
         with:
           entrypoint: /bin/sh
-          args: -c "flux-local diff kustomization --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS --all-namespaces
-            > diff.txt 2>/dev/null; flux-local diff helmrelease --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS
-            --all-namespaces >> diff.txt 2>/dev/null; true"
+          args: -c "git config --global --add safe.directory ${{ forge.workspace }} && flux-local diff
+            kustomization --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS --all-namespaces > diff.txt
+            2>/dev/null; flux-local diff helmrelease --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS --all-namespaces
+            >> diff.txt 2>/dev/null; true"
       - name: Comment on PR
         if: always() && github.event_name == 'pull_request'
         env:
