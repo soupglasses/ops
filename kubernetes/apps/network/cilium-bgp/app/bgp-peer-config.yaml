@@ -4,7 +4,7 @@
 
 # CiliumBGPPeerConfig defines the BGP peering settings for RouterOS
 # This is referenced by CiliumBGPClusterConfig
-apiVersion: cilium.io/v2
+apiVersion: cilium.io/v2alpha1
 kind: CiliumBGPPeerConfig
 metadata:
   name: routeros-peer
