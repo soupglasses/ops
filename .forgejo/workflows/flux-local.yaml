@@ -27,6 +27,8 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install tools
+        env:
+          GITHUB_TOKEN: ""
         run: |
           # Install kustomize
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
