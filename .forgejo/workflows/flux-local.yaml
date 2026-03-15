@@ -35,6 +35,8 @@ jobs:
           mv kustomize /usr/local/bin/
           # Install helm
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          # Install flux
+          curl -s https://fluxcd.io/install.sh | bash
       - name: Install flux-local
         run: |
           pip install flux-local==8.1.0
