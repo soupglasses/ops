@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# CiliumBGPPeerConfig defines the BGP peering settings for RouterOS
+# This is referenced by CiliumBGPClusterConfig
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: routeros-peer
+  namespace: kube-system
+spec:
+  timers:
+    # Fast failure detection for home network
+    connectRetryTimeSeconds: 5
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  # Graceful restart allows Cilium agent restarts without traffic disruption
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 30
+  families:
+    # Only IPv4 is needed for this setup
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: "bgp"

@@ -5,7 +5,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: ingress-nginx
+  name: ingress-nginx-tailscale
 spec:
   interval: 1h
   chart:

@@ -106,7 +106,9 @@ spec:
       generateStructures: true
       overrideServerProperties: true
       serviceType: LoadBalancer
-      loadBalancerClass: tailscale
+      loadBalancerClass: io.cilium/bgp-control-plane
+      serviceLabels:
+        bgp: "enabled"
       extraPorts:
         - name: voice-chat
           containerPort: 24454

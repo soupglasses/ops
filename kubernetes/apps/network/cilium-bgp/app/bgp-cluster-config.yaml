@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# CiliumBGPClusterConfig defines the BGP instance and peer configuration
+# This creates a BGP session between Cilium (on Kubernetes nodes) and RouterOS
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: routeros-bgp
+  namespace: kube-system
+spec:
+  # Apply to all nodes (only nas currently)
+  nodeSelector:
+    matchExpressions:
+      - {key: node-role.kubernetes.io/control-plane, operator: Exists}
+  bgpInstances:
+    - name: "instance-64512"
+      # Cilium uses a private ASN (64512-65534 are private ASNs)
+      localASN: 64512
+      # Listen on default BGP port for incoming connections from RouterOS
+      localPort: 179
+      peers:
+        - name: "routeros-peer"
+          # RouterOS ASN (configure this to match RouterOS)
+          peerASN: 64513
+          # RouterOS BGP peering IP (on local network)
+          peerAddress: 172.21.68.1
+          peerConfigRef:
+            name: "routeros-peer"

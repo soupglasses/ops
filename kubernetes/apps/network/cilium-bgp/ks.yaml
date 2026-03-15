@@ -6,24 +6,14 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: &app ingress-nginx
-  namespace: &namespace network
+  name: &app cilium-bgp
+  namespace: &namespace kube-system
 spec:
-  path: ./kubernetes/apps/network/ingress-nginx/app
+  path: ./kubernetes/apps/network/cilium-bgp/app
   targetNamespace: *namespace
-  dependsOn:
-    - name: prometheus-operator-crds
-      namespace: monitoring
-    - name: tailscale-operator
-      namespace: network
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  healthChecks:
-    - apiVersion: helm.toolkit.fluxcd.io/v2
-      kind: HelmRelease
-      name: *app
-      namespace: *namespace
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -32,3 +22,4 @@ spec:
   retryInterval: 2m
   timeout: 5m
   prune: true
+  wait: true

@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# CiliumBGPAdvertisement defines what routes Cilium will advertise via BGP
+# This is matched by the CiliumBGPPeerConfig via label selector
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: bgp-advertisements
+  namespace: kube-system
+  labels:
+    # This label is matched by CiliumBGPPeerConfig
+    advertise: bgp
+spec:
+  advertisements:
+    # Advertise the Pod CIDR assigned to each node
+    # This allows RouterOS to route directly to pods
+    - advertisementType: "PodCIDR"
+      attributes:
+        communities:
+          standard: ["64512:100"]
+    # Advertise LoadBalancer service IPs
+    # This announces the single LoadBalancer IP (172.21.68.10) to RouterOS
+    - advertisementType: "Service"
+      service:
+        addresses:
+          - LoadBalancerIP
+      # Select services with the bgp label
+      selector:
+        matchLabels:
+          bgp: "enabled"

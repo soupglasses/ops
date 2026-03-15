@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# CiliumLoadBalancerIPPool defines the IP pool for BGP LoadBalancer services
+# Using a single IP (172.21.68.10) that will be announced via BGP
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: bgp-pool
+  namespace: kube-system
+spec:
+  blocks:
+    # Single IP for all BGP-exposed services
+    # RouterOS will dst-nat ports from public IP to this IP
+    - cidr: "172.21.68.10/32"
+  # Only allocate to services with the bgp label
+  serviceSelector:
+    matchLabels:
+      bgp: "enabled"

@@ -10,6 +10,8 @@ components:
   - ../../components/common
   - ../../components/privileged
 resources:
+  - ./cilium-bgp/ks.yaml
   - ./external-dns/ks.yaml
-  - ./ingress-nginx/ks.yaml
+  - ./ingress-nginx-tailscale/ks.yaml
+  - ./ingress-nginx-public/ks.yaml
   - ./tailscale-operator/ks.yaml
