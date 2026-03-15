@@ -28,8 +28,11 @@ jobs:
           python-version: "3.13"
       - name: Install tools
         run: |
-          apt-get update
-          apt-get install -y kustomize helm
+          # Install kustomize
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          mv kustomize /usr/local/bin/
+          # Install helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       - name: Install flux-local
         run: |
           pip install flux-local==8.1.0
