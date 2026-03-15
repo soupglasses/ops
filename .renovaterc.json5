@@ -16,6 +16,7 @@
   ],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
+  rebaseWhen: "behind-base-branch",
   ignorePaths: [
     "**/*.sops.*",
     "kubernetes/clusters/*/flux-system/**",
