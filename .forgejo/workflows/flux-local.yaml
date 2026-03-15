@@ -45,14 +45,14 @@ jobs:
           pip install flux-local==8.1.0
       - name: Test
         run: |
-          flux-local test --enable-helm --all-namespaces --path kubernetes/clusters/home -v
+          flux-local test --enable-helm --all-namespaces --path $CLUSTER_PATH -v
       - name: Diff
         if: always() && github.event_name == 'pull_request'
         run: |
           flux-local diff kustomization --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces | tee -a diff.txt || true
+            --all-namespaces | tee -a diff.txt
           flux-local diff helmrelease --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces | tee -a diff.txt || true
+            --all-namespaces | tee -a diff.txt
       - name: Comment on PR
         if: always() && github.event_name == 'pull_request'
         env:
