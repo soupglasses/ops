@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  group: ${{ forge.workflow }}-${{ forge.event.number || forge.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -47,14 +47,14 @@ jobs:
         run: |
           flux-local test --enable-helm --all-namespaces --path $CLUSTER_PATH -v
       - name: Diff
-        if: always() && github.event_name == 'pull_request'
+        if: always() && forge.event_name == 'pull_request'
         run: |
-          flux-local diff kustomization --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces | tee -a diff.txt
-          flux-local diff helmrelease --path $CLUSTER_PATH --strip-attrs $STRIP_ATTRS \
-            --all-namespaces | tee -a diff.txt
+          flux-local diff kustomization --branch ${{ forge.base_ref }} --path $CLUSTER_PATH \
+            --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt || true
+          flux-local diff helmrelease --branch ${{ forge.base_ref }} --path $CLUSTER_PATH \
+            --strip-attrs $STRIP_ATTRS --all-namespaces | tee -a diff.txt || true
       - name: Comment on PR
-        if: always() && github.event_name == 'pull_request'
+        if: always() && forge.event_name == 'pull_request'
         env:
           FORGEJO_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
         run: |
@@ -73,7 +73,7 @@ jobs:
 
           jq -Rs '{"body": .}' body.md | \
             curl -s -X POST \
-              "${{ forge.server_url }}/api/v1/repos/${{ forge.repository }}/issues/${{ github.event.number }}/comments" \
+              "${{ forge.server_url }}/api/v1/repos/${{ forge.repository }}/issues/${{ forge.event.number }}/comments" \
               -H "Authorization: token ${FORGEJO_TOKEN}" \
               -H "Content-Type: application/json" \
               -d @-
