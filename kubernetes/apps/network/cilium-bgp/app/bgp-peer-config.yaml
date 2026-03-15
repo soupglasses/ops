@@ -19,6 +19,7 @@ spec:
   gracefulRestart:
     enabled: true
     restartTimeSeconds: 30
+  ebgpMultihop: 1
   families:
     # Only IPv4 is needed for this setup
     - afi: ipv4

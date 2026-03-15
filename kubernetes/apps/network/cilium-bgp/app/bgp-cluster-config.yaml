@@ -22,7 +22,6 @@ spec:
         - name: "routeros-peer"
           # RouterOS ASN (configure this to match RouterOS)
           peerASN: 64513
-          # RouterOS BGP peering IP (on local network)
           peerAddress: 172.21.68.1
           peerConfigRef:
             name: "routeros-peer"

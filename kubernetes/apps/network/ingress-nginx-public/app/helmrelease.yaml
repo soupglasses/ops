@@ -30,6 +30,9 @@ spec:
       enableAnnotationValidations: true
       service:
         enabled: true
+        annotations:
+          lbipam.cilium.io/sharing-key: public-services
+          lbipam.cilium.io/sharing-cross-namespace: default
         labels:
           bgp: "enabled"
         type: LoadBalancer

@@ -119,6 +119,8 @@ spec:
             port: 24454
     serviceAnnotations:
       external-dns.alpha.kubernetes.io/hostname: mc.${SECRET_DOMAIN}
+      lbipam.cilium.io/sharing-key: public-services
+      lbipam.cilium.io/sharing-cross-namespace: network
     persistence:
       storageClass: openebs-hostpath
       dataDir:
