@@ -31,3 +31,7 @@ spec:
       image:
         repository: ghcr.io/home-operations/opentofu-runner
         tag: rolling
+      serviceAccount:
+        allowedNamespaces:
+          - flux-system
+          - identity
