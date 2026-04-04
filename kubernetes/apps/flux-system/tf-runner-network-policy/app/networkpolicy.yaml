@@ -22,4 +22,4 @@ spec:
               app.kubernetes.io/name: tf-runner
       ports:
         - protocol: TCP
-          port: 9090
+          port: http
