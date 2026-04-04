@@ -58,5 +58,14 @@ spec:
           persistentVolumeClaim:
             claimName: openldap-data
         - name: tls
-          secret:
-            secretName: openldap-tls
+          projected:
+            sources:
+              - secret:
+                  name: openldap-tls
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+                    - key: tls.key
+                      path: tls.key
+                    - key: tls.crt
+                      path: ca.crt
