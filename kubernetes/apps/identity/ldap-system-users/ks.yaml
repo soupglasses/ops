@@ -23,6 +23,11 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
+  healthChecks:
+    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+      kind: Terraform
+      name: ldap-system-users
+      namespace: identity
   interval: 1h
   retryInterval: 2m
   timeout: 5m
