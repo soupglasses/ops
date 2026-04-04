@@ -6,6 +6,9 @@
 *.pub
 *.key
 *.decrypted~*.yaml
+# Terraform/OpenTofu
+.terraform/
+*.tfstate*
 # Misc.
 .private/
 .secure/
