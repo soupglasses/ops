@@ -29,8 +29,8 @@ spec:
     allowCrossNamespaceRefs: true
     runner:
       image:
-        repository: ghcr.io/home-operations/opentofu-runner
-        tag: rolling
+        repository: ghcr.io/flux-iac/tf-runner
+        tag: v0.16.2
       serviceAccount:
         allowedNamespaces:
           - flux-system
