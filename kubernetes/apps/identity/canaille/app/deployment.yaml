@@ -50,6 +50,11 @@ spec:
               value: "ou=users,dc=finnes,dc=dev"
             - name: CANAILLE_LDAP__GROUP_BASE
               value: "ou=groups,dc=finnes,dc=dev"
+            - name: CANAILLE_OIDC__ACTIVE_JWKS
+              valueFrom:
+                secretKeyRef:
+                  name: canaille
+                  key: ACTIVE_JWKS
           volumeMounts:
             - name: config
               mountPath: /config

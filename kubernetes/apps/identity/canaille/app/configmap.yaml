@@ -11,6 +11,8 @@ data:
   canaille.toml: |
     [CANAILLE]
     NAME = "Finnes"
+    DATABASE = "ldap"
+    SERVER_NAME = "auth.finnes.dev"
 
     [CANAILLE.ACL.DEFAULT]
     PERMISSIONS = ["edit_self", "use_oidc", "manage_own_groups"]
