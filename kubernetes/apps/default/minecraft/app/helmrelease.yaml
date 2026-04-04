@@ -48,24 +48,24 @@ spec:
       backupInterval: 24h
       pauseIfNoPlayers: "true"
       backupMethod: "restic"
-      resticRepository: "${SECRET_RESTIC_S3_ENDPOINT}/minecraft"
+      resticRepository: "${SECRET_S3_ENDPOINT}/minecraft"
       resticHostname: "minecraft"
       resticEnvs:
         RESTIC_PASSWORD:
           valueFrom:
             secretKeyRef:
               name: cluster-secrets
-              key: SECRET_RESTIC_PASSWORD
+              key: SECRET_PASSWORD
         AWS_ACCESS_KEY_ID:
           valueFrom:
             secretKeyRef:
               name: cluster-secrets
-              key: SECRET_RESTIC_AWS_ACCESS_KEY_ID
+              key: SECRET_AWS_ACCESS_KEY_ID
         AWS_SECRET_ACCESS_KEY:
           valueFrom:
             secretKeyRef:
               name: cluster-secrets
-              key: SECRET_RESTIC_AWS_SECRET_ACCESS_KEY
+              key: SECRET_AWS_SECRET_ACCESS_KEY
       pruneResticRetention: "--keep-daily 7 --keep-weekly 4"
     minecraftServer:
       rcon:
@@ -116,8 +116,8 @@ spec:
             embedded: true
             port: 24454
     serviceAnnotations:
-      external-dns.alpha.kubernetes.io/hostname: mc.${SECRET_DOMAIN}
-      external-dns.alpha.kubernetes.io/target: ${SECRET_IP_ADDRESS}
+      external-dns.alpha.kubernetes.io/hostname: mc.${DOMAIN}
+      external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS}
       lbipam.cilium.io/sharing-key: public-services
       lbipam.cilium.io/sharing-cross-namespace: network
     serviceLabels:

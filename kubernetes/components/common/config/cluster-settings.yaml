@@ -10,3 +10,7 @@ metadata:
 data:
   TIMEZONE: "Europe/Copenhagen"
   CLUSTER_NAME: "home"
+  DOMAIN: "finnes.dev"
+  IP_ADDRESS: 192.121.119.137
+  S3_ENDPOINT: "hel1.your-objectstorage.com"
+  S3_BUCKET: "soupglasses"

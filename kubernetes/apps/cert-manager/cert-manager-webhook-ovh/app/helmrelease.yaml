@@ -26,7 +26,7 @@ spec:
       retries: 3
   values:
     configVersion: 0.0.2
-    groupName: acme.${SECRET_DOMAIN}
+    groupName: acme.${DOMAIN}
     certManager:
       namespace: cert-manager
       serviceAccountName: cert-manager
@@ -36,7 +36,7 @@ spec:
         kind: ClusterIssuer
         acmeServerUrl: https://acme-v02.api.letsencrypt.org/directory
         profile: tlsserver
-        email: acme@${SECRET_DOMAIN}
+        email: acme@${DOMAIN}
         ovhEndpointName: ovh-eu
         ovhAuthenticationMethod: application
         ovhAuthenticationRef:
@@ -54,7 +54,7 @@ spec:
         kind: ClusterIssuer
         acmeServerUrl: https://acme-staging-v02.api.letsencrypt.org/directory
         profile: tlsserver
-        email: acme@${SECRET_DOMAIN}
+        email: acme@${DOMAIN}
         ovhEndpointName: ovh-eu
         ovhAuthenticationMethod: application
         ovhAuthenticationRef:
