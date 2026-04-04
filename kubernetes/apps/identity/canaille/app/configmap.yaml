@@ -13,7 +13,7 @@ data:
     NAME = "Finnes"
 
     [CANAILLE.ACL.DEFAULT]
-    PERMISSIONS = ["edit_self", "use_oidc"]
+    PERMISSIONS = ["edit_self", "use_oidc", "manage_own_groups"]
     READ = [
         "user_name", "groups", "lock_date",
         "display_name", "given_name", "family_name",
@@ -30,7 +30,7 @@ data:
     FILTER = {groups = "admin"}
     PERMISSIONS = [
         "edit_self", "use_oidc",
-        "manage_users", "manage_groups", "manage_oidc",
+        "manage_users", "manage_all_groups", "manage_oidc",
         "delete_account", "impersonate_users",
     ]
     READ = [
@@ -47,7 +47,7 @@ data:
     ]
 
     [CANAILLE_LDAP]
-    USER_CLASS = "inetOrgPerson"
+    USER_CLASS = ["inetOrgPerson", "oathHOTPToken"]
     USER_RDN = "uid"
     GROUP_CLASS = "groupOfNames"
     GROUP_RDN = "cn"
