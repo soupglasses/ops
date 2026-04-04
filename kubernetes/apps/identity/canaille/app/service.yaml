@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/service-v1.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: canaille
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: canaille
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP

@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/deployment-apps-v1.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canaille
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: canaille
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: canaille
+    spec:
+      containers:
+        - name: canaille
+          image: docker.io/yaalcoop/canaille:0.2.3
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: CANAILLE_CONFIG
+              value: /config/canaille.toml
+            - name: CANAILLE__ADMIN_EMAIL
+              value: "admin@finnes.dev"
+            - name: CANAILLE__SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: canaille
+                  key: SECRET_KEY
+            - name: CANAILLE_LDAP__URI
+              value: "ldaps://ldap.finnes.dev:636"
+            - name: CANAILLE_LDAP__ROOT_DN
+              value: "dc=finnes,dc=dev"
+            - name: CANAILLE_LDAP__BIND_DN
+              value: "uid=auth,ou=system,dc=finnes,dc=dev"
+            - name: CANAILLE_LDAP__BIND_PW
+              valueFrom:
+                secretKeyRef:
+                  name: canaille
+                  key: BIND_PW
+            - name: CANAILLE_LDAP__USER_BASE
+              value: "ou=users,dc=finnes,dc=dev"
+            - name: CANAILLE_LDAP__GROUP_BASE
+              value: "ou=groups,dc=finnes,dc=dev"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: canaille-config

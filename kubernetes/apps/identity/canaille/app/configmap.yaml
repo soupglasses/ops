@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/configmap-v1.json
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canaille-config
+data:
+  canaille.toml: |
+    [CANAILLE]
+    NAME = "Finnes"
+
+    [CANAILLE.ACL.DEFAULT]
+    PERMISSIONS = ["edit_self", "use_oidc"]
+    READ = [
+        "user_name", "groups", "lock_date",
+        "display_name", "given_name", "family_name",
+        "emails", "phone_numbers", "preferred_language",
+        "photo", "profile_url",
+    ]
+    WRITE = [
+        "photo", "given_name", "family_name",
+        "display_name", "password", "phone_numbers",
+        "emails", "preferred_language",
+    ]
+
+    [CANAILLE.ACL.ADMIN]
+    FILTER = {groups = "admin"}
+    PERMISSIONS = [
+        "edit_self", "use_oidc",
+        "manage_users", "manage_groups", "manage_oidc",
+        "delete_account", "impersonate_users",
+    ]
+    READ = [
+        "user_name", "groups", "lock_date",
+        "display_name", "given_name", "family_name",
+        "emails", "phone_numbers", "preferred_language",
+        "photo", "profile_url", "formatted_address",
+    ]
+    WRITE = [
+        "user_name", "groups", "lock_date",
+        "photo", "given_name", "family_name",
+        "display_name", "password", "phone_numbers",
+        "emails", "preferred_language", "formatted_address",
+    ]
+
+    [CANAILLE_LDAP]
+    USER_CLASS = "inetOrgPerson"
+    USER_RDN = "uid"
+    GROUP_CLASS = "groupOfNames"
+    GROUP_RDN = "cn"
+
+    [CANAILLE_OIDC]
+    DYNAMIC_CLIENT_REGISTRATION_OPEN = true

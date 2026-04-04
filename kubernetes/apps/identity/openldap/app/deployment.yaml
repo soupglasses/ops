@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/deployment-apps-v1.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openldap
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openldap
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: openldap
+    spec:
+      containers:
+        - name: openldap
+          image: ghcr.io/soupglasses/openldap:rolling
+          ports:
+            - containerPort: 636
+              name: ldaps
+          env:
+            - name: LDAP_SUFFIX
+              value: "dc=finnes,dc=dev"
+            - name: LDAP_ROOT_DN
+              value: "cn=admin,dc=finnes,dc=dev"
+            - name: LDAP_ORGANISATION
+              value: "Finnes"
+            - name: LDAP_PPOLICY_DEFAULT_DN
+              value: "cn=password,ou=policies,dc=finnes,dc=dev"
+            - name: LDAP_URLS
+              value: "ldaps://0.0.0.0:636/"
+            - name: LDAP_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openldap
+                  key: LDAP_ROOT_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /config/data
+            - name: tls
+              mountPath: /config/tls
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: openldap-data
+        - name: tls
+          secret:
+            secretName: openldap-tls

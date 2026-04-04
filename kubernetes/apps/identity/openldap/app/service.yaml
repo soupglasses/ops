@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/service-v1.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: openldap
+  ports:
+    - name: ldaps
+      port: 636
+      targetPort: 636
+      protocol: TCP

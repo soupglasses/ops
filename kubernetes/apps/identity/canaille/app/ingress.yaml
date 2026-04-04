@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/ingress-networking-v1.json
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: canaille
+  annotations:
+    cert-manager.io/cluster-issuer: ovh-dns01-production
+    external-dns.alpha.kubernetes.io/hostname: auth.${DOMAIN}
+    external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS}
+spec:
+  ingressClassName: nginx-public
+  rules:
+    - host: auth.${DOMAIN}
+      http:
+        paths:
+          - backend:
+              service:
+                name: canaille
+                port:
+                  number: 5000
+            path: /
+            pathType: Prefix
+  tls:
+    - secretName: canaille-tls
+      hosts:
+        - auth.${DOMAIN}

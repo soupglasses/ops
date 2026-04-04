@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openldap-tls
+spec:
+  secretName: openldap-tls
+  issuerRef:
+    name: ovh-dns01-production
+    kind: ClusterIssuer
+  dnsNames:
+    - ldap.finnes.dev
