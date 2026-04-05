@@ -9,5 +9,5 @@ namespace: kube-system
 components:
   - ../../components/common
 resources:
-  - ./coredns-custom/ks.yaml
+  - ./coredns/ks.yaml
   - ./snapshot-controller/ks.yaml
