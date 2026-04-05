@@ -23,14 +23,14 @@ spec:
         - name: canaille
           image: docker.io/yaalcoop/canaille:0.2.3
           ports:
-            - containerPort: 5000
+            - containerPort: 8000
               name: http
           env:
             - name: CANAILLE_CONFIG
               value: /config/canaille.toml
             - name: CANAILLE__ADMIN_EMAIL
               value: "admin@finnes.dev"
-            - name: CANAILLE__SECRET_KEY
+            - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: canaille

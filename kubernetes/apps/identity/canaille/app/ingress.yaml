@@ -21,7 +21,7 @@ spec:
               service:
                 name: canaille
                 port:
-                  number: 5000
+                  name: http
             path: /
             pathType: Prefix
   tls:
