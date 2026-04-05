@@ -9,4 +9,4 @@ namespace: flux-system
 components:
   - ../../components/common
 resources:
-  - ./tf-runner-network-policy/ks.yaml
+  - ./tofu-controller/ks.yaml

@@ -26,8 +26,6 @@ spec:
       strategy: rollback
       retries: 3
   values:
-    allowCrossNamespaceRefs: true
-    usePodSubdomainResolution: true
     runner:
       image:
         repository: ghcr.io/flux-iac/tf-runner
