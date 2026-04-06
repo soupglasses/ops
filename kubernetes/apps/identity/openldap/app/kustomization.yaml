@@ -12,3 +12,4 @@ resources:
   - ./pvc.yaml
   - ./certificate.yaml
   - ./secret.sops.yaml
+  - ./configmap.yaml
