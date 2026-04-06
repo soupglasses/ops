@@ -30,7 +30,10 @@ data:
     ]
 
     [CANAILLE.ACL.ADMIN]
-    FILTER = {groups = "admin"}
+    FILTER = [
+        {user_name = "admin"},
+        {groups = "admin"},
+    ]
     PERMISSIONS = [
         "edit_self", "use_oidc",
         "manage_users", "manage_all_groups", "manage_oidc",
