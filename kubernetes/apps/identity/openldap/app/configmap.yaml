@@ -52,6 +52,7 @@ data:
 
   05-oauth2-openldap.ldif: |
     dn: cn=oauth,cn=schema,cn=config
+    changetype: add
     objectClass: olcSchemaConfig
     cn: oauth
     olcAttributeTypes: (  1.3.6.1.4.1.56207.1.1.1 NAME 'oauthCode'
