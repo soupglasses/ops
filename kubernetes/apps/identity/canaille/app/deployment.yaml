@@ -40,12 +40,12 @@ spec:
             - name: CANAILLE_LDAP__ROOT_DN
               value: "dc=finnes,dc=dev"
             - name: CANAILLE_LDAP__BIND_DN
-              value: "uid=auth,ou=system,dc=finnes,dc=dev"
+              value: "cn=admin,dc=finnes,dc=dev"
             - name: CANAILLE_LDAP__BIND_PW
               valueFrom:
                 secretKeyRef:
-                  name: canaille
-                  key: BIND_PW
+                  name: openldap
+                  key: LDAP_ROOT_PASSWORD
             - name: CANAILLE_LDAP__USER_BASE
               value: "ou=users,dc=finnes,dc=dev"
             - name: CANAILLE_LDAP__GROUP_BASE
