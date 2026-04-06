@@ -9,8 +9,9 @@ resource "ldap_entry" "auth_user" {
     objectClass        = ["inetOrgPerson", "organizationalPerson", "person"]
     cn                 = ["System Auth User"]
     sn                 = ["Auth"]
-    userPassword       = [local.auth_user_password]
+    userPassword       = [var.admin_user_password_hash]
     pwdPolicySubentry  = ["cn=system,ou=policies,${local.ldap_suffix}"]
   })
+  restrict_attributes = ["objectClass", "cn", "sn", "userPassword", "pwdPolicySubentry"]
   depends_on = [ldap_entry.ou_system, ldap_entry.system_password_policy]
 }

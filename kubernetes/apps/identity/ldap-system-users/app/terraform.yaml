@@ -15,23 +15,8 @@ spec:
     name: flux-system
     namespace: flux-system
   vars:
-    - name: use_sops
-      value: "false"
     - name: domain
       value: ${DOMAIN}
-  runnerPodTemplate:
-    spec:
-      env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: cluster-secrets
-              key: SECRET_AWS_ACCESS_KEY_ID
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: cluster-secrets
-              key: SECRET_AWS_SECRET_ACCESS_KEY
   varsFrom:
     - kind: Secret
       name: ldap-admin-credentials

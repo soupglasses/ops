@@ -10,7 +10,8 @@ resource "ldap_entry" "admin_user" {
     cn           = ["Admin"]
     sn           = ["Admin"]
     mail         = ["admin@${var.domain}"]
-    userPassword = [local.admin_password]
+    userPassword = [var.admin_password_hash]
   })
+  restrict_attributes = ["objectClass", "cn", "sn", "mail", "userPassword"]
   depends_on = [ldap_entry.ou_users]
 }

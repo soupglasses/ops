@@ -2,12 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-variable "use_sops" {
-  type        = bool
-  description = "Use SOPS to decrypt secrets. Set to false when variables are provided externally (e.g., via tofu-controller)."
-  default     = true
-}
-
 variable "domain" {
   type        = string
   description = "Base domain"
@@ -34,7 +28,7 @@ variable "ldap_bind_user" {
 
 variable "ldap_bind_password" {
   type        = string
-  description = "LDAP bind password. Only required when use_sops is false."
+  description = "LDAP bind password."
   sensitive   = true
   default     = null
 }
@@ -51,16 +45,16 @@ variable "ldap_suffix" {
   default     = null
 }
 
-variable "auth_user_password" {
+variable "admin_user_password_hash" {
   type        = string
-  description = "Password for the auth system user. Only required when use_sops is false."
+  description = "RFC2307 password hash for the auth system user."
   sensitive   = true
   default     = null
 }
 
-variable "admin_password" {
+variable "admin_password_hash" {
   type        = string
-  description = "Password for the initial admin user. Only required when use_sops is false."
+  description = "RFC2307 password hash for the initial admin user."
   sensitive   = true
   default     = null
 }
