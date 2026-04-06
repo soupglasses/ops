@@ -6,7 +6,7 @@
 resource "ldap_entry" "admin_user" {
   dn = "uid=admin,ou=users,${local.ldap_suffix}"
   data_json = jsonencode({
-    objectClass  = ["inetOrgPerson", "organizationalPerson", "person"]
+    objectClass  = ["inetOrgPerson", "oathHOTPToken", "organizationalPerson", "person"]
     cn           = ["Admin"]
     sn           = ["Admin"]
     mail         = ["admin@${var.domain}"]
