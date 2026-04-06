@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: openldap
-          image: ghcr.io/soupglasses/openldap:rolling
+          image: ghcr.io/soupglasses/openldap@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
           ports:
             - containerPort: 636
               name: ldaps
