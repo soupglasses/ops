@@ -30,8 +30,6 @@ spec:
               value: /config/canaille.toml
             - name: CANAILLE__ADMIN_EMAIL
               value: "admin@finnes.dev"
-            - name: CANAILLE_HYPERCORN__WORKERS
-              value: "2"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
