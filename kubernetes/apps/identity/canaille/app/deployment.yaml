@@ -30,6 +30,8 @@ spec:
               value: /config/canaille.toml
             - name: CANAILLE__ADMIN_EMAIL
               value: "admin@finnes.dev"
+            - name: CANAILLE_HYPERCORN__WORKERS
+              value: "2"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -72,9 +74,9 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
-            limits:
               memory: 256Mi
+            limits:
+              memory: 512Mi
           livenessProbe:
             httpGet:
               path: /login
