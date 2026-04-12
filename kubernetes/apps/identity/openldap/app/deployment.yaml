@@ -50,6 +50,9 @@ spec:
             - name: overlays
               mountPath: /config/ldif.d
               readOnly: true
+            - name: oauth-schema
+              mountPath: /config/slapd.conf.d
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -73,3 +76,6 @@ spec:
         - name: overlays
           configMap:
             name: openldap-overlays
+        - name: oauth-schema
+          configMap:
+            name: openldap-oauth-schema
