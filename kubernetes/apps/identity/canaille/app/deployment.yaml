@@ -55,6 +55,16 @@ spec:
                 secretKeyRef:
                   name: canaille
                   key: ACTIVE_JWKS
+            - name: CANAILLE__SMTP__LOGIN
+              valueFrom:
+                secretKeyRef:
+                  name: canaille
+                  key: SMTP_LOGIN
+            - name: CANAILLE__SMTP__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: canaille
+                  key: SMTP_PW
           volumeMounts:
             - name: config
               mountPath: /config

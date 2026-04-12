@@ -60,3 +60,9 @@ data:
 
     [CANAILLE_OIDC]
     DYNAMIC_CLIENT_REGISTRATION_OPEN = true
+
+    [CANAILLE.SMTP]
+    HOST = "prod-mta-06.swg-srv.net"
+    PORT = 2525
+    TLS = true
+    FROM_ADDR = "canaille@noreply.finnes.dev"
