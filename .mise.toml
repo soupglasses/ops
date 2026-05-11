@@ -37,19 +37,38 @@ krew="https://github.com/soupglasses/mise-krew"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
 "krew:pv-migrate" = "v3.0.0"
 "krew:pv-mounter" = "v26.10.0"
+"krew:volsync" = "v0.15.0"
 "github:flux-iac/tofu-controller" = "v0.16.2"
 
 [[hooks.enter]]
 shell = "bash"
 script = '''
 source <(\kubectl completion bash)
-source <(pv-mounter completion bash)
-source <(pv-migrate completion bash)
+source <(kubectl-pv_mounter completion bash)
+source <(kubectl-pv_migrate completion bash)
 source <(talosctl completion bash)
 source <(task --completion bash)
 source <(flux completion bash)
 source <(talhelper completion bash)
 source <(tfctl completion bash)
+source <(kubectl-volsync completion bash)
+
+# kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
+# `kubectl <plugin>` (and therefore `k <plugin>` / `kubecolor <plugin>`).
+# Generate one shim per krew plugin so completion works there too — the
+# plugins' own `completion bash` output only covers the bare binary form.
+_kcs_dir="${XDG_CACHE_HOME:-$HOME/.cache}/soupglasses-ops/kubectl-complete-shims"
+mkdir -p "$_kcs_dir"
+for _kcs_plugin in volsync pv_migrate pv_mounter; do
+  _kcs_shim="$_kcs_dir/kubectl_complete-$_kcs_plugin"
+  if [[ ! -x "$_kcs_shim" ]]; then
+    printf '#!/usr/bin/env bash\nexec kubectl-%s __complete "$@"\n' "$_kcs_plugin" >"$_kcs_shim"
+    chmod +x "$_kcs_shim"
+  fi
+done
+case ":$PATH:" in *":$_kcs_dir:"*) ;; *) export PATH="$_kcs_dir:$PATH" ;; esac
+unset _kcs_dir _kcs_plugin _kcs_shim
+
 alias kubectl=kubecolor
 complete -o default -F __start_kubectl kubecolor
 alias k=kubectl
@@ -99,13 +118,31 @@ alias ldapwhoami=_ldapwhoami
 shell = "zsh"
 script = '''
 source <(kubectl completion zsh)
-source <(kubectl pv-mounter completion zsh)
-source <(kubectl pv-migrate completion zsh)
+source <(kubectl-pv_mounter completion zsh)
+source <(kubectl-pv_migrate completion zsh)
 source <(talosctl completion zsh)
 source <(task --completion zsh)
 source <(flux completion zsh)
 source <(talhelper completion zsh)
 source <(tfctl completion zsh)
+source <(kubectl-volsync completion bash)
+
+# kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
+# `kubectl <plugin>` (and therefore `k <plugin>` / `kubecolor <plugin>`).
+# Generate one shim per krew plugin so completion works there too — the
+# plugins' own `completion` output only covers the bare binary form.
+_kcs_dir="${XDG_CACHE_HOME:-$HOME/.cache}/soupglasses-ops/kubectl-complete-shims"
+mkdir -p "$_kcs_dir"
+for _kcs_plugin in volsync pv_migrate pv_mounter; do
+  _kcs_shim="$_kcs_dir/kubectl_complete-$_kcs_plugin"
+  if [[ ! -x "$_kcs_shim" ]]; then
+    printf '#!/usr/bin/env bash\nexec kubectl-%s __complete "$@"\n' "$_kcs_plugin" >"$_kcs_shim"
+    chmod +x "$_kcs_shim"
+  fi
+done
+case ":$PATH:" in *":$_kcs_dir:"*) ;; *) export PATH="$_kcs_dir:$PATH" ;; esac
+unset _kcs_dir _kcs_plugin _kcs_shim
+
 alias kubectl=kubecolor
 compdef kubecolor=kubectl
 alias k=kubectl
