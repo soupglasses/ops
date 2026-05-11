@@ -28,3 +28,10 @@ spec:
   timeout: 5m
   wait: true
   prune: false
+  postBuild:
+    substitute:
+      APP: *app
+      VOLSYNC_CAPACITY: 50Gi
+      VOLSYNC_STORAGECLASS: openebs-zfs
+      VOLSYNC_SNAPSHOTCLASS: openebs-zfs-snapshot
+      VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-zfs

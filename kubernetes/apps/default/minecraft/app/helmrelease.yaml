@@ -43,30 +43,6 @@ spec:
           secretKeyRef:
             name: minecraft
             key: OPS
-    mcbackup:
-      enabled: true
-      backupInterval: 24h
-      pauseIfNoPlayers: "true"
-      backupMethod: "restic"
-      resticRepository: "${SECRET_S3_ENDPOINT}/minecraft"
-      resticHostname: "minecraft"
-      resticEnvs:
-        RESTIC_PASSWORD:
-          valueFrom:
-            secretKeyRef:
-              name: cluster-secrets
-              key: SECRET_PASSWORD
-        AWS_ACCESS_KEY_ID:
-          valueFrom:
-            secretKeyRef:
-              name: cluster-secrets
-              key: SECRET_AWS_ACCESS_KEY_ID
-        AWS_SECRET_ACCESS_KEY:
-          valueFrom:
-            secretKeyRef:
-              name: cluster-secrets
-              key: SECRET_AWS_SECRET_ACCESS_KEY
-      pruneResticRetention: "--keep-daily 7 --keep-weekly 4"
     minecraftServer:
       rcon:
         enabled: true
@@ -123,11 +99,6 @@ spec:
     serviceLabels:
       bgp: "enabled"
     persistence:
-      storageClass: openebs-hostpath
       dataDir:
         enabled: true
-        Size: 50Gi
-        annotations:
-          helm.sh/resource-policy: keep
-        accessModes:
-          - ReadWriteOnce
+        existingClaim: minecraft
