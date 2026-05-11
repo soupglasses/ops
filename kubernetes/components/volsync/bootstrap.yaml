@@ -1,0 +1,128 @@
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+# Bootstrap Job for volsync's volume populator.
+#
+# The populator blocks a PVC's binding until the ReplicationDestination has a
+# latestImage. On the very first deploy of an app, the restic repo is empty,
+# so no latestImage ever appears and the PVC stays Pending forever.
+#
+# This Job seeds the repo with one empty snapshot iff it has zero snapshots,
+# then re-triggers the destination so it can restore the seed and populate
+# the PVC empty. Idempotent: no-ops when real backups already exist.
+#
+# Pinned via ssa: IfNotPresent so flux never recreates it after first run.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${APP}-volsync-bootstrap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${APP}-volsync-bootstrap
+rules:
+  - apiGroups: [volsync.backube]
+    resources: [replicationdestinations]
+    resourceNames: ["${APP}-dst"]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${APP}-volsync-bootstrap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${APP}-volsync-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: ${APP}-volsync-bootstrap
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${APP}-volsync-bootstrap
+  labels:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: ${APP}-volsync-bootstrap
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: docker.io/itzg/mc-backup:latest
+          envFrom:
+            - secretRef:
+                name: volsync-${APP}
+          env:
+            - name: NS
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RD
+              value: ${APP}-dst
+          command: [/bin/bash, -c]
+          args:
+            - |
+              set -euo pipefail
+
+              KAPI=https://kubernetes.default.svc
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              URL="$KAPI/apis/volsync.backube/v1alpha1/namespaces/$NS/replicationdestinations/$RD"
+
+              # Idempotency guard: if the repo already has snapshots (whether
+              # bootstrap-seeded or real), this is a re-run — bail out before
+              # touching anything.
+              if restic snapshots --no-cache --no-lock --json 2>/dev/null \
+                  | grep -q '"id"'; then
+                echo "Repo already has snapshots; nothing to do."
+                exit 0
+              fi
+
+              echo "Repo is empty; seeding bootstrap snapshot."
+              # init is idempotent on a fresh-but-existing repo: errors if the
+              # repo already exists, which we tolerate.
+              restic init --no-cache 2>/dev/null || true
+              mkdir -p /tmp/empty
+              restic backup --no-cache /tmp/empty --tag volsync-bootstrap
+
+              # The destination's mover may have already fired once and
+              # errored on the empty repo. Bump its trigger so it retries
+              # now that there's a snapshot to restore.
+              echo "Waiting for ReplicationDestination/$RD to exist..."
+              until curl -fsS --cacert "$CA" -H "Authorization: Bearer $TOKEN" \
+                  "$URL" >/dev/null 2>&1; do
+                sleep 3
+              done
+
+              echo "Re-triggering ReplicationDestination/$RD."
+              curl -fsS --cacert "$CA" -H "Authorization: Bearer $TOKEN" \
+                -H 'Content-Type: application/merge-patch+json' \
+                -X PATCH \
+                -d "{\"spec\":{\"trigger\":{\"manual\":\"bootstrap-$(date +%s)\"}}}" \
+                "$URL" >/dev/null
+
+              echo "Bootstrap complete."
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 256Mi}
+      volumes:
+        - name: tmp
+          emptyDir: {}
