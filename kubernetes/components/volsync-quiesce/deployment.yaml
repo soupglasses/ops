@@ -1,0 +1,98 @@
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP}-volsync-quiesce
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}-volsync-quiesce
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${APP}-volsync-quiesce
+    spec:
+      serviceAccountName: ${APP}-volsync-quiesce
+      containers:
+        - name: watcher
+          image: docker.io/bitnami/kubectl:latest
+          env:
+            - name: NS
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PVC
+              value: ${APP}
+            - name: TARGET_SELECTOR
+              value: ${VOLSYNC_QUIESCE_TARGET_SELECTOR}
+            - name: TARGET_CONTAINER
+              value: ${VOLSYNC_QUIESCE_TARGET_CONTAINER:=}
+            - name: QUIESCE_CMD
+              value: ${VOLSYNC_QUIESCE_CMD}
+            - name: RESUME_CMD
+              value: ${VOLSYNC_RESUME_CMD}
+          command: [/bin/bash, -c]
+          args:
+            - |
+              set -u
+              status() {
+                kubectl get -n "$NS" pvc/"$PVC" \
+                  -o 'jsonpath={.metadata.annotations.volsync\.backube/latest-copy-status}' 2>/dev/null
+              }
+              target_pod() {
+                kubectl get -n "$NS" pod -l "$TARGET_SELECTOR" \
+                  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
+              }
+              c_flag() { [ -n "$TARGET_CONTAINER" ] && printf -- '-c\n%s' "$TARGET_CONTAINER"; }
+
+              echo "Watching pvc/$PVC in ns/$NS for WaitingForTrigger..."
+              while true; do
+                until [ "$(status)" = "WaitingForTrigger" ]; do sleep 5; done
+
+                pod=$(target_pod)
+                if [ -z "$pod" ]; then
+                  echo "ERROR: no pod matched selector '$TARGET_SELECTOR'; releasing trigger un-quiesced"
+                else
+                  echo "Quiescing in pod/$pod"
+                  kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$QUIESCE_CMD" \
+                    || echo "WARN: quiesce returned non-zero; releasing trigger anyway"
+                fi
+
+                tr="trigger-$(date +%s)"
+                echo "Releasing snapshot ($tr)"
+                kubectl annotate -n "$NS" pvc/"$PVC" --overwrite \
+                  "volsync.backube/copy-trigger=$tr" >/dev/null
+
+                # Wait for snapshot to be taken (status leaves WaitingForTrigger)
+                for _ in $(seq 1 60); do
+                  [ "$(status)" != "WaitingForTrigger" ] && break
+                  sleep 1
+                done
+
+                if [ -n "$pod" ]; then
+                  echo "Resuming in pod/$pod (status=$(status))"
+                  kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$RESUME_CMD" \
+                    || echo "WARN: resume returned non-zero"
+                fi
+
+                # Debounce so we don't immediately re-detect the same cycle
+                sleep 30
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests: {cpu: 5m, memory: 32Mi}
+            limits: {memory: 128Mi}

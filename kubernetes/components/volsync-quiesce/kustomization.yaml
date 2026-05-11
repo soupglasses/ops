@@ -8,6 +8,6 @@ kind: Component
 resources:
   - ./serviceaccount.yaml
   - ./rbac.yaml
-  - ./cronjob.yaml
+  - ./deployment.yaml
 patches:
   - path: ./pvc-trigger-patch.yaml

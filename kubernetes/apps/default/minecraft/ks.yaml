@@ -35,3 +35,6 @@ spec:
       VOLSYNC_STORAGECLASS: openebs-zfs
       VOLSYNC_SNAPSHOTCLASS: openebs-zfs-snapshot
       VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-zfs
+      VOLSYNC_QUIESCE_TARGET_SELECTOR: app=minecraft
+      VOLSYNC_QUIESCE_CMD: rcon-cli save-off && rcon-cli save-all flush
+      VOLSYNC_RESUME_CMD: rcon-cli save-on

@@ -7,10 +7,21 @@ kind: Role
 metadata:
   name: ${APP}-volsync-quiesce
 rules:
+  # Watch + trigger our PVC's copy-trigger annotation.
   - apiGroups: [""]
     resources: [persistentvolumeclaims]
     resourceNames: ["${APP}"]
     verbs: [get, patch]
+  # Find the target pod by label selector.
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  # Exec into the target pod to run quiesce/resume.
+  # Cannot be scoped by resourceNames (pod names are generated); namespace
+  # scope keeps blast radius to this app's own namespace.
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

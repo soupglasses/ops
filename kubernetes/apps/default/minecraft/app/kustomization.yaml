@@ -12,4 +12,4 @@ resources:
   - ./secret.sops.yaml
 components:
   - ../../../../components/volsync
-  - ../../../../components/volsync-quiesce-rcon
+  - ../../../../components/volsync-quiesce

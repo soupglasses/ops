@@ -46,6 +46,9 @@ Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `
 
 ## Gotchas
 
+- **Quoted-numeric substitutions become ints.** `value: "${PORT:=25575}"` looks safe but kustomize re-emits the placeholder *without* outer quotes (it's already non-numeric thanks to `$`/`{`/`:`), so after Flux substitutes `25575` you end up with `value: 25575` and SSA dry-run rejects it (`expected string, got Value:25575`). Fix: force the type tag, e.g. `value: !!str ${PORT:=25575}`, or read the value via `valueFrom: configMapKeyRef`. Hardcoding is the laziest workaround and loses configurability.
+
+
 - Chart-created PVC names differ from Kustomize-created ones. The Minecraft chart auto-creates `minecraft-datadir`; switching to volsync-managed PVC means setting `persistence.dataDir.existingClaim: <name>` and disabling chart provisioning.
 - `openebs-hostpath` does **not** support CSI snapshots — volsync `copyMethod: Snapshot` requires `openebs-zfs` (or `openebs-zfs-data` for Retain reclaim).
 - The user has WIP uncommitted changes in `main` regularly. `git status` first; stage only your own files (`git add <explicit paths>`), never `git add -A`.
