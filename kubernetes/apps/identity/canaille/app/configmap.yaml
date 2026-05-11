@@ -14,6 +14,7 @@ data:
     [CANAILLE]
     NAME = "Finnes"
     DATABASE = "ldap"
+    OTP_METHOD = "TOTP"
     LOGO = ""
 
     [CANAILLE.ACL.DEFAULT]
