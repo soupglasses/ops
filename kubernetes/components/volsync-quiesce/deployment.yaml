@@ -69,14 +69,17 @@ spec:
                 kubectl annotate -n "$NS" pvc/"$PVC" --overwrite \
                   "volsync.backube/copy-trigger=$tr" >/dev/null
 
-                # Wait for snapshot to be taken (status leaves WaitingForTrigger)
-                for _ in $(seq 1 60); do
-                  [ "$(status)" != "WaitingForTrigger" ] && break
-                  sleep 1
+                # Wait for backup to finish (Completed) or fail (Error).
+                # Cap at 30min so a stuck mover doesn't keep the app quiesced forever.
+                for _ in $(seq 1 360); do
+                  case "$(status)" in
+                    Completed|Error) break ;;
+                  esac
+                  sleep 5
                 done
 
                 if [ -n "$pod" ]; then
-                  echo "Resuming in pod/$pod (status=$(status))"
+                  echo "Resuming in pod/$pod (final status=$(status))"
                   kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$RESUME_CMD" \
                     || echo "WARN: resume returned non-zero"
                 fi
@@ -86,7 +89,6 @@ spec:
               done
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
