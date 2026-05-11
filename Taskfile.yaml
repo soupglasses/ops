@@ -21,3 +21,6 @@ includes:
   license:
     taskfile: .taskfiles/license.yaml
     dir: .
+  volsync:
+    taskfile: .taskfiles/volsync.yaml
+    dir: .

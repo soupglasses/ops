@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+set: [pipefail]
+
+# All tasks accept NS=<namespace> (default: default).
+tasks:
+  restore:
+    desc: Restore an app's PVC from the newest restic snapshot [APP=required NS=default]
+    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}}
+    interactive: true
+    requires:
+      vars: [APP]
+    preconditions:
+      - test -f "$KUBECONFIG"
+      - test -x scripts/volsync-restore.sh
+  restore-pick:
+    desc: Pick a snapshot interactively and restore [APP=required NS=default]
+    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} --pick
+    interactive: true
+    requires:
+      vars: [APP]
+    preconditions:
+      - test -f "$KUBECONFIG"
+      - test -x scripts/volsync-restore.sh
+  restore-at:
+    desc: Restore as of an RFC3339 timestamp [APP=required AT=required NS=default]
+    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} {{.AT}}
+    interactive: true
+    requires:
+      vars: [APP, AT]
+    preconditions:
+      - test -f "$KUBECONFIG"
+      - test -x scripts/volsync-restore.sh

@@ -28,6 +28,7 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 | `VOLSYNC_CAPACITY` | `5Gi` | PVC size. |
 | `VOLSYNC_STORAGECLASS` | `openebs-zfs` | Must support CSI snapshots (RS `copyMethod: Snapshot`). |
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
+| `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
 
 ## Bootstrap behaviour
 
@@ -49,14 +50,17 @@ and then never again. Implications:
   the *frozen* `latestImage`, which is whatever the RD restored at its first
   fire. New RS backups don't update it. ⚠️
 
-To force a fresh restore without a full rebuild, bump the RD trigger first:
+To force a fresh restore without a full rebuild, use `scripts/volsync-restore.sh`
+(also exposed via `task volsync:restore APP=<name>`). It bumps the RD trigger,
+waits for `latestImage` to refresh, scales the workload to 0, deletes + rebinds
+the PVC, then scales the workload back up. Point-in-time variants:
 
 ```bash
-kubectl patch replicationdestination "${APP}-dst" --type=merge \
-  -p "{\"spec\":{\"trigger\":{\"manual\":\"refresh-$(date +%s)\"}}}"
-# wait for .status.latestImage to update, then delete + recreate the PVC
+task volsync:restore APP=minecraft                          # newest snapshot
+task volsync:restore-pick APP=minecraft                     # interactive picker
+task volsync:restore-at APP=minecraft AT=2026-05-01T12:00:00Z
 ```
 
 Switching to `trigger.schedule` would refresh automatically at the cost of an
 extra restore cycle per period; we accept the trade because cluster-rebuild
-is the actual disaster scenario and PVC-only recovery is rare.
+is the actual disaster scenario and PVC-only recovery is rare and scripted.
