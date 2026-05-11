@@ -12,13 +12,15 @@ spec:
   trigger:
     manual: restore-once
   restic:
-    destinationPVC: ${APP}
+    # Populator pattern: do NOT set destinationPVC. The mover restores into
+    # an internal volume, takes a snapshot, and sets .status.latestImage —
+    # which the PVC's volume populator then copies into the user's PVC.
     accessModes:
       - ${VOLSYNC_ACCESSMODES:=ReadWriteOnce}
     cacheAccessModes:
       - ${VOLSYNC_CACHE_ACCESSMODES:=ReadWriteOnce}
     repository: volsync-${APP}
-    copyMethod: Direct # Snapshot
+    copyMethod: Snapshot
     cleanupCachePVC: true
     cleanupTempPVC: true
     enableFileDeletion: true
