@@ -113,8 +113,7 @@ spec:
             - name: tmp
               mountPath: /tmp
           securityContext:
-            # itzg/mc-backup has no USER directive, so runAsNonRoot needs an
-            # explicit UID to pass admission.
+            # Image has no USER directive; runAsNonRoot needs an explicit UID.
             runAsNonRoot: true
             runAsUser: 1000
             runAsGroup: 1000
