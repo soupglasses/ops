@@ -36,6 +36,9 @@ tasks:
     cmd: flux reconcile kustomization flux-system --with-source
   reconcile-ks:
     desc: Reconcile all Flux Kustomizations across all namespaces
+    preconditions:
+      - which flux
+      - flux check
     cmds:
       - flux reconcile kustomization flux-system --namespace flux-system --with-source
       - |
@@ -45,3 +48,14 @@ tasks:
             flux reconcile kustomization "$name" --namespace "$namespace"
           fi
         done
+  unstuck:
+    desc: Reconcile all Flux Kustomizations across all namespaces
+    preconditions:
+      - which flux
+      - flux check
+    requires:
+      vars: [NAME, NAMESPACE]
+    cmds:
+      - |
+        flux suspend kustomization "{{.NAME}}" --namespace "{{.NAMESPACE}}"
+        flux resume kustomization "{{.NAME}}" --namespace "{{.NAMESPACE}}"
