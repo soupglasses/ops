@@ -9,7 +9,7 @@ metadata:
 spec:
   sourcePVC: ${APP}
   trigger:
-    schedule: 15 6 * * *
+    schedule: ${VOLSYNC_SCHEDULE:=15 6 * * *}
   restic:
     accessModes:
       - ${VOLSYNC_SNAP_ACCESSMODES:=ReadWriteOnce}
