@@ -1,0 +1,96 @@
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${APP}-volsync-quiesce
+spec:
+  schedule: "${VOLSYNC_QUIESCE_SCHEDULE:=15 6 * * *}"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          serviceAccountName: ${APP}-volsync-quiesce
+          restartPolicy: Never
+          containers:
+            - name: quiesce
+              image: docker.io/itzg/mc-backup:latest
+              env:
+                - name: NS
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: PVC
+                  value: ${APP}
+                - name: RCON_HOST
+                  value: ${VOLSYNC_QUIESCE_RCON_HOST:=${APP}-rcon}
+                - name: RCON_PORT
+                  value: "${VOLSYNC_QUIESCE_RCON_PORT:=25575}"
+                - name: RCON_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${VOLSYNC_QUIESCE_RCON_SECRET:=${APP}-rcon}
+                      key: ${VOLSYNC_QUIESCE_RCON_SECRET_KEY:=rcon-password}
+              command: [/bin/bash, -c]
+              args:
+                - |
+                  set -euo pipefail
+                  KAPI=https://kubernetes.default.svc
+                  TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+                  CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                  URL="$KAPI/api/v1/namespaces/$NS/persistentvolumeclaims/$PVC"
+
+                  status() {
+                    curl -fsS --cacert "$CA" -H "Authorization: Bearer $TOKEN" "$URL" \
+                      | jq -r '.metadata.annotations["volsync.backube/latest-copy-status"] // ""'
+                  }
+                  trigger() {
+                    curl -fsS --cacert "$CA" -H "Authorization: Bearer $TOKEN" \
+                      -H 'Content-Type: application/merge-patch+json' \
+                      -X PATCH -d "$1" "$URL" >/dev/null
+                  }
+                  resume() { rcon-cli save-on || true; }
+                  trap resume EXIT
+
+                  echo "Waiting for volsync to request trigger..."
+                  for _ in $(seq 1 180); do
+                    [ "$(status)" = "WaitingForTrigger" ] && break
+                    sleep 5
+                  done
+                  [ "$(status)" = "WaitingForTrigger" ] || { echo "timeout"; exit 1; }
+
+                  echo "Quiescing: save-off, save-all flush"
+                  rcon-cli save-off
+                  rcon-cli save-all flush
+                  sync
+
+                  TR="trigger-$(date +%s)"
+                  echo "Releasing snapshot ($TR)"
+                  trigger "{\"metadata\":{\"annotations\":{\"volsync.backube/copy-trigger\":\"$TR\"}}}"
+
+                  echo "Waiting for snapshot to be taken..."
+                  for _ in $(seq 1 60); do
+                    [ "$(status)" != "WaitingForTrigger" ] && break
+                    sleep 1
+                  done
+                  echo "Snapshot taken (status=$(status)); resuming saves."
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+                seccompProfile:
+                  type: RuntimeDefault
+              resources:
+                requests: {cpu: 10m, memory: 32Mi}
+                limits: {memory: 128Mi}

@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}
+  annotations:
+    volsync.backube/use-copy-trigger: ""
