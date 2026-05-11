@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # Canaille bind account -- used for LDAP authentication lookups.
+# TODO: Rename
 resource "ldap_entry" "auth_user" {
   dn = "uid=auth,ou=system,${local.ldap_suffix}"
   data_json = jsonencode({
