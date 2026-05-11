@@ -13,9 +13,10 @@ repos:
         stages: [pre-commit]
       - id: kubeconform
         name: kubeconform
-        entry: >
-          kubeconform -kubernetes-version='1.33.2' -schema-location='default' -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-          -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json' -summary
+        # Wrapper applies `flux envsubst` first so postBuild placeholders
+        # resolve before validation (e.g. ${VAR:=1000} -> 1000 satisfies
+        # typed-int schema fields like runAsUser).
+        entry: scripts/kubeconform.sh
         language: system
         files: ^kubernetes/.*\.ya?ml$
         stages: [pre-commit]

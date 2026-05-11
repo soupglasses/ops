@@ -55,7 +55,8 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: bootstrap
-          image: docker.io/itzg/mc-backup:latest
+          # renovate: datasource=docker depName=quay.io/backube/volsync
+          image: ${VOLSYNC_BOOTSTRAP_IMAGE:=quay.io/backube/volsync:0.15.0}
           envFrom:
             - secretRef:
                 name: volsync-${APP}
@@ -113,10 +114,9 @@ spec:
             - name: tmp
               mountPath: /tmp
           securityContext:
-            # Image has no USER directive; runAsNonRoot needs an explicit UID.
             runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
+            runAsUser: ${VOLSYNC_BOOTSTRAP_UID:=1000}
+            runAsGroup: ${VOLSYNC_BOOTSTRAP_GID:=1000}
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
