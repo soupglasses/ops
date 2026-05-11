@@ -37,6 +37,7 @@ krew="https://github.com/soupglasses/mise-krew"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
 "krew:pv-migrate" = "v3.0.0"
 "krew:pv-mounter" = "v26.10.0"
+"github:flux-iac/tofu-controller" = "v0.16.2"
 
 [[hooks.enter]]
 shell = "bash"
@@ -48,12 +49,50 @@ source <(talosctl completion bash)
 source <(task --completion bash)
 source <(flux completion bash)
 source <(talhelper completion bash)
+source <(tfctl completion bash)
 alias kubectl=kubecolor
 complete -o default -F __start_kubectl kubecolor
 alias k=kubectl
 complete -o default -F __start_kubectl k
 alias t=talosctl
 complete -o default -F __start_talosctl t
+
+_openldap_exec() {
+  local ldap_command=$1
+  shift
+
+  kubectl exec -n identity -i deploy/openldap -- bash -lc '
+  set -euo pipefail
+  export LDAPTLS_CACERT=/config/tls/ca.crt
+  export LDAPTLS_REQCERT=never
+  export LDAPURI=ldaps://127.0.0.1:636/
+  case "$1" in
+    ldapsearch)
+      shift
+      exec ldapsearch -x -H "$LDAPURI" -D "$LDAP_ROOT_DN" -w "$LDAP_ROOT_PASSWORD" -b "$LDAP_SUFFIX" "$@"
+      ;;
+    *)
+      ldap_command=$1
+      shift
+      exec "$ldap_command" -x -H "$LDAPURI" -D "$LDAP_ROOT_DN" -w "$LDAP_ROOT_PASSWORD" "$@"
+      ;;
+  esac
+  ' -- "$ldap_command" "$@"
+}
+
+_ldapsearch() { _openldap_exec ldapsearch "$@"; }
+_ldapmodify() { _openldap_exec ldapmodify "$@"; }
+_ldapadd() { _openldap_exec ldapadd "$@"; }
+_ldapdelete() { _openldap_exec ldapdelete "$@"; }
+_ldappasswd() { _openldap_exec ldappasswd "$@"; }
+_ldapwhoami() { _openldap_exec ldapwhoami "$@"; }
+
+alias ldapsearch=_ldapsearch
+alias ldapmodify=_ldapmodify
+alias ldapadd=_ldapadd
+alias ldapdelete=_ldapdelete
+alias ldappasswd=_ldappasswd
+alias ldapwhoami=_ldapwhoami
 '''
 
 [[hooks.enter]]
@@ -66,10 +105,48 @@ source <(talosctl completion zsh)
 source <(task --completion zsh)
 source <(flux completion zsh)
 source <(talhelper completion zsh)
+source <(tfctl completion zsh)
 alias kubectl=kubecolor
 compdef kubecolor=kubectl
 alias k=kubectl
 compdef k=kubectl
 alias t=talosctl
 compdef t=talosctl
+
+_openldap_exec() {
+  local ldap_command=$1
+  shift
+
+  kubectl exec -n identity -i deploy/openldap -- bash -lc '
+  set -euo pipefail
+  export LDAPTLS_CACERT=/config/tls/ca.crt
+  export LDAPTLS_REQCERT=never
+  export LDAPURI=ldaps://127.0.0.1:636/
+  case "$1" in
+    ldapsearch)
+      shift
+      exec ldapsearch -x -H "$LDAPURI" -D "$LDAP_ROOT_DN" -w "$LDAP_ROOT_PASSWORD" -b "$LDAP_SUFFIX" "$@"
+      ;;
+    *)
+      ldap_command=$1
+      shift
+      exec "$ldap_command" -x -H "$LDAPURI" -D "$LDAP_ROOT_DN" -w "$LDAP_ROOT_PASSWORD" "$@"
+      ;;
+  esac
+  ' -- "$ldap_command" "$@"
+}
+
+_ldapsearch() { _openldap_exec ldapsearch "$@"; }
+_ldapmodify() { _openldap_exec ldapmodify "$@"; }
+_ldapadd() { _openldap_exec ldapadd "$@"; }
+_ldapdelete() { _openldap_exec ldapdelete "$@"; }
+_ldappasswd() { _openldap_exec ldappasswd "$@"; }
+_ldapwhoami() { _openldap_exec ldapwhoami "$@"; }
+
+alias ldapsearch=_ldapsearch
+alias ldapmodify=_ldapmodify
+alias ldapadd=_ldapadd
+alias ldapdelete=_ldapdelete
+alias ldappasswd=_ldappasswd
+alias ldapwhoami=_ldapwhoami
 '''
