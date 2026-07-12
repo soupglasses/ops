@@ -115,7 +115,10 @@ kubectl -n identity patch replicationsource openldap --type merge \
   -p '{"spec":{"trigger":{"manual":"post-migration"}}}'
 kubectl -n identity get replicationsource openldap \
   -o jsonpath='{.status.lastSyncTime} {.status.latestMoverStatus.result}{"\n"}'   # Successful
-flux reconcile kustomization openldap -n identity   # restores the schedule trigger
+# Remove the manual trigger explicitly: volsync gives manual precedence over the
+# schedule, and flux's server-side apply does not remove fields it never owned.
+kubectl -n identity patch replicationsource openldap --type merge \
+  -p '{"spec":{"trigger":{"manual":null}}}'
 ```
 
 ## Phase 6: cleanup commit (only after phase 5 says Successful)
