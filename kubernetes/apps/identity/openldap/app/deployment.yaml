@@ -60,7 +60,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: openldap-data
+            claimName: openldap
         - name: tls
           projected:
             sources:
