@@ -14,5 +14,6 @@
 .secure/
 .task/
 .venv/
+.pytest_cache/
 .DS_Store
 Thumbs.db
