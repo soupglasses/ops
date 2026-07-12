@@ -14,6 +14,10 @@ spec:
   dependsOn:
     - name: cert-manager
       namespace: cert-manager
+    - name: openebs
+      namespace: openebs-system
+    - name: volsync
+      namespace: volsync-system
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -30,3 +34,15 @@ spec:
   retryInterval: 2m
   timeout: 5m
   prune: true
+  postBuild:
+    substitute:
+      APP: *app
+      VOLSYNC_CAPACITY: 5Gi
+      # slapd runs as nobody; the mover must match to read the 0600 mdb files.
+      VOLSYNC_PUID: "65534"
+      VOLSYNC_PGID: "65534"
+      VOLSYNC_QUIESCE_TARGET_SELECTOR: app.kubernetes.io/name=openldap
+      # Not a quiesce: mdb snapshots are crash-consistent. This drops a
+      # portable LDIF dump into the volume so every snapshot carries one.
+      VOLSYNC_QUIESCE_CMD: slapcat -f /config/slapd.conf -l /config/data/dump.ldif
+      VOLSYNC_RESUME_CMD: echo resume-noop
