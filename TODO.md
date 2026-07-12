@@ -97,12 +97,22 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   via the Gateway, retire ingress-nginx-public. Keep ingress-nginx-tailscale until a
   Tailscale-class Gateway replaces it. Game servers may stay direct LoadBalancer
   Services on the shared IP if the Envoy hop shows in latency.
-- [ ] **Per-app LDAP service accounts with ordering.** Built:
+- [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
   `components/ldap-account` + `tofu/ldap/service-account` (design in
-  `docs/ldap-service-accounts.md`). Before first use: add
-  `SECRET_LDAP_ADMIN_PASSWORD` to cluster-secrets, merge tofu-controller 0.16.4
-  (PR #68), and close out the gRPC-hang follow-ups in
-  `docs/tofu-controller-grpc-hang.md`.
+  `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
+  `SECRET_LDAP_ADMIN_PASSWORD` is in cluster-secrets. Remaining: the gRPC-hang
+  follow-ups in `docs/tofu-controller-grpc-hang.md` if the hang recurs.
+- [ ] **ldap-account should bind as a delegated provisioner, not the rootdn.** The
+  component currently stamps the `cn=admin` password into each consuming namespace;
+  a namespace-level compromise there would yield the whole identity system. Create
+  `uid=provisioner,ou=system` in `tofu/ldap/base` with a slapd ACL restricted to
+  managing `ou=system`, switch the component to `SECRET_LDAP_PROVISIONER_PASSWORD`,
+  and retire the admin password from cluster-secrets.
+- [ ] **Every namespace carries cluster-secrets and the sops age key** (common
+  component), because per-namespace Kustomizations decrypt and substitute locally.
+  Accepted homelab tradeoff for now, but worth revisiting: the age key in any
+  namespace decrypts every secret in the repo. Keep new cluster-wide secrets to the
+  minimum and prefer per-app scoped credentials.
 - [ ] **Cilium egress gateway idea** parked in `docs/cilium-egress-gateway.md`.
 - [x] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
 
