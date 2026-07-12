@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: ${APP}-ldap
+spec:
+  approvePlan: auto
+  interval: 1h
+  path: ./tofu/ldap/service-account
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  vars:
+    - name: app
+      value: ${APP}
+    - name: domain
+      value: ${DOMAIN}
+  varsFrom:
+    - kind: Secret
+      name: ${APP}-ldap-admin
+  writeOutputsToSecret:
+    name: ${APP}-ldap-credentials

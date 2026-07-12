@@ -38,9 +38,10 @@ kubernetes/
     ldap-account/       # kustomize component, stamped like components/volsync
 ```
 
-The component mirrors the volsync design and rides the existing `${APP}` substitution:
+The component (implemented in `kubernetes/components/ldap-account/`, see its README)
+mirrors the volsync design and rides the existing `${APP}` substitution:
 
-- `secret.yaml`: an `ldap-admin-${APP}` Secret templated from a new
+- `secret.yaml`: an `${APP}-ldap-admin` Secret templated from a new
   `SECRET_LDAP_ADMIN_PASSWORD` in cluster-secrets (postBuild substitution already
   reaches every namespace), used as `varsFrom` for the provider bind.
 - `terraform.yaml`: a Terraform CR named `${APP}-ldap`, `spec.path:

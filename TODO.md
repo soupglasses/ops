@@ -97,10 +97,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   via the Gateway, retire ingress-nginx-public. Keep ingress-nginx-tailscale until a
   Tailscale-class Gateway replaces it. Game servers may stay direct LoadBalancer
   Services on the shared IP if the Envoy hop shows in latency.
-- [ ] **Per-app LDAP service accounts with ordering.** Split tofu so each app gets its
-  own bind account and secret, gated by Flux dependsOn. Design in
-  `docs/ldap-service-accounts.md`. Prerequisite: tofu-controller 0.16.4 (PR #68) and
-  the gRPC-hang follow-ups in `docs/tofu-controller-grpc-hang.md`.
+- [ ] **Per-app LDAP service accounts with ordering.** Built:
+  `components/ldap-account` + `tofu/ldap/service-account` (design in
+  `docs/ldap-service-accounts.md`). Before first use: add
+  `SECRET_LDAP_ADMIN_PASSWORD` to cluster-secrets, merge tofu-controller 0.16.4
+  (PR #68), and close out the gRPC-hang follow-ups in
+  `docs/tofu-controller-grpc-hang.md`.
 - [ ] **Cilium egress gateway idea** parked in `docs/cilium-egress-gateway.md`.
 - [ ] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
 
