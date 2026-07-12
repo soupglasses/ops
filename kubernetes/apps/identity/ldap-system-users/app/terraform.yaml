@@ -9,7 +9,7 @@ metadata:
 spec:
   approvePlan: auto
   interval: 1h
-  path: ./tofu/ldap-system-users
+  path: ./tofu/ldap/base
   sourceRef:
     kind: GitRepository
     name: flux-system
