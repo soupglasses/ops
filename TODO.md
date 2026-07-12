@@ -30,17 +30,17 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   `openebs-zfs` with the default Delete reclaim; `scripts/volsync-restore.sh` deletes
   the PVC (and thus the ZFS dataset) before the repopulated volume is proven good.
   Take a VolumeSnapshot in the script before deleting the PVC.
-- [ ] **volsync cache PVCs inherit the data size.** `cacheCapacity` defaults to
+- [x] **volsync cache PVCs inherit the data size.** `cacheCapacity` defaults to
   `${VOLSYNC_CAPACITY}`, so minecraft allocates a 50Gi restic cache that needs ~5Gi.
   Introduce a separate `VOLSYNC_CACHE_CAPACITY` variable.
-- [ ] **Stale minecraft backup alert.** `minecraft/app/prometheusrule.yaml` alerts on
+- [x] **Stale minecraft backup alert.** `minecraft/app/prometheusrule.yaml` alerts on
   a `container="mc-backup"` sidecar that no longer exists, so it can never fire. The
   real coverage is the volsync rules in `volsync-system`. Delete the stale rule.
-- [ ] **minecraft ks.yaml has no dependsOn.** On a from-zero rebuild it races
+- [x] **minecraft ks.yaml has no dependsOn.** On a from-zero rebuild it races
   openebs/volsync and retry-loops until they converge, and the restore-once
   ReplicationDestination can fire under half-ready conditions. Add dependsOn openebs +
   volsync (openldap now has this pattern).
-- [ ] **Orphaned settings.** `S3_ENDPOINT`/`S3_BUCKET` in
+- [x] **Orphaned settings.** `S3_ENDPOINT`/`S3_BUCKET` in
   `components/common/config/cluster-settings.yaml` are consumed by nothing (the live
   value is the encrypted `SECRET_S3_ENDPOINT`); they can drift silently. Remove or use.
 
@@ -69,7 +69,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Flux / reconciliation
 
-- [ ] **Failure recovery and drift wait up to 1h.** Every app Kustomization and
+- [x] **Failure recovery and drift wait up to 1h.** Every app Kustomization and
   HelmRelease has `interval: 1h`; a HelmRelease that exhausts its retries sits failed
   until the next tick. Reconciles measure sub-second on this cluster, so drop app
   ks.yaml intervals to 10m and HelmReleases to 30m; consider
@@ -81,7 +81,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [ ] **Push detection is a 1m git poll.** A Codeberg webhook into a Flux Receiver
   would make it instant, at the cost of exposing notification-controller publicly.
   Optional polish.
-- [ ] **cilium-bgp ks.yaml declares `namespace: kube-system`** but the parent
+- [x] **cilium-bgp ks.yaml declares `namespace: kube-system`** but the parent
   kustomization rewrites it into `network`, where it actually lands. The declared
   namespace is misleading; align it.
 
@@ -104,7 +104,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   (PR #68), and close out the gRPC-hang follow-ups in
   `docs/tofu-controller-grpc-hang.md`.
 - [ ] **Cilium egress gateway idea** parked in `docs/cilium-egress-gateway.md`.
-- [ ] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
+- [x] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
 
 ## Renovate / PR hygiene
 

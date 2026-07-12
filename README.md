@@ -17,8 +17,9 @@ Talos' inline manifests. Applications are deployed using FluxCD.
 
 Mikrotik RB5009 Router handling forwarded connections from a VPS through Wireguard.
 
-Currently only doing simple port-forwarding. A BGP based load balancer is
-planned for the future to automate this process.
+Load balancing is BGP based: Cilium's BGP control plane peers with the router and
+announces the LoadBalancer IP, which the router DNATs public traffic to. Details in
+`docs/network-topology.md` and `docs/routeros-bgp-config.md`.
 
 ## Tasks
 
