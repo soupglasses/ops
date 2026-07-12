@@ -6,6 +6,25 @@ SPDX-License-Identifier: 0BSD
 
 # Agent Guidelines
 
+## Working Loop
+
+Commits and pushes to `main` are how changes deploy; you are expected to do both and
+then verify the result live. The loop:
+
+1. Edit manifests, then `task flux-local:test` (must pass).
+2. Commit with `mise exec -- git commit ...` (pre-commit hooks need mise's PATH to find
+   `ec` and friends). Small logical commits, conventional style (`feat(scope):`,
+   `fix(scope):`), written in a human voice.
+3. Stage explicit paths only; the human keeps WIP on `main`, so never `git add -A`.
+4. Push, `task flux:reconcile` (or `flux reconcile ks <name> -n <ns> --with-source`),
+   and observe with kubectl until the change demonstrably works. Retry and fix forward;
+   do not stop at "committed".
+5. Backup or restore changes additionally get a restore drill: pull the data back out
+   and check the contents (see docs/openldap-volsync-migration.md for the pattern).
+6. Throwaway verification resources (test pods, one-off CRs) must be deleted before
+   finishing. End state is always Flux-managed.
+7. Record new findings in TODO.md and tick off what you complete.
+
 ## Formatting & Validation
 
 ### YAML Formatting
@@ -83,7 +102,6 @@ When creating a **NEW** secret file:
 
 **NEVER do any of the following:**
 
-- **NEVER commit changes** - User must review and commit themselves
 - Modify an existing `.sops.yaml` file (encrypted or not)
 - Use `sops --decrypt` on any file
 - Use `sops -d` (decrypt) in any form
@@ -100,6 +118,10 @@ When creating a **NEW** secret file:
 1. **STOP your work immediately**
 2. **Ask the user** to make the changes
 3. **Wait for confirmation** before continuing
+
+When the user has edited a sops file themselves, you may commit it for them: first
+confirm it is encrypted (key names and `ENC[AES256_GCM` markers are visible; values
+must never be), then commit it like any other change.
 
 You have **NO ACCESS** to secret values. You can only see:
 

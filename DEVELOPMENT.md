@@ -169,10 +169,21 @@ Place in `app/` folder alongside HelmRelease.
 
 ### VolSync Backup Setup
 
-1. Add volsync component to app's resources (if not using central template)
-2. Create bucket path config via ConfigMap or accept default (`${APP}`)
-3. Store S3 credentials in `cluster-secrets.sops.yaml` with `SECRET_` prefix
-4. Reference via `${SECRET_S3_ENDPOINT}/volsync-${APP}` pattern
+Every stateful app gets the volsync component; a PVC without a backup is a bug.
+
+1. Add the `volsync` component (and `volsync-quiesce` if the app needs a pre-snapshot
+   hook) to the app's `kustomization.yaml`
+2. Set `postBuild.substitute` vars in `ks.yaml`: `APP`, `VOLSYNC_CAPACITY`, and
+   `VOLSYNC_PUID`/`VOLSYNC_PGID` matching the container's uid (the mover must be able
+   to read the data). Keep `VOLSYNC_CACHE_CAPACITY` small; the cache holds metadata only
+3. Add `dependsOn` openebs + volsync to the app's `ks.yaml` so from-zero rebuilds order
+   cleanly
+4. Credentials come from `cluster-secrets.sops.yaml` via the
+   `${SECRET_S3_ENDPOINT}/volsync-${APP}` pattern; no per-app setup needed
+5. Prove it: trigger a manual backup, then restore-drill it (see
+   `docs/openldap-volsync-migration.md`). Clear the manual trigger afterwards, it
+   overrides the schedule
+6. Full contract: `kubernetes/components/volsync/README.md`
 
 ### Prometheus Alerts
 

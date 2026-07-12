@@ -24,8 +24,9 @@ End state is **always** flux-managed. Never leave `kubectl apply`'d resources be
 edit YAML
 task flux-local:test     # validate kustomizations + helmreleases
 task flux-local:diff     # see rendered diff vs HEAD
-git add … && git commit  # pre-commit runs: editorconfig, kubeconform, reuse, yamlfmt
-git push                 # → codeberg → flux GitRepository polls
+git add …                        # explicit paths only
+mise exec -- git commit …        # pre-commit hooks need mise's PATH (ec, kubeconform, …)
+git push                         # → codeberg → flux GitRepository polls
 task flux:reconcile      # nudge flux instead of waiting for interval
 mise exec -- kubectl -n <ns> get … / logs / describe
 ```

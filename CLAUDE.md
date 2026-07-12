@@ -27,7 +27,14 @@ Codeberg (Forgejo, not GitHub).
 - Secrets are sops-encrypted with age. New secrets: write plaintext as `*.sops.yaml`,
   encrypt in place exactly once. Existing secrets: never decrypt, edit, or rotate; stop
   and ask. Never read `.secure/`.
-- Never commit or push. Sofie reviews and commits herself; WIP lives on `main`.
+- Commit and push to `main`; that is the deploy mechanism. Work in small, logical,
+  conventional-style commits, then drive them to done: push, reconcile, observe with
+  kubectl, and keep iterating until the change demonstrably works. Anything that
+  touches backups gets a restore drill, not just a green status.
+- The human keeps WIP on `main` too: stage your own files explicitly, never
+  `git add -A`.
+- Temporary live resources (test pods, throwaway CRs) are fine for verification, but
+  remove them before finishing; the end state is always Flux-managed.
 
 ## Ground rules
 

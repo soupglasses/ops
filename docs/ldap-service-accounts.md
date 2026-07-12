@@ -80,8 +80,8 @@ broken nextcloud plan cannot touch immich's account or the base tree.
 2. `runner.serviceAccount.allowedNamespaces` in the tofu-controller HelmRelease must
    list every namespace that runs a Terraform CR (plus its NetworkPolicy to reach
    source-controller).
-3. `SECRET_LDAP_ADMIN_PASSWORD` added to cluster-secrets (sops; new key, so Sofie adds
-   it).
+3. `SECRET_LDAP_ADMIN_PASSWORD` added to cluster-secrets (sops; new key, added by the
+   user). Done as of July 2026.
 
 ## Non-goals / gotchas
 
