@@ -11,6 +11,11 @@ metadata:
 spec:
   path: ./kubernetes/apps/default/minecraft/app
   targetNamespace: *namespace
+  dependsOn:
+    - name: openebs
+      namespace: openebs-system
+    - name: volsync
+      namespace: volsync-system
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -23,7 +28,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  interval: 1h
+  interval: 10m
   retryInterval: 2m
   timeout: 5m
   wait: true
@@ -32,6 +37,8 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 50Gi
+      # Existing cache PVC is 50Gi; PVCs cannot shrink in place.
+      VOLSYNC_CACHE_CAPACITY: 50Gi
       VOLSYNC_STORAGECLASS: openebs-zfs
       VOLSYNC_SNAPSHOTCLASS: openebs-zfs-snapshot
       VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-zfs
