@@ -7,7 +7,7 @@ kind: HelmRelease
 metadata:
   name: ingress-nginx-tailscale
 spec:
-  interval: 1h
+  interval: 30m
   chart:
     spec:
       chart: ingress-nginx

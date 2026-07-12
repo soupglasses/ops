@@ -136,7 +136,7 @@ Bash-style defaults work: `${VAR:-default}`
 
 ### HelmRelease Conventions
 
-- Use `interval: 1h` for reconciliation
+- Use `interval: 30m` for reconciliation (`10m` on Flux Kustomizations)
 - Enable retries: `retries: -1` for install, `retries: 3` for upgrade with rollback
 - Prefer `chartRef` with OCIRepository over HelmRepository
 - Use `cleanupOnFail: true` for upgrades

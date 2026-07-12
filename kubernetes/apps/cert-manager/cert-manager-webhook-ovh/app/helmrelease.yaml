@@ -7,7 +7,7 @@ kind: HelmRelease
 metadata:
   name: cert-manager-webhook-ovh
 spec:
-  interval: 1h
+  interval: 30m
   chart:
     spec:
       chart: cert-manager-webhook-ovh

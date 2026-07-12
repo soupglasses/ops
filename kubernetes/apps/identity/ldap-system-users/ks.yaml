@@ -28,7 +28,7 @@ spec:
       kind: Terraform
       name: ldap-system-users
       namespace: identity
-  interval: 1h
+  interval: 10m
   retryInterval: 2m
   timeout: 5m
   prune: true
