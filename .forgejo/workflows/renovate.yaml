@@ -40,7 +40,7 @@ jobs:
           args: ${{ forge.repository }}
         env:
           LOG_LEVEL: ${{ inputs.loglevel || 'info' }}
-          RENOVATE_GIT_AUTHOR: Ops Bot <sofie+bot@mailbox.org>
+          RENOVATE_GIT_AUTHOR: Soup Bot <bot+ops@finnes.dev>
           RENOVATE_GIT_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.GH_TOKEN }}
