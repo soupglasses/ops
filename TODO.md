@@ -69,6 +69,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Canaille did not trust ingress proxy headers.** OIDC metadata used HTTP URLs
   behind TLS-terminating ingress-nginx, causing Authlib validation failures and 500s
   after client creation. Enable legacy forwarded-header handling for the single proxy hop.
+- [ ] **Canaille token administration has two upstream UI bugs.** Version 0.3.3 still
+  crashes after revoking client-credentials tokens because audit logging assumes a user
+  subject, and its Copy buttons submit the surrounding form. Report and track upstream;
+  do not carry local source patches.
 
 ## Flux / reconciliation
 
