@@ -66,6 +66,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [ ] **PodSecurity: workloads violate `restricted`.** canaille lacked
   allowPrivilegeEscalation=false, drop ALL, runAsNonRoot, seccompProfile; likely
   repo-wide. Sweep all Deployments and chart values.
+- [x] **Canaille did not trust ingress proxy headers.** OIDC metadata used HTTP URLs
+  behind TLS-terminating ingress-nginx, causing Authlib validation failures and 500s
+  after client creation. Enable legacy forwarded-header handling for the single proxy hop.
 
 ## Flux / reconciliation
 
