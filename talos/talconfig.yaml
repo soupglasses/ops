@@ -17,7 +17,7 @@ cniConfig:
 nodes:
   - hostname: nas
     controlPlane: true
-    ipAddress: "172.21.69.10"
+    ipAddress: "172.21.71.10"
     networkInterfaces:
       - deviceSelector:
           hardwareAddr: "30:9c:23:82:38:72"

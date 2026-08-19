@@ -22,6 +22,6 @@ spec:
         - name: "routeros-peer"
           # RouterOS ASN (configure this to match RouterOS)
           peerASN: 64513
-          peerAddress: 172.21.68.1
+          peerAddress: 172.21.71.1
           peerConfigRef:
             name: "routeros-peer"

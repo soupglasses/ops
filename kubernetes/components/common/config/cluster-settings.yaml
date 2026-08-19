@@ -11,4 +11,4 @@ data:
   TIMEZONE: "Europe/Copenhagen"
   CLUSTER_NAME: "home"
   DOMAIN: "finnes.dev"
-  IP_ADDRESS: 192.121.119.137
+  IP_ADDRESS: 80.248.139.51
