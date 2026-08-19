@@ -87,7 +87,7 @@ When setting up the repository on a new machine, you need to generate the client
 
 2. **Generate kubeconfig** - Fetches the Kubernetes config from the cluster:
    ```bash
-   task talos:kubeconfig NODE=172.21.69.10
+   task talos:kubeconfig NODE=172.21.71.10
    ```
 
 3. **Fetch age key** - Retrieves the SOPS encryption key:
@@ -134,7 +134,7 @@ Symptoms:
 plane node:
 
 ```bash
-task talos:rebootstrap NODE=172.21.69.10
+task talos:rebootstrap NODE=172.21.71.10
 ```
 
 This wipes both STATE and EPHEMERAL (we no longer trust the disk), bootstraps

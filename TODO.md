@@ -51,18 +51,19 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   changes need a machine-config re-apply. Keep a minimal day-0 inline install, then
   manage Cilium as a Flux HelmRelease that takes over. Prerequisite for enabling
   Gateway API support.
-- [ ] **Pod CIDR mismatch (verified live).** Pods run in 10.244.0.0/16 (Talos
-  default; `talconfig.yaml` sets no podSubnets) but Cilium has
-  `ipv4NativeRoutingCIDR=10.42.0.0/16` and RouterOS BGP filters accept 10.42.0.0/16.
-  It works only because mismatched traffic is masqueraded. Set podSubnets explicitly
-  and align Cilium + RouterOS to it.
+- [ ] **Cilium native-routing CIDR does not match the live pod CIDR.** Pods run in
+  10.244.0.0/16 (Talos default; `talconfig.yaml` sets no podSubnets), while Cilium has
+  `ipv4NativeRoutingCIDR=10.42.0.0/16`. Pod CIDR advertisement to RouterOS was removed
+  because the router needs only Service VIP routes, but the internal Cilium setting
+  should still be aligned deliberately.
 - [ ] **Talos/K8s upgrades pending, must be walked.** Node runs Talos 1.11.6 /
   K8s 1.34.2; Renovate PRs #33 (installer 1.13.5) and #29 (kubelet 1.36.2) must not
   be merged blind. Upgrade one minor at a time (1.11 -> 1.12 -> 1.13,
   1.34 -> 1.35 -> 1.36) as deliberate sessions, merging the config bump with each hop.
 - [ ] **Node IP relies on a DHCP reservation.** `talconfig.yaml` uses `dhcp: true`
-  while BGP peering, RouterOS DNAT, and CoreDNS all assume 172.21.69.10. Pin the
-  address statically in machine config.
+  while BGP peering and cluster DNS assume 172.21.71.10. The RouterOS reservation is
+  working and keeps the VLAN migration simple; consider pinning the address statically
+  in machine config later.
 - [ ] **PodSecurity: workloads violate `restricted`.** canaille lacked
   allowPrivilegeEscalation=false, drop ALL, runAsNonRoot, seccompProfile; likely
   repo-wide. Sweep all Deployments and chart values.
@@ -93,6 +94,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   namespace is misleading; align it.
 
 ## Networking / future
+
+- [x] **Move Kubernetes to an isolated server VLAN and native WAN ingress.** `ether8`
+  is now the VLAN 71 access port, the node is 172.21.71.10, Cilium advertises the
+  shared 172.21.68.10 VIP to RouterOS, and 80.248.139.51 is DNATed to that VIP. New
+  server-to-trusted-LAN connections are blocked while replies and internet egress work.
+- [ ] **Public DNS records predate external-dns ownership.** `auth.finnes.dev` and
+  `mc.finnes.dev` still resolve through the old 192.121.119.137 path even though their
+  live external-dns target annotations are 80.248.139.51. Migrate or recreate those
+  records under the `default` TXT owner without exposing OVH credentials.
 
 - [ ] **Gateway API migration (before palworld/nextcloud/immich).** Replace
   ingress-nginx and the lbipam sharing-key hack with one Gateway owning the single BGP

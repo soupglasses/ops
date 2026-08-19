@@ -14,12 +14,6 @@ metadata:
     advertise: bgp
 spec:
   advertisements:
-    # Advertise the Pod CIDR assigned to each node
-    # This allows RouterOS to route directly to pods
-    - advertisementType: "PodCIDR"
-      attributes:
-        communities:
-          standard: ["64512:100"]
     # Advertise LoadBalancer service IPs
     # This announces the single LoadBalancer IP (172.21.68.10) to RouterOS
     - advertisementType: "Service"
