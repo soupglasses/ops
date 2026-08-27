@@ -10,7 +10,8 @@ Minimal facts a Claude agent needs to test changes against the live cluster.
 
 ## Where things live
 
-- This (ops) repo: `~/Code/Codeberg/soupglasses/ops/` — Flux source of truth (branch `main` on `git@codeberg.org:soupglasses/ops.git`).
+- This (ops) repo: `~/Code/codeberg.org/soupglasses/ops/` — Flux source of truth
+  (branch `main` on `git@github.com:soupglasses/ops.git`).
 - Tooling: `mise`. Run commands as `mise exec -- <cmd>` from the repo root, or `mise activate`. Without mise no `kubectl`/`flux`/`kustomize`/`task` exist.
 - Cluster API: `https://k8s.home.arpa:6443` — only resolves on home VPN. If `kubectl` fails with `lookup k8s.home.arpa ... no such host`, the user is off-VPN; stop and ask.
 
@@ -26,7 +27,7 @@ task flux-local:test     # validate kustomizations + helmreleases
 task flux-local:diff     # see rendered diff vs HEAD
 git add …                        # explicit paths only
 mise exec -- git commit …        # pre-commit hooks need mise's PATH (ec, kubeconform, …)
-git push                         # → codeberg → flux GitRepository polls
+git push                         # → GitHub → flux GitRepository polls
 task flux:reconcile      # nudge flux instead of waiting for interval
 mise exec -- kubectl -n <ns> get … / logs / describe
 ```
@@ -53,4 +54,5 @@ Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `
 - Chart-created PVC names differ from Kustomize-created ones. The Minecraft chart auto-creates `minecraft-datadir`; switching to volsync-managed PVC means setting `persistence.dataDir.existingClaim: <name>` and disabling chart provisioning.
 - `openebs-hostpath` does **not** support CSI snapshots — volsync `copyMethod: Snapshot` requires `openebs-zfs` (or `openebs-zfs-data` for Retain reclaim).
 - The user has WIP uncommitted changes in `main` regularly. `git status` first; stage only your own files (`git add <explicit paths>`), never `git add -A`.
-- This is Forgejo/Codeberg, not GitHub. `gh` won't work for PRs here; just push to `main` (it's a personal repo).
+- This is GitHub. Direct pushes to `main` deploy through Flux; use `gh` for pull requests
+  and Actions inspection.

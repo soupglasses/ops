@@ -19,15 +19,15 @@ tasks:
       - sops -d kubernetes/clusters/home/secret.sops.yaml | kubectl apply -n flux-system -f -
       - sops -d kubernetes/components/common/sops/secret.sops.yaml | kubectl apply -n flux-system -f -
       - |
-        export GITEA_TOKEN=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.password)
-        flux bootstrap gitea \
+        export GIT_USERNAME=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.username)
+        export GIT_PASSWORD=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.password)
+        flux bootstrap git \
           --token-auth \
-          --hostname=codeberg.org \
-          --owner=soupglasses \
-          --repository=ops \
+          --url=https://github.com/soupglasses/ops.git \
+          --username="${GIT_USERNAME}" \
           --branch=main \
           --path=kubernetes/clusters/home \
-          --personal
+          --silent
   reconcile:
     desc: Trigger manual reconcile for Flux.
     preconditions:

@@ -66,13 +66,12 @@ task flux-local:diff
 
 **Do NOT use** `--path-orig` or `--branch-orig` flags with flux-local in task commands. These bypass flux-local's internal git worktree creation and break ConfigMap resolution for `substituteFrom` references.
 
-## CI/CD (Forgejo Actions)
+## CI/CD (GitHub Actions)
 
-Workflows are in `.forgejo/workflows/`. This is a **Codeberg/Forgejo** environment, not GitHub.
+Workflows are in `.github/workflows/` and run on GitHub-hosted runners.
 
-- Forgejo supports `github.*` context variables for compatibility, but prefer `forge.*` where available
-- Docker steps use `uses: docker://image` with `args`
-- Runners are `codeberg-tiny` or `codeberg-tiny-lazy`
+- Pin actions to full commit digests.
+- Keep workflow permissions explicit and avoid write operations for fork-originated pull requests.
 
 ## Creating New Encrypted Secrets (.sops.yaml)
 

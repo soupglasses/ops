@@ -1,0 +1,102 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+name: Flux Local Validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flux-local:
+    name: Flux Local
+    runs-on: ubuntu-latest
+    env:
+      CLUSTER_PATH: kubernetes/clusters/home
+      STRIP_ATTRS: helm.sh/chart,checksum/config,app.kubernetes.io/version,chart
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.14"
+
+      - name: Install manifest tools
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          version: 2026.7.17
+          install_args: aqua:fluxcd/flux2 aqua:helm/helm aqua:kubernetes-sigs/kustomize
+      - name: Install flux-local
+        run: pip install flux-local==8.4.0
+
+      - name: Test
+        run: flux-local test --enable-helm --all-namespaces --path "$CLUSTER_PATH" -v
+
+      - name: Fetch base branch
+        if: always() && github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "$GITHUB_BASE_REF"
+
+      - name: Diff
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          flux-local diff kustomization --path "$CLUSTER_PATH" \
+            --branch-orig "origin/$GITHUB_BASE_REF" --strip-attrs "$STRIP_ATTRS" \
+            --all-namespaces | tee -a diff.txt
+          flux-local diff helmrelease --path "$CLUSTER_PATH" \
+            --branch-orig "origin/$GITHUB_BASE_REF" --strip-attrs "$STRIP_ATTRS" \
+            --all-namespaces | tee -a diff.txt
+
+      - name: Add diff to job summary
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          if [ ! -s diff.txt ]; then
+            echo "No Flux Local diff." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Flux Local Diff"
+            echo
+            echo '```diff'
+            cat diff.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on pull request
+        if: >-
+          always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name
+          == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -s diff.txt ]; then
+            exit 0
+          fi
+
+          {
+            echo "## Flux Local Diff"
+            echo
+            echo '```diff'
+            cat diff.txt
+            echo '```'
+            echo
+            echo '🤖 Written by [GPT-5.6 Sol](https://developers.openai.com/codex/models).'
+          } > body.md
+
+          gh pr comment "$PR_NUMBER" --body-file body.md

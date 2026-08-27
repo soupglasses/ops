@@ -86,7 +86,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   (revision changes propagate), but it does not retry failed apps; `flux:reconcile-ks`
   does, serially and slowly. Consider a parallel variant or an alias that also
   reconciles cluster-apps.
-- [ ] **Push detection is a 1m git poll.** A Codeberg webhook into a Flux Receiver
+- [ ] **Push detection is a 1m git poll.** A GitHub webhook into a Flux Receiver
   would make it instant, at the cost of exposing notification-controller publicly.
   Optional polish.
 - [x] **cilium-bgp ks.yaml declares `namespace: kube-system`** but the parent
@@ -134,6 +134,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
 
 ## Renovate / PR hygiene
+
+- [ ] **Rotate GitHub automation tokens annually.** The `soupbot` Flux source token
+  (`public_repo`) and commit-status token (`repo:status`) have no provider expiry.
+  Rotate both by 2027-08-27, keeping the credentials separate and least-privileged.
 
 - [ ] Renovate automerges only GitHub Actions and mise tools, so chart/container PRs
   pile up. Automerge patch-level helm/docker updates gated on the flux-local CI check.

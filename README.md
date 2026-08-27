@@ -100,7 +100,10 @@ After these steps, all kubectl and talosctl commands will work correctly.
 ## Configure new cluster
 
 1. **Install Talos Linux** on each control-plane and worker node. Generate `.secure/kubeconfig`, `.secure/talosconfig` using [Talos: Production Notes](https://www.talos.dev/v1.10/introduction/prodnotes/). After install, put each created machine patch into the `talos/` folder for safekeeping. You should also use Talos bootstrap script to set up the kubernetes cluster.
-2. **Install FluxCD** following this guide [Flux: Gitea bootstrap](https://fluxcd.io/flux/installation/bootstrap/gitea/). Remember to set `--hostname=codeberg.org` and place the configuration into `kubernetes/clusters/$CLUSTER_NAME`.
+2. **Install FluxCD** with `task flux:bootstrap`. The recovery task uses generic Git
+   bootstrap over HTTPS so the `soupbot` collaborator does not need repository
+   administration access. It places the configuration in
+   `kubernetes/clusters/$CLUSTER_NAME`.
 3. **Configure the SOPS encryption** using [Flux: Encrypting secrets using age](https://fluxcd.io/flux/guides/mozilla-sops/#encrypting-secrets-using-age). Place the generated key into `.secure/age.agekey`. Ensure you also add the public key into `.sops.yaml` as well.
 
 ## Adding worker nodes
