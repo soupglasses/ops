@@ -7,7 +7,7 @@ terraform {
   required_providers {
     ldap = {
       source  = "l-with/ldap"
-      version = "~> 0.12"
+      version = "~> 0.14"
     }
     random = {
       source  = "hashicorp/random"
