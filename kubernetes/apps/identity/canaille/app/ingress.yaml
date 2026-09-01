@@ -8,7 +8,7 @@ kind: Ingress
 metadata:
   name: canaille
   annotations:
-    cert-manager.io/cluster-issuer: ovh-dns01-production
+    cert-manager.io/cluster-issuer: cloudflare-dns01-production
     external-dns.alpha.kubernetes.io/hostname: auth.${DOMAIN}
     external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS}
 spec:

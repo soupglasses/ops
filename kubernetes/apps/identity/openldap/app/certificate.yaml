@@ -9,7 +9,7 @@ metadata:
 spec:
   secretName: openldap-tls
   issuerRef:
-    name: ovh-dns01-production
+    name: cloudflare-dns01-production
     kind: ClusterIssuer
   dnsNames:
     - ldap.finnes.dev
