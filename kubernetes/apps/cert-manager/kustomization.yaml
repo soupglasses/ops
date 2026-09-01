@@ -11,4 +11,3 @@ components:
 resources:
   - ./cert-manager/ks.yaml
   - ./cloudflare-issuers/ks.yaml
-  - ./cert-manager-webhook-ovh/ks.yaml

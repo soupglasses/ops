@@ -104,11 +104,6 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   is now the VLAN 71 access port, the node is 172.21.71.10, Cilium advertises the
   shared 172.21.68.10 VIP to RouterOS, and 80.248.139.51 is DNATed to that VIP. New
   server-to-trusted-LAN connections are blocked while replies and internet egress work.
-- [ ] **Public DNS records predate external-dns ownership.** `auth.finnes.dev` and
-  `mc.finnes.dev` still resolve through the old 192.121.119.137 path even though their
-  live external-dns target annotations are 80.248.139.51. Migrate or recreate those
-  records under the `default` TXT owner without exposing OVH credentials.
-
 - [ ] **Gateway API migration (before palworld/nextcloud/immich).** Replace
   ingress-nginx and the lbipam sharing-key hack with one Gateway owning the single BGP
   IP 172.21.68.10. Recommended implementation: Envoy Gateway (Flux-managed, supports
