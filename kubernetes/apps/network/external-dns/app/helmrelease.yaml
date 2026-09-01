@@ -25,30 +25,24 @@ spec:
       strategy: rollback
       retries: 3
   values:
-    policy: sync
+    policy: upsert-only
     sources:
       - ingress
       - service
+    domainFilters:
+      - ${DOMAIN}
+    extraArgs:
+      - --zone-id-filter=cec77e1bff57b978e3abdcd8e6b76b3e
     txtPrefix: "k8s-${CLUSTER_NAME}."
     txtOwnerId: default
     provider:
-      name: ovh
+      name: cloudflare
     env:
-      - name: OVH_APPLICATION_KEY
+      - name: CF_API_TOKEN
         valueFrom:
           secretKeyRef:
-            name: ovh-api-key
-            key: OVH_APPLICATION_KEY
-      - name: OVH_APPLICATION_SECRET
-        valueFrom:
-          secretKeyRef:
-            name: ovh-api-key
-            key: OVH_APPLICATION_SECRET
-      - name: OVH_CONSUMER_KEY
-        valueFrom:
-          secretKeyRef:
-            name: ovh-api-key
-            key: OVH_CONSUMER_KEY
+            name: cloudflare-api-token
+            key: api-token
     image:
       pullPolicy: Always
     resources:
