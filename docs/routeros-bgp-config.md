@@ -10,6 +10,90 @@ This records the desired RB5009 configuration for native public ingress. It omit
 unrelated default, LAN, container, and remote-access WireGuard configuration.
 Private keys are never included.
 
+## Native IPv6
+
+The ISP routes `2a13:e745:1ee8::/48` to the static WAN address. Each local network
+gets a `/64` whose subnet ID follows the corresponding IPv4 network or VLAN number.
+The Kubernetes and WireGuard ranges are reserved until those systems are configured
+for IPv6.
+
+```routeros
+/ipv6/address
+add address=2a13:e740:285:893a::2/64 interface=ether1 advertise=no \
+    comment="ISP static IPv6 WAN"
+add address=2a13:e745:1ee8:69::1/64 interface=bridge advertise=yes \
+    comment="Trusted LAN IPv6"
+add address=2a13:e745:1ee8:71::1/64 interface=vlan71-servers advertise=yes \
+    comment="Server VLAN 71 IPv6"
+
+/ipv6/route
+add dst-address=::/0 gateway=2a13:e740:285:893a::1%ether1 distance=1 \
+    comment="ISP static IPv6 default"
+
+/ipv6/nd
+set 0 interface=bridge advertise-dns=self
+add interface=vlan71-servers advertise-dns=self
+```
+
+Router advertisements run only on the trusted bridge and server VLAN, never the WAN.
+RDNSS points clients at the RouterOS DNS resolver. The active reservations are:
+
+```text
+2a13:e745:1ee8:68::/64  Kubernetes public service VIPs
+2a13:e745:1ee8:70::/64  remote-access WireGuard
+```
+
+The server VLAN is not a member of the broad `LAN` interface list. Add narrow rules
+before the default non-LAN drops so it can use RouterOS DNS and reach the Internet
+without gaining access to the trusted LAN. The isolation drop precedes the default
+broad ICMPv6 forward accept.
+
+```routeros
+/ipv6/firewall/filter
+add chain=input action=accept protocol=udp dst-port=53 \
+    in-interface=vlan71-servers \
+    place-before=[find where chain=input in-interface-list=!LAN action=drop] \
+    comment="Allow IPv6 DNS UDP from server VLAN"
+add chain=input action=accept protocol=tcp dst-port=53 \
+    in-interface=vlan71-servers \
+    place-before=[find where chain=input in-interface-list=!LAN action=drop] \
+    comment="Allow IPv6 DNS TCP from server VLAN"
+add chain=forward action=accept connection-state=new \
+    in-interface=vlan71-servers out-interface-list=WAN \
+    place-before=[find where chain=forward in-interface-list=!LAN action=drop] \
+    comment="Allow server VLAN IPv6 internet egress"
+add chain=forward action=drop connection-state=new \
+    in-interface=vlan71-servers out-interface=bridge \
+    place-before=[find where chain=forward protocol=icmpv6 action=accept] \
+    comment="Block server VLAN IPv6 to trusted LAN"
+```
+
+Verification:
+
+```routeros
+/ipv6/address/print detail where global
+/ipv6/route/print detail
+/ipv6/nd/print detail
+/ipv6/nd/prefix/print detail
+/ipv6/firewall/filter/print stats
+```
+
+## DNS observability
+
+RouterOS is distributed as the resolver through IPv4 DHCP and IPv6 RDNSS, but client
+DNS is not destination-NATed. A passthrough rule after FastTrack counts new direct
+IPv4 UDP/53 flows without accepting, dropping, or redirecting them. Router-local DNS
+does not traverse the forward chain and is therefore excluded.
+
+```routeros
+/ip/firewall/filter
+add chain=forward action=passthrough connection-state=new protocol=udp \
+    dst-port=53 dst-address-type=!local in-interface-list=!WAN \
+    out-interface-list=WAN \
+    place-before=[find where comment="defconf: accept established,related, untracked"] \
+    comment="Count direct outbound DNS UDP"
+```
+
 ## Server VLAN 71
 
 The dedicated bridge avoids changing VLAN filtering on the trusted-LAN bridge.

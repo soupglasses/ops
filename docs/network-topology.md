@@ -20,11 +20,17 @@ Internet
 | Purpose | Address or VLAN |
 | --- | --- |
 | Public WAN | `80.248.139.51/24`, DHCP reservation from the ISP |
+| Public IPv6 WAN | `2a13:e740:285:893a::2/64`, static; gateway `2a13:e740:285:893a::1` |
+| Routed IPv6 allocation | `2a13:e745:1ee8::/48` |
+| Reserved Kubernetes IPv6 VIP subnet | `2a13:e745:1ee8:68::/64` |
 | Trusted LAN | `172.21.69.0/24` |
 | Router on trusted LAN | `172.21.69.1` |
+| Trusted LAN IPv6 | `2a13:e745:1ee8:69::/64`, SLAAC; router `::1` |
 | Remote-access WireGuard | `172.21.70.0/24`, UDP `51821` |
+| Reserved WireGuard IPv6 subnet | `2a13:e745:1ee8:70::/64` |
 | Server VLAN | VLAN 71, `172.21.71.0/24` |
 | Router on server VLAN | `172.21.71.1` |
+| Server VLAN IPv6 | `2a13:e745:1ee8:71::/64`, SLAAC; router `::1` |
 | Kubernetes node | `172.21.71.10` |
 | Public Cilium VIP | `172.21.68.10/32` |
 | Router ASN | `64513` |
@@ -53,6 +59,26 @@ The forwarding policy is intentionally asymmetric:
 - the server VLAN may use the internet;
 - new server-VLAN connections to `172.21.69.0/24` are dropped;
 - destination-NATed WAN traffic is accepted only toward the Cilium VIP.
+
+The IPv6 policy mirrors this without NAT:
+
+- trusted-LAN devices use SLAAC and may initiate Internet connections;
+- the server VLAN uses its own `/64`, may initiate Internet connections, and cannot
+  initiate connections to the trusted LAN;
+- unsolicited WAN forwarding remains denied;
+- RouterOS advertises itself as DNS through RDNSS on the trusted LAN and server VLAN;
+- the WireGuard and Kubernetes VIP `/64`s are reserved but not yet assigned.
+
+The ISP also offers DHCPv6-PD, but it delegated only
+`2a13:e745:1ee8:3700::/56`. The static configuration was tested using a source
+address from the far end of the routed `/48`, confirming that the full allocation is
+routed to the static WAN address.
+
+DHCP and RDNSS advertise RouterOS as the preferred DNS resolver, which forwards
+queries through certificate-verified DNS over HTTPS. DNS is not intercepted: clients
+that deliberately use another IPv4 or IPv6 resolver may reach it directly. A passive
+IPv4 firewall counter records new forwarded UDP/53 flows to non-local destinations
+without changing their verdict.
 
 ## Public ingress
 
