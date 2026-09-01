@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-api-token
+type: Opaque
+stringData:
+  api-token: ENC[AES256_GCM,data:2wSgHMwIB2W+VaCIVLpwQo6ASJY7Pg0mA0sc6OCSUKDdvoIed0F8o67mfI0Vuk83pkFytg8=,iv:Y9ldaCpAEJkB2+nXgoYIq+cqSobcZMPsOu3yMGc9sLA=,tag:lSo/tQOAkF+xtm/sfWOn0g==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA2VEQ3YXJpdXprS3RReEN2
+        OXNLWCt4bDQyMG1iVVJaQlFlQ2l3NnkyWmxZCm5ZMDNCVFVvUmU2Qi82Tjk2VVR0
+        c0ZrMFNrWFZlSklLbGxQZWY4aFNtWXcKLS0tIGJNb3hYU2FIMStIRUU5OGZzRnBl
+        c2k5ckZIdGZjcXVxZnFDam5BQU9zZVUKb/lRVzuEizzoniLrFwtYyFZUNNQr8aNS
+        vpqZnsrlTZtkAplfT1/NYg2EaThS85+f0iQYs3G2Xyum1TnUMxdegg==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age16k03wpjydrcr2wk68f0q9ypdxvh7vsy0fpx4lq72nc50zln8xf3qvkjxas
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-09-01T19:06:54Z"
+  mac: ENC[AES256_GCM,data:DxyWTEshfZSzW7PboY4aogW7DTZL3afK3Qnqlsuf8kOXvs2E4LTdS0Jv6gOfSo2lFXgOVpnNpWDlC/sFJ+VYXJhk29aZR5tsFW0t9pIhuT2XKmjGvIaAKP1v8hwmoZMBmoJ3ppOT7imq0NIxqEbpUxPtgjF8LW7hITlll8Vh7NA=,iv:fJPWwJWGIAsyPLStmQVxYMYUoeARCVsC7+RCEtsWrvY=,tag:Ywl4IjD9AKs0SOM6Yeqg5A==,type:str]
+  version: 3.13.3
