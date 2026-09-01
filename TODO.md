@@ -95,11 +95,14 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Networking / future
 
+- [ ] **Enable IPv6 dual stack in Talos and Cilium.** Configure IPv6 pod and service
+  CIDRs, Cilium IPAM, and dual-stack services, then verify pod, service, and egress
+  connectivity before advertising public service `/128`s.
 - [ ] **Complete native IPv6 application exposure.** RouterOS uses the ISP's static
   `2a13:e745:1ee8::/48`; trusted LAN and server VLAN SLAAC are live on subnet IDs 69
-  and 71. Reserve subnet 68 for Kubernetes service VIPs and 70 for WireGuard. Enable
-  Talos/Cilium dual stack before advertising IPv6 service `/128`s over BGP, then add
-  explicit WAN firewall accepts and AAAA records per public service.
+  and 71. Reserve subnet 68 for Kubernetes service VIPs and 70 for WireGuard. After
+  dual stack is live, advertise IPv6 service `/128`s over BGP, then add explicit WAN
+  firewall accepts and AAAA records per public service.
 - [x] **Move Kubernetes to an isolated server VLAN and native WAN ingress.** `ether8`
   is now the VLAN 71 access port, the node is 172.21.71.10, Cilium advertises the
   shared 172.21.68.10 VIP to RouterOS, and 80.248.139.51 is DNATed to that VIP. New
