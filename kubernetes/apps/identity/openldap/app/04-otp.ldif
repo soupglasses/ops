@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
+dn: olcOverlay=otp,olcDatabase={1}mdb,cn=config
+changetype: add
+objectClass: olcOverlayConfig
+olcOverlay: otp

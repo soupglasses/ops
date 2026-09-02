@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+SERVER_NAME = "auth.finnes.dev"
+
+[CANAILLE]
+NAME = "Finnes"
+DATABASE = "ldap"
+OTP_METHOD = "TOTP"
+LOGO = ""
+
+[CANAILLE.ACL.DEFAULT]
+PERMISSIONS = ["edit_self", "use_oidc", "manage_own_groups"]
+READ = [
+    "user_name", "groups", "lock_date",
+    "display_name", "given_name", "family_name",
+    "emails", "phone_numbers", "preferred_language",
+    "photo", "profile_url",
+]
+WRITE = [
+    "photo", "given_name", "family_name",
+    "display_name", "password", "phone_numbers",
+    "emails", "preferred_language",
+]
+
+[CANAILLE.ACL.ADMIN]
+FILTER = [
+    {user_name = "admin"},
+    {groups = "admin"},
+]
+PERMISSIONS = [
+    "edit_self", "use_oidc",
+    "manage_users", "manage_all_groups", "manage_oidc",
+    "delete_account", "impersonate_users",
+]
+READ = [
+    "user_name", "groups", "lock_date",
+    "display_name", "given_name", "family_name",
+    "emails", "phone_numbers", "preferred_language",
+    "photo", "profile_url", "formatted_address",
+]
+WRITE = [
+    "user_name", "groups", "lock_date",
+    "photo", "given_name", "family_name",
+    "display_name", "password", "phone_numbers",
+    "emails", "preferred_language", "formatted_address",
+]
+
+[CANAILLE_HYPERCORN]
+PROXY_MODE = "legacy"
+PROXY_TRUSTED_HOPS = 1
+
+[CANAILLE_LDAP]
+USER_CLASS = ["inetOrgPerson", "oathHOTPToken"]
+USER_RDN = "uid"
+GROUP_CLASS = "groupOfNames"
+GROUP_RDN = "cn"
+
+[CANAILLE_OIDC]
+DYNAMIC_CLIENT_REGISTRATION_OPEN = true
+REQUIRE_NONCE = false
+
+[CANAILLE.SMTP]
+HOST = "prod-mta-06.swg-srv.net"
+PORT = 2525
+TLS = true
+FROM_ADDR = "canaille@noreply.finnes.dev"
