@@ -66,6 +66,7 @@ data:
 
     [CANAILLE_OIDC]
     DYNAMIC_CLIENT_REGISTRATION_OPEN = true
+    REQUIRE_NONCE = false
 
     [CANAILLE.SMTP]
     HOST = "prod-mta-06.swg-srv.net"
