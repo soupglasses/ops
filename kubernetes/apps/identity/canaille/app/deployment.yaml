@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: canaille
-          image: docker.io/yaalcoop/canaille:0.3.3
+          image: docker.io/yaalcoop/canaille:0.3.6
           ports:
             - containerPort: 8000
               name: http
