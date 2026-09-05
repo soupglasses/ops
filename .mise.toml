@@ -13,6 +13,7 @@ MISE_EXPERIMENTAL = true # for krew plugin
 krew="https://github.com/soupglasses/mise-krew"
 
 [tools]
+"go" = "1.27.1"
 "python" = "3.14.7"
 "aqua:budimanjojo/talhelper" = "3.1.17"
 "aqua:cilium/cilium-cli" = "0.20.0"
