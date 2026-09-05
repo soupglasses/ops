@@ -64,8 +64,10 @@ all comments, and the completed Flux Local rendered diff before doing any review
 research, checkout, cluster inspection, or specialist routing. Failed or timed-out CI
 stops review until a later invocation.
 
-Specialists are selected from the completed rendered diff, not merely the application
-type or changed source filename:
+Specialists are broad generalists within their fields, not narrow manifest classifiers.
+Select them when their judgment materially improves a decision: always for material,
+ambiguous, novel, or high-consequence domain questions, and not merely from the
+application type or changed source filename:
 
 - `security` is mandatory when the PR adds or broadens RBAC, identity, trust boundaries,
   network exposure, admission behavior, CI authority, workload privilege, credentials,
@@ -80,9 +82,19 @@ type or changed source filename:
 
 A routine image or chart update does not require `security` merely because the workload
 is security-sensitive, and does not require `resilience` merely because it is stateful.
-When CI passes and no specialist boundary is crossed, opslead handles the routine merge
-without delegating “for confidence.” Pre-existing debt is tracked separately and is not
-made a blocker unless the PR materially worsens it.
+When CI passes and there is no material, ambiguous, novel, or high-consequence specialist
+question, opslead handles the routine merge without delegating “for confidence.” Broad
+specialist review remains appropriate when subtle upstream behavior or operational
+context creates such a question even if no obvious manifest category changed.
+Pre-existing debt is tracked separately and is not made a blocker unless the PR
+materially worsens it.
+
+Every agent is expected to be effective and practical: consider the whole relevant
+domain, identify subtle omissions, rank concerns by evidence and material impact, and use
+the shortest safe path to a verified result. A blocker needs a plausible failure path
+tied to the change. Checklist ideals, unchanged debt, and theoretical concerns are
+reported separately rather than used as automatic refusals. Delegation asks a focused
+question and is preserved without duplicate review or reinterpretation.
 
 An agent cannot approve its own implementation. Repeated webhook deliveries and
 already-handled requests should produce no additional comment.

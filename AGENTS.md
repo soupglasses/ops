@@ -91,8 +91,10 @@ automatic PR routing, labels, and webhook operations.
 - `incident`: evidence-first outage diagnosis and root-cause analysis.
 - `observability`: scrape design, cardinality, alerts, recording rules, and dashboards.
 - `implementer`: scoped GitOps implementation and live verification.
-- `security`: least-privilege, workload, network, CI, and supply-chain review.
-- `resilience`: mandatory independent recovery review for stateful changes.
+- `security`: broad security judgment across architecture, identity, workloads, networks,
+  CI/CD, secrets, supply chain, abuse cases, and operational interactions.
+- `resilience`: broad resilience judgment across availability, data survival, recovery,
+  dependencies, failure domains, capacity, rollout/rollback, and operator error.
 
 An agent must not approve its own implementation. RBAC or trust-boundary changes need
 `security` review. Stateful or destructive lifecycle changes need `resilience`
@@ -103,9 +105,18 @@ For pull requests, wait for all required CI to complete before review or delegat
 then re-fetch the current head, check results, comments, and Flux Local rendered diff.
 Use one blocking CLI wait rather than spending model turns polling or streaming workflow
 logs. A routine image/chart update is not specialist-gated solely because the workload
-is stateful or security-sensitive: delegate only when the completed rendered diff or
-upstream migration notes show that specialist's boundary is changed. Unchanged
-pre-existing debt is non-blocking and should be tracked separately.
+is stateful or security-sensitive. Delegate whenever broad specialist judgment would
+materially improve a decision, especially for ambiguous, novel, or high-consequence
+questions revealed by the rendered diff, upstream behavior, or operational context.
+Unchanged pre-existing debt is non-blocking and should be tracked separately.
+
+All agents optimize for effective, practical outcomes rather than checklist completion.
+They consider their full domain, including subtle interactions and omissions, while
+ranking concerns by evidence, likelihood, impact, and recoverability. A merge blocker
+must have a plausible material failure path tied to the proposed change. Agents clearly
+separate blockers from non-blocking improvements and pre-existing debt, use the smallest
+sufficient test or mitigation, avoid duplicate work, and delegate focused questions when
+specialist judgment materially improves a decision.
 
 ## Formatting & Validation
 
