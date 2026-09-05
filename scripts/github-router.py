@@ -128,12 +128,38 @@ def main() -> int:
     item_number = pull_request.get("number") or issue.get("number")
     if not isinstance(item_number, int) or item_number < 1:
         return 0
-    payload["_hermes"] = {
+    item = pull_request or issue
+    item_type = "pull request" if pull_request else "issue"
+    routed = {
+        "action": action,
+        "repository": {"full_name": repository["full_name"]},
+        "sender": {"login": sender},
+        "item": {
+            "type": item_type,
+            "number": item_number,
+            "title": item.get("title") or "",
+            "url": item.get("html_url") or "",
+        },
+    }
+    if comment:
+        routed["comment"] = {
+            "id": comment.get("id"),
+            "body": comment.get("body") or "",
+            "author": (comment.get("user") or {}).get("login") or "",
+        }
+    if review:
+        routed["review"] = {
+            "id": review.get("id"),
+            "body": review.get("body") or "",
+            "author": (review.get("user") or {}).get("login") or "",
+        }
+    routed["_hermes"] = {
         "target_profile": target,
         "reason": reason,
         "item_number": item_number,
+        "item_type": item_type,
     }
-    json.dump(payload, sys.stdout, separators=(",", ":"))
+    json.dump(routed, sys.stdout, separators=(",", ":"))
     return 0
 
 

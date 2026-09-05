@@ -132,9 +132,18 @@ restarted after changing that allowlist. The dynamic `github-router` route is bo
 `opslead`; route definitions hot-reload, but gateway multiplex configuration does not.
 
 Webhook prompt placeholders address the transformed payload directly, for example
-`{_hermes.target_profile}`. They must not use a `payload.` prefix. Use `{__raw__}` when
-the complete transformed payload is required. Literal `{payload}` or
-`{payload.some_field}` text indicates a broken route template.
+`{_hermes.target_profile}`. They must not use a `payload.` prefix. The router emits a
+small routing envelope (`item`, `comment` or `review`, and `_hermes`) rather than the
+complete GitHub payload: the agent gets authoritative current state with `gh` after it
+starts. The prompt starts with the item type, number, and title so generated Hermes
+session names identify the actual work. Do not add `{__raw__}` to this route; it makes
+prompts and transcripts needlessly large. Literal `{payload}` or `{payload.some_field}`
+text indicates a broken template.
+
+The router uses log-only adapter delivery and instructs the agent to post once with
+`gh issue comment`, which works for both issues and pull requests. This avoids Hermes'
+current `github_comment` adapter path, which invokes `gh pr comment` and cannot deliver
+to issues. Keep the independent PR-only resilience route on adapter delivery.
 
 ## Verification
 

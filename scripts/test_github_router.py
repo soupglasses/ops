@@ -49,8 +49,37 @@ class RoutingPolicyTest(unittest.TestCase):
         assert result is not None
         self.assertEqual(
             result["_hermes"],
-            {"target_profile": "opslead", "reason": "new-issue", "item_number": 1},
+            {
+                "target_profile": "opslead",
+                "reason": "new-issue",
+                "item_number": 1,
+                "item_type": "issue",
+            },
         )
+
+    def test_output_is_compact_and_keeps_title_for_session_naming(self):
+        payload = base(
+            action="created",
+            issue={
+                "number": 3,
+                "title": "Set up Webhook Receiver for fast reconcile",
+                "html_url": "https://github.com/soupglasses/ops/issues/3",
+                "body": "large issue body that the agent will fetch with gh",
+                "unneeded": "x" * 10_000,
+            },
+            comment={
+                "id": 42,
+                "body": "@soupbot check whether this is already implemented",
+                "user": {"login": "human"},
+                "unneeded": "x" * 10_000,
+            },
+        )
+        result = route(payload)
+        assert result is not None
+        self.assertEqual(result["item"]["title"], "Set up Webhook Receiver for fast reconcile")
+        self.assertEqual(result["comment"]["id"], 42)
+        self.assertNotIn("issue", result)
+        self.assertLess(len(json.dumps(result)), 1_000)
 
     def test_soupbot_issue_is_ignored(self):
         self.assertIsNone(route(base(sender={"login": "soupbot[bot]"}, issue={"number": 1})))
