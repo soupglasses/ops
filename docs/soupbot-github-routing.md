@@ -41,6 +41,12 @@ A bare `@soupbot` routes to `opslead`. Separators such as `:`, `,`, `/`, and `-`
 accepted, as is `@soupbot to security`. Messages authored by `soupbot` are ignored to
 prevent response loops.
 
+Only repository collaborators with `write`, `maintain`, or `admin` permission are
+trusted. The router checks the triggering sender against GitHub's repository
+collaborator-permission API and fails closed if that lookup fails. Outside contributors,
+first-time contributors, and read/triage-only users are ignored even when they mention
+`@soupbot`.
+
 A named command is logically addressed directly to that specialist. Because one Hermes
 webhook route has one fixed profile binding, the current single-webhook deployment uses
 `opslead` only as a thin dispatcher: it launches the exact named profile with the full
@@ -50,9 +56,10 @@ router could remove this implementation hop without changing the public command 
 
 ## Automatic pull-request routing
 
-Non-draft pull requests route to `opslead` on `opened`, `reopened`, `ready_for_review`,
-and `synchronize`. Opslead examines the changed files and existing comments before
-routing review:
+New non-draft pull requests route to `opslead` on `opened` or `reopened`; drafts route
+once on `ready_for_review`. New commits (`synchronize`) do not wake Soup Bot by
+themselves. Opslead examines the changed files and existing comments before routing
+review:
 
 - `security` is mandatory for RBAC, identity, trust-boundary, network exposure,
   admission, CI permissions, and supply-chain changes.
@@ -64,6 +71,23 @@ routing review:
 
 An agent cannot approve its own implementation. Repeated webhook deliveries and
 already-handled requests should produce no additional comment.
+
+The accepted trigger surface is deliberately narrow:
+
+- a new issue from a trusted collaborator;
+- an explicit `@soupbot` ping in a new or edited issue body;
+- a new or newly-ready pull request from a trusted collaborator;
+- an explicit `@soupbot` ping in a PR body, conversation comment, inline review
+  comment, or submitted review body;
+- a PR review request explicitly addressed to the Soup Bot account.
+
+All Soup Bot-authored issues, PRs, comments, and reviews are ignored. Routing agents
+must respond on the existing issue or PR and must never create another issue or PR as
+an acknowledgement, routing record, or response to a webhook event.
+
+The route uses `deliver: log`: the selected profile posts and verifies its comment or
+review with `gh`, then returns `[SILENT]`. This avoids a second adapter-generated comment
+and keeps response ownership with the profile that performed the work.
 
 ## Labels
 
@@ -92,8 +116,8 @@ Create one repository webhook for `soupglasses/ops`:
 - **Secret:** the shared HMAC secret configured in both the GitHub App and the protected
   Hermes `github-router` subscription. Rotate both sides together; do not commit it.
 - **SSL verification:** enabled.
-- **Events:** select individual events, then enable **Issues**, **Issue comments**, and
-  **Pull requests**.
+- **Events:** select individual events, then enable **Issues**, **Issue comments**,
+  **Pull requests**, **Pull request reviews**, and **Pull request review comments**.
 - **Active:** enabled.
 
 The reverse proxy must allow public `POST` requests to the exact

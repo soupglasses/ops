@@ -7,6 +7,7 @@
 
 import json
 import re
+import subprocess
 import sys
 
 PROFILES = {
@@ -22,8 +23,10 @@ MENTION = re.compile(
     r"(opslead|incident|observability|implementer|security|resilience))?\b",
     re.IGNORECASE,
 )
-PR_ACTIONS = {"opened", "reopened", "ready_for_review", "synchronize"}
-ISSUE_ACTIONS = {"opened", "edited", "reopened"}
+PR_CREATION_ACTIONS = {"opened", "reopened"}
+ISSUE_CREATION_ACTIONS = {"opened"}
+SOUPBOT_LOGINS = {"soupbot", "soupbot[bot]"}
+TRUSTED_PERMISSIONS = {"admin", "maintain", "write"}
 
 
 def mention_target(body: str) -> str | None:
@@ -34,6 +37,29 @@ def mention_target(body: str) -> str | None:
     return target if target in PROFILES else "opslead"
 
 
+def sender_is_trusted(login: str) -> bool:
+    """Fail closed unless GitHub reports collaborator write access or stronger."""
+    if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", login):
+        return False
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"repos/soupglasses/ops/collaborators/{login}/permission",
+                "--jq",
+                ".permission",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.stdout.strip().lower() in TRUSTED_PERMISSIONS
+
+
 def main() -> int:
     payload = json.load(sys.stdin)
     repository = payload.get("repository") or {}
@@ -42,24 +68,57 @@ def main() -> int:
 
     action = payload.get("action", "")
     sender = (payload.get("sender") or {}).get("login", "").lower()
-    if sender in {"soupbot", "soupbot[bot]"}:
+    if sender in SOUPBOT_LOGINS:
+        return 0
+    if not sender_is_trusted(sender):
         return 0
 
     target = None
     reason = None
 
-    if payload.get("comment") and payload.get("issue") and action == "created":
-        target = mention_target(((payload.get("comment") or {}).get("body") or ""))
+    issue = payload.get("issue") or {}
+    pull_request = payload.get("pull_request") or {}
+    comment = payload.get("comment") or {}
+    review = payload.get("review") or {}
+
+    # Conversation comments on issues and PRs route only explicit pings.
+    if comment and issue and action == "created":
+        target = mention_target(comment.get("body") or "")
         reason = "explicit-mention"
-    elif payload.get("issue") and not payload.get("pull_request") and action in ISSUE_ACTIONS:
-        target = mention_target(((payload.get("issue") or {}).get("body") or ""))
+    # Inline pull-request review comments also route only explicit pings.
+    elif comment and pull_request and action == "created":
+        target = mention_target(comment.get("body") or "")
         reason = "explicit-mention"
-    elif payload.get("pull_request") and action in PR_ACTIONS:
-        pull_request = payload.get("pull_request") or {}
-        if pull_request.get("draft") and action != "ready_for_review":
-            return 0
-        target = mention_target(pull_request.get("body") or "") or "opslead"
-        reason = "explicit-mention" if target != "opslead" else "pr-review-routing"
+    # A submitted review can contain a routing command in its summary body.
+    elif review and pull_request and action == "submitted":
+        target = mention_target(review.get("body") or "")
+        reason = "explicit-mention"
+    elif issue and not pull_request:
+        body_target = mention_target(issue.get("body") or "")
+        if action in ISSUE_CREATION_ACTIONS:
+            target = body_target or "opslead"
+            reason = "explicit-mention" if body_target else "new-issue"
+        elif action == "edited" and body_target:
+            target = body_target
+            reason = "explicit-mention"
+    elif pull_request:
+        body_target = mention_target(pull_request.get("body") or "")
+        if action in PR_CREATION_ACTIONS:
+            if pull_request.get("draft"):
+                return 0
+            target = body_target or "opslead"
+            reason = "explicit-mention" if body_target else "new-pr"
+        elif action == "ready_for_review":
+            target = body_target or "opslead"
+            reason = "explicit-mention" if body_target else "pr-ready"
+        elif action == "edited" and body_target:
+            target = body_target
+            reason = "explicit-mention"
+        elif action == "review_requested":
+            requested = (payload.get("requested_reviewer") or {}).get("login", "").lower()
+            if requested in SOUPBOT_LOGINS:
+                target = body_target or "opslead"
+                reason = "review-request"
     else:
         return 0
 
