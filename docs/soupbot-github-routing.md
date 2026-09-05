@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 SoupBot <ops+bot@finnes.dev>
+SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
 
 SPDX-License-Identifier: 0BSD
 -->
@@ -9,6 +9,18 @@ SPDX-License-Identifier: 0BSD
 A single GitHub App webhook routes GitHub work to the logical Hermes profiles. The
 GitHub actor remains `soupbot`; comments identify the profile and run ID because
 Hermes profiles are not separate GitHub accounts.
+
+## Canonical identity
+
+All Hermes profiles use this identity for agent-created commits and copyright headers:
+
+```text
+Soup Bot <ops+bot@finnes.dev>
+```
+
+The display name is exactly `Soup Bot`, with a space. Do not use `SoupBot` as the Git
+author name and do not substitute GitHub's generated noreply address. Existing human
+authorship is preserved when agents edit existing files.
 
 ## Commands
 
