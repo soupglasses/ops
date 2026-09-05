@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
+SPDX-FileCopyrightText: 2026 SoupBot <ops+bot@finnes.dev>
 
 SPDX-License-Identifier: 0BSD
 -->
@@ -77,8 +77,8 @@ Create one repository webhook for `soupglasses/ops`:
 - **Payload URL:**
   `https://hermes.finnes.dev/p/opslead/webhooks/github-router`
 - **Content type:** `application/json`
-- **Secret:** the exact contents of `/opt/data/.github-webhook-secret.pending` on the
-  Hermes host; do not add a newline and do not commit it.
+- **Secret:** the shared HMAC secret configured in both the GitHub App and the protected
+  Hermes `github-router` subscription. Rotate both sides together; do not commit it.
 - **SSL verification:** enabled.
 - **Events:** select individual events, then enable **Issues**, **Issue comments**, and
   **Pull requests**.
@@ -94,6 +94,11 @@ The default Hermes gateway must run with `gateway.multiplex_profiles: true`, inc
 `opslead` and every target profile in `gateway.multiplex_profile_allowlist`, and be
 restarted after changing that allowlist. The dynamic `github-router` route is bound to
 `opslead`; route definitions hot-reload, but gateway multiplex configuration does not.
+
+Webhook prompt placeholders address the transformed payload directly, for example
+`{_hermes.target_profile}`. They must not use a `payload.` prefix. Use `{__raw__}` when
+the complete transformed payload is required. Literal `{payload}` or
+`{payload.some_field}` text indicates a broken route template.
 
 ## Verification
 
