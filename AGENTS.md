@@ -32,8 +32,8 @@ work from this repository, off-cluster backups, and the minimum documented recov
 keys. No required state may exist only in the live cluster, on one node, in an agent's
 workspace, or in an image registry with no recovery plan.
 
-Request review from the `resilience` Hermes profile for every change that adds,
-removes, or materially changes any of the following:
+Request review from the `resilience` Hermes profile when the completed rendered diff
+adds, removes, or materially changes any of the following:
 
 - a PVC, StatefulSet, storage class, VolumeSnapshot, or reclaim policy;
 - a database, datastore, migration, restore script, retention policy, or backup job;
@@ -98,6 +98,14 @@ An agent must not approve its own implementation. RBAC or trust-boundary changes
 `security` review. Stateful or destructive lifecycle changes need `resilience`
 review. Changes requiring both need both reviews; one specialty does not substitute for
 the other.
+
+For pull requests, wait for all required CI to complete before review or delegation,
+then re-fetch the current head, check results, comments, and Flux Local rendered diff.
+Use one blocking CLI wait rather than spending model turns polling or streaming workflow
+logs. A routine image/chart update is not specialist-gated solely because the workload
+is stateful or security-sensitive: delegate only when the completed rendered diff or
+upstream migration notes show that specialist's boundary is changed. Unchanged
+pre-existing debt is non-blocking and should be tracked separately.
 
 ## Formatting & Validation
 

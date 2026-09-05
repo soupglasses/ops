@@ -58,16 +58,31 @@ router could remove this implementation hop without changing the public command 
 
 New non-draft pull requests route to `opslead` on `opened` or `reopened`; drafts route
 once on `ready_for_review`. New commits (`synchronize`) do not wake Soup Bot by
-themselves. Opslead examines the changed files and existing comments before routing
-review:
+themselves. Opslead first waits, without model-turn polling or workflow-log streaming,
+for required CI to finish. It then re-fetches the current head, final check conclusions,
+all comments, and the completed Flux Local rendered diff before doing any review,
+research, checkout, cluster inspection, or specialist routing. Failed or timed-out CI
+stops review until a later invocation.
 
-- `security` is mandatory for RBAC, identity, trust-boundary, network exposure,
-  admission, CI permissions, and supply-chain changes.
-- `resilience` is mandatory for stateful workloads, PVCs, storage, databases,
-  snapshots, VolSync, backups, restores, retention, destructive migrations, and
-  image-lifecycle assumptions.
+Specialists are selected from the completed rendered diff, not merely the application
+type or changed source filename:
+
+- `security` is mandatory when the PR adds or broadens RBAC, identity, trust boundaries,
+  network exposure, admission behavior, CI authority, workload privilege, credentials,
+  or executable supply-chain behavior. Pure narrowing/removal and unchanged security
+  debt do not require delegation unless another concrete risk is present.
+- `resilience` is mandatory when the PR changes storage/PVC identity, data paths or
+  ownership, backup/restore resources or hooks, retention, storage/database engines,
+  persistent-data formats or migrations, destructive lifecycle behavior, rollback
+  compatibility, or recovery-critical artifact availability.
 - `observability` handles monitoring, scraping, metrics cardinality, alerting, and
   dashboard changes when specialist review is useful.
+
+A routine image or chart update does not require `security` merely because the workload
+is security-sensitive, and does not require `resilience` merely because it is stateful.
+When CI passes and no specialist boundary is crossed, opslead handles the routine merge
+without delegating “for confidence.” Pre-existing debt is tracked separately and is not
+made a blocker unless the PR materially worsens it.
 
 An agent cannot approve its own implementation. Repeated webhook deliveries and
 already-handled requests should produce no additional comment.
