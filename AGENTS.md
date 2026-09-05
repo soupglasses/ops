@@ -25,6 +25,75 @@ then verify the result live. The loop:
    finishing. End state is always Flux-managed.
 7. Record new findings in TODO.md and tick off what you complete.
 
+## Data Survival Is a Merge Gate
+
+The machine and cluster are disposable; application data is not. A clean recovery must
+work from this repository, off-cluster backups, and the minimum documented recovery
+keys. No required state may exist only in the live cluster, on one node, in an agent's
+workspace, or in an image registry with no recovery plan.
+
+Request review from the `resilience` Hermes profile for every change that adds,
+removes, or materially changes any of the following:
+
+- a PVC, StatefulSet, storage class, VolumeSnapshot, or reclaim policy;
+- a database, datastore, migration, restore script, retention policy, or backup job;
+- VolSync resources, quiesce hooks, native dumps, pgBackRest, or equivalent tooling;
+- destructive pruning, volume replacement, application reinstallation, or image/chart
+  lifecycle assumptions.
+
+A stateful change is not complete until the review establishes all applicable items:
+
+1. **Automatic rebuild:** deleting and recreating the application or PVC through Flux
+   restores usable data without undocumented manual state. For ordinary PVC workloads,
+   use the repository's VolSync component and its `ReplicationDestination` plus PVC
+   `dataSourceRef` pattern.
+2. **Corruption recovery:** an operator can select an older known-good recovery point.
+   Databases that need point-in-time recovery use a database-native mechanism such as
+   pgBackRest (or a justified equivalent); a crash-consistent volume snapshot alone is
+   not sufficient.
+3. **Application consistency:** quiesce writes or produce a portable native dump before
+   snapshots where the workload requires it. Match mover UID/GID so backup jobs can
+   actually read the data.
+4. **Independent survival:** backups are off-cluster and survive node, ZFS pool, and
+   clean-cluster loss. Document the minimal keys, credentials, endpoints, and ordering
+   needed to recover them. Never commit those credentials.
+5. **Retention and history:** keep enough independently usable recovery points to
+   survive delayed corruption discovery. Do not silently reduce retention or make the
+   writer credential capable of erasing the only copy without explicit review.
+6. **Observable failure:** alert on failed and stale backups without noisy per-run
+   paging. A green controller condition proves execution, not restorability.
+7. **Proven restore:** run a restore drill and validate application-level contents, not
+   only PVC binding, pod readiness, or backup-controller status. Record evidence in the
+   issue or PR.
+8. **Safe destruction:** never delete or overwrite the only known-good local copy before
+   the replacement has been restored and validated. Preserve a rollback point through
+   migrations.
+9. **Artifact recovery:** required container images and charts must remain fetchable
+   after a clean rebuild, or have a documented mirror, digest, source, and rebuild path.
+
+The reviewer must request changes when recovery evidence is missing. "The backup job
+succeeded" and "the pod became Ready" are not acceptable substitutes for a restore
+test. See `kubernetes/components/volsync/README.md` for the standard PVC contract and
+`docs/openldap-volsync-migration.md` for a migration and restore-drill pattern.
+
+## Agent Review Routing
+
+GitHub Issues and pull requests are the durable coordination record. All profiles use
+the shared `soupbot` GitHub identity, so each agent comment or review must state its
+logical profile and Hermes run/session identifier.
+
+- `opslead`: triage, deduplication, decomposition, routing, and closure criteria.
+- `incident`: evidence-first outage diagnosis and root-cause analysis.
+- `observability`: scrape design, cardinality, alerts, recording rules, and dashboards.
+- `implementer`: scoped GitOps implementation and live verification.
+- `security`: least-privilege, workload, network, CI, and supply-chain review.
+- `resilience`: mandatory independent recovery review for stateful changes.
+
+An agent must not approve its own implementation. RBAC or trust-boundary changes need
+`security` review. Stateful or destructive lifecycle changes need `resilience`
+review. Changes requiring both need both reviews; one specialty does not substitute for
+the other.
+
 ## Formatting & Validation
 
 ### YAML Formatting
