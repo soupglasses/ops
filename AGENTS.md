@@ -124,7 +124,7 @@ task license:0bsd FILE=path/to/file  # For 0BSD
 
 Check existing files in the same directory to match the correct license.
 For files created by any Hermes profile, use
-`Soup Bot <306269487+soupbot@users.noreply.github.com>` as the copyright holder;
+`Soup Bot <ops+bot@finnes.dev>` as the copyright holder;
 never attribute agent-created files to Sofie or copy her personal identity from a
 neighboring header. Preserve existing copyright lines when editing existing files.
 

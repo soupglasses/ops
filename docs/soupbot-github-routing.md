@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 Soup Bot <306269487+soupbot@users.noreply.github.com>
+SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
 
 SPDX-License-Identifier: 0BSD
 -->
