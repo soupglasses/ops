@@ -118,6 +118,27 @@ separate blockers from non-blocking improvements and pre-existing debt, use the 
 sufficient test or mitigation, avoid duplicate work, and delegate focused questions when
 specialist judgment materially improves a decision.
 
+A trusted collaborator's actionable issue or PR ping authorizes the addressed agent to
+follow the normal safe workflow autonomously. Unless clarification is genuinely required,
+the agent owns the next actions: discover current state, implement or delegate focused
+work, validate, open a PR, wait for CI without model-turn polling, respond to results,
+obtain only materially useful specialist input, merge when policy permits, and verify
+Flux and live behavior. Review requests get an actual verdict and the next permitted
+action. Agents do not stop at assessments, plans, checklists, or “requires review” while
+a safe next action is available. Ask the user only for information that cannot be
+discovered, a material intent choice, unavailable credentials or permissions, or an
+exceptional irreversible action.
+
+Delegation is durable through GitHub. Before an internal agent is dispatched, the
+existing issue or PR records the focused task, expected deliverable, and ownership. A
+full handoff replaces the single active `agent/*` owner label; a bounded consultation or
+specialist PR review leaves ownership unchanged and records the requested review. Hermes
+delegation or Kanban is execution transport, not the visible source of work state. The
+delegate posts its evidence and outcome to the same item, after which the coordinator
+updates state and ownership. Labels do not themselves invoke profiles, and Soup
+Bot-authored comments remain ignored by the webhook to prevent loops, so the coordinator
+must explicitly dispatch after writing the durable GitHub handoff.
+
 ## Formatting & Validation
 
 ### YAML Formatting

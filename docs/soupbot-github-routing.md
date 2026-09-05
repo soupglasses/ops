@@ -41,6 +41,18 @@ A bare `@soupbot` routes to `opslead`. Separators such as `:`, `,`, `/`, and `-`
 accepted, as is `@soupbot to security`. Messages authored by `soupbot` are ignored to
 prevent response loops.
 
+A trusted collaborator's actionable mention is an instruction to proceed, not merely to
+report status or propose scope. The addressed agent follows the safe autonomous path:
+discover current state; implement directly or delegate a focused task; validate; open a
+pull request; wait for CI without spending model turns; address results; obtain only
+materially useful specialist input; merge when policy allows; and verify Flux plus live
+behavior. A review mention produces an actual verdict and continues with the next
+permitted action. The agent asks the collaborator only when required information is not
+discoverable, materially different choices need human intent, credentials or permissions
+are unavailable, or an exceptional irreversible action needs confirmation. It must not
+stop at an assessment, plan, checklist, or statement that another review is required
+while it can safely perform the next action.
+
 Only repository collaborators with `write`, `maintain`, or `admin` permission are
 trusted. The router checks the triggering sender against GitHub's repository
 collaborator-permission API and fails closed if that lookup fails. Outside contributors,
@@ -53,6 +65,28 @@ webhook route has one fixed profile binding, the current single-webhook deployme
 issue or pull-request context, waits for it, and returns no competing answer. Opslead
 must not redo or reinterpret that specialist's work. A future dedicated transport
 router could remove this implementation hop without changing the public command syntax.
+
+## Durable delegation
+
+GitHub is the human-visible source of delegation state. Before dispatch, record on the
+existing issue or PR:
+
+- the focused task or question and expected deliverable;
+- the current owner and whether ownership is transferring;
+- any blocking dependency or acceptance criterion.
+
+For a full handoff, replace the single active `agent/*` label with the recipient. For a
+bounded consultation or specialist PR review, retain the current owner and record the
+requested specialist input in an attributed comment or review; consultation is not an
+ownership transfer. Then explicitly dispatch the target profile through Hermes or the
+Kanban worker path. Internal dispatch is transport, not durable work state. The delegate
+returns evidence and outcome on the same GitHub item, and the coordinator updates labels
+after reading it.
+
+Labels alone do not trigger profiles. Soup Bot-authored comments are also ignored by the
+webhook to prevent response loops, so never try to delegate by posting an `@soupbot`
+mention from the shared bot account. Write the GitHub record and invoke the target through
+the internal dispatcher as one coordinated operation.
 
 ## Automatic pull-request routing
 
