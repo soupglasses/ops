@@ -95,8 +95,6 @@ jobs:
             echo '```diff'
             cat diff.txt
             echo '```'
-            echo
-            echo '🤖 Written by [GPT-5.6 Sol](https://developers.openai.com/codex/models).'
           } > body.md
 
           gh pr comment "$PR_NUMBER" --body-file body.md
