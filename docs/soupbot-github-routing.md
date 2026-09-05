@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
+SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
 
 SPDX-License-Identifier: 0BSD
 -->
@@ -15,7 +15,7 @@ Hermes profiles are not separate GitHub accounts.
 All Hermes profiles use this identity for agent-created commits and copyright headers:
 
 ```text
-Soup Bot <ops+bot@finnes.dev>
+Soup Bot <bot+ops@finnes.dev>
 ```
 
 The display name is exactly `Soup Bot`, with a space. Do not use `SoupBot` as the Git
@@ -85,9 +85,9 @@ All Soup Bot-authored issues, PRs, comments, and reviews are ignored. Routing ag
 must respond on the existing issue or PR and must never create another issue or PR as
 an acknowledgement, routing record, or response to a webhook event.
 
-The route uses `deliver: log`: the selected profile posts and verifies its comment or
-review with `gh`, then returns `[SILENT]`. This avoids a second adapter-generated comment
-and keeps response ownership with the profile that performed the work.
+The route uses Hermes's `github_comment` delivery. The selected profile returns one
+attributed response, and the webhook adapter posts it to the existing issue or PR using
+the normalized item number produced by the router. Agents must not post a second copy.
 
 ## Labels
 

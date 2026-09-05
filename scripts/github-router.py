@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
 #
 # SPDX-License-Identifier: 0BSD
 
@@ -125,7 +125,14 @@ def main() -> int:
     if target is None:
         return 0
 
-    payload["_hermes"] = {"target_profile": target, "reason": reason}
+    item_number = pull_request.get("number") or issue.get("number")
+    if not isinstance(item_number, int) or item_number < 1:
+        return 0
+    payload["_hermes"] = {
+        "target_profile": target,
+        "reason": reason,
+        "item_number": item_number,
+    }
     json.dump(payload, sys.stdout, separators=(",", ":"))
     return 0
 

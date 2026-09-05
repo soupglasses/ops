@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 Soup Bot <ops+bot@finnes.dev>
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
 #
 # SPDX-License-Identifier: 0BSD
 
@@ -45,7 +45,12 @@ def base(**values) -> dict:
 class RoutingPolicyTest(unittest.TestCase):
     def test_new_human_issue_routes_to_opslead(self):
         result = route(base(issue={"number": 1, "body": "No mention"}))
-        self.assertEqual(result["_hermes"], {"target_profile": "opslead", "reason": "new-issue"})
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(
+            result["_hermes"],
+            {"target_profile": "opslead", "reason": "new-issue", "item_number": 1},
+        )
 
     def test_soupbot_issue_is_ignored(self):
         self.assertIsNone(route(base(sender={"login": "soupbot[bot]"}, issue={"number": 1})))
