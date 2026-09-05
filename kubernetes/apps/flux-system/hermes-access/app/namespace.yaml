@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hermes-system
