@@ -80,7 +80,12 @@ test. See `kubernetes/components/volsync/README.md` for the standard PVC contrac
 
 GitHub Issues and pull requests are the durable coordination record. All profiles use
 the shared `soupbot` GitHub identity, so each agent comment or review must state its
-logical profile and Hermes run/session identifier.
+logical profile and Hermes run/session identifier. A bare `@soupbot` mention routes to
+`opslead`. A named command such as `@soupbot security` is addressed to that specialist;
+the current single-webhook implementation uses opslead as a thin dispatcher because a
+Hermes webhook route is bound to one profile, but opslead must not redo or reinterpret
+the specialist's work. Read `docs/soupbot-github-routing.md` for accepted commands,
+automatic PR routing, labels, and webhook operations.
 
 - `opslead`: triage, deduplication, decomposition, routing, and closure criteria.
 - `incident`: evidence-first outage diagnosis and root-cause analysis.
@@ -118,6 +123,10 @@ task license:0bsd FILE=path/to/file  # For 0BSD
 ```
 
 Check existing files in the same directory to match the correct license.
+For files created by any Hermes profile, use
+`Soup Bot <306269487+soupbot@users.noreply.github.com>` as the copyright holder;
+never attribute agent-created files to Sofie or copy her personal identity from a
+neighboring header. Preserve existing copyright lines when editing existing files.
 
 ### Kubernetes Manifest Validation
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-FileCopyrightText: 2026 Soup Bot <306269487+soupbot@users.noreply.github.com>
 #
 # SPDX-License-Identifier: 0BSD
 
