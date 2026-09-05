@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-default_install_hook_types: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
 repos:
   - repo: local
     hooks:
@@ -32,6 +32,13 @@ repos:
         language: system
         types: [yaml]
         stages: [pre-commit]
+      - id: verify-push-signatures
+        name: verify pushed commit signatures
+        entry: scripts/verify-push-signatures.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
   - repo: https://github.com/onedr0p/sops-pre-commit
     rev: v2.1.1
     hooks:
