@@ -45,9 +45,9 @@ installer account, and then converge the host:
 cd ansible
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-galaxy collection install -r requirements.yml
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/bootstrap.yml \
-  -u sofie -e ansible_host=172.21.71.254
+  -u sofie -e initial_ansible_host=172.21.71.254
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/site.yml \
-  -u ansible -e ansible_host=172.21.71.254
+  -u ansible -e initial_ansible_host=172.21.71.254
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/verify.yml
 ```
 
@@ -56,7 +56,8 @@ keep a local console available for the first handoff. Never disable SSH host-key
 checking to make the transition pass. The inventory reads the dedicated public key from
 `~/.ssh/ansible.pub` and pins the controller to `172.21.69.10/32` plus its recorded global
 IPv6 `/128`. The role fails closed unless it receives exactly one `/32` and one `/128` in
-the trusted management subnet.
+the trusted management subnet. Use `initial_ansible_host` only for this handoff; overriding
+`ansible_host` would prevent the role from switching the remaining play to `.10`.
 
 While audit mode is active, open a new SSH session and exercise API, monitoring, BGP,
 backup, IPv4, and IPv6 paths while inspecting Hubble verdicts. Audit is the default and

@@ -54,7 +54,7 @@ temporary installer address. The inventory reads the public half of the dedicate
 
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
-  -u sofie -e ansible_host=172.21.71.254
+  -u sofie -e initial_ansible_host=172.21.71.254
 ```
 
 Use the dedicated automation key held in the controller credential store. Its private half is
@@ -76,8 +76,12 @@ perform the network handoff:
 
 ```bash
 ansible-playbook playbooks/site.yml \
-  -u ansible -e ansible_host=172.21.71.254
+  -u ansible -e initial_ansible_host=172.21.71.254
 ```
+
+Do not override `ansible_host` itself for the first convergence. Extra variables have
+higher precedence than the network role's post-handoff connection fact and would pin
+Ansible to the obsolete installer address after networkd moves the node.
 
 Audit mode is the safe default. Before enforcement, inspect Hubble dropped/audited verdicts and prove
 new sessions—not existing connections—for IPv4 and IPv6 SSH, Kubernetes API access, both authenticated

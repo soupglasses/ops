@@ -64,9 +64,9 @@ From `ansible/`, bootstrap and converge the clean host with the original encrypt
 
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
-  -u sofie -e ansible_host=172.21.71.254
+  -u sofie -e initial_ansible_host=172.21.71.254
 ansible-playbook playbooks/site.yml \
-  -u ansible -e ansible_host=172.21.71.254
+  -u ansible -e initial_ansible_host=172.21.71.254
 ```
 
 This initially creates a disposable empty control plane so Ansible can validate the pinned binary and
