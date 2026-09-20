@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: grafana-oidc
+spec:
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  interval: 1h
+  path: ./tofu/ldap/grafana-oidc
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  vars:
+    - name: domain
+      value: ${DOMAIN}
+  varsFrom:
+    - kind: Secret
+      name: ldap-admin-credentials
+    - kind: Secret
+      name: grafana-oidc-registration
