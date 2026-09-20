@@ -9,6 +9,39 @@
     daemon_reload: true
   listen: Restart RKE2
 
+- name: Wait for Cilium Helm values to reach the effective ConfigMap
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - get
+      - configmap/cilium-config
+      - -o
+      - jsonpath={.data.enable-host-legacy-routing}
+  register: rke2_cilium_host_routing
+  retries: 36
+  delay: 5
+  until: rke2_cilium_host_routing.rc == 0 and rke2_cilium_host_routing.stdout == 'false'
+  changed_when: false
+  listen: Wait for Cilium Helm values
+
+- name: Restart Cilium after changing its managed Helm values
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - restart
+      - daemonset/cilium
+  changed_when: true
+  listen: Restart Cilium
+
 - name: Restart Prometheus node exporter
   ansible.builtin.systemd_service:
     name: prometheus-node-exporter
