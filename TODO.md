@@ -56,6 +56,24 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   systemd-networkd, the CIS-oriented host baseline, RKE2, bundled Cilium, ZFS, and
   RouterOS. Converge it, bootstrap Flux, complete both S3 restore passes from
   `docs/zfs-s3-recovery.md`, then remove the preserved Talos configuration.
+- [ ] **Finish the 2026-09-21 RKE2 recovery checkpoint.** The host is converged and
+  verified at `172.21.71.10`, the old ZFS datasets remain unmounted, and RouterOS has
+  the authenticated dual-stack BGP peers plus narrowly scoped firewall rules. Next:
+  bootstrap Flux using the human-owned `.secure` credentials; reconcile all
+  Kustomizations; verify both BGP sessions and `/32` plus `/128` VIP routes; prove
+  dual-stack pod, Service, DNS, ingress, and egress traffic; then run the two-pass S3
+  application restore drill. Do not enable host-firewall enforcement or remove Talos
+  data/configuration before those checks pass.
+- [ ] **Prove an independent human recovery login.** The managed `ansible` account and
+  passwordless sudo work. The `sofie` account still has its two pre-existing
+  GitHub-imported authorized keys and correct file permissions, but the locally selected
+  recovery key did not match either entry. Test with the matching key or explicitly add
+  a designated recovery public key before enforcing the Cilium host firewall.
+- [ ] **Complete the new observability acceptance tests.** After Flux bootstrap, verify
+  VictoriaMetrics Operator/CRDs, VMAgent, VMAlert, VMAlertmanager, Grafana, VictoriaLogs,
+  Vector journald/Kubernetes ingestion, and the host exporters. Prove a firing and
+  resolved SMTP message, Grafana admin login, useful LogSQL results, stale-backup
+  alerting, and a VictoriaLogs backup restore from an older recovery point.
 - [ ] **Add VictoriaLogs security and platform logging.** Collect SSH/sudo authentication,
   auditd, AIDE, kernel/AppArmor, RKE2/containerd, Cilium/Hubble policy verdicts,
   RouterOS firewall/BGP, VolSync/restore, and Flux/controller reconciliation events.

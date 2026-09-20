@@ -22,17 +22,25 @@
   no_log: true
 
 - name: Require the RouterOS 7.20+ BGP instance model
-  community.routeros.command:
-    commands:
-      - /system/resource/print
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: :put [/system/resource/get version]
+    stdin_add_newline: true
   register: routeros_cilium_resource_facts
   changed_when: false
+  delegate_to: localhost
 
 - name: Extract the RouterOS version
   ansible.builtin.set_fact:
-    routeros_cilium_version: >-
-      {{ routeros_cilium_resource_facts.stdout[0] | regex_findall('version:\\s+([0-9.]+)') | first }}
-
+    routeros_cilium_version: "{{ routeros_cilium_resource_facts.stdout.split()[0] }}"
 - name: Require RouterOS 7.20 or newer
   ansible.builtin.assert:
     that:
@@ -77,12 +85,21 @@
       - rule="reject"
 
 - name: Keep the IPv4 accept before the reject
-  community.routeros.command:
-    commands:
-      - >-
-        /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v4:accept"] destination=[find
-        where comment="ansible:cilium:bgp:v4:reject"]
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: >-
+      /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v4:accept"] [find where comment="ansible:cilium:bgp:v4:reject"]
+    stdin_add_newline: true
   changed_when: false
+  delegate_to: localhost
 
 - name: Converge the exact IPv6 Cilium prefix accept
   ansible.builtin.include_tasks: reconcile.yml
@@ -111,12 +128,21 @@
       - rule="reject"
 
 - name: Keep the IPv6 accept before the reject
-  community.routeros.command:
-    commands:
-      - >-
-        /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v6:accept"] destination=[find
-        where comment="ansible:cilium:bgp:v6:reject"]
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: >-
+      /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v6:accept"] [find where comment="ansible:cilium:bgp:v6:reject"]
+    stdin_add_newline: true
   changed_when: false
+  delegate_to: localhost
 
 - name: Preserve and converge the IPv4 Cilium BGP connection
   ansible.builtin.include_tasks: reconcile.yml
@@ -194,8 +220,8 @@
     routeros_resource_expected:
       - chain=input
       - action=accept
-      - "src-address={{ routeros_node_ipv6 }}"
-      - "dst-address={{ routeros_router_ipv6 }}"
+      - "src-address={{ routeros_node_ipv6 }}/128"
+      - "dst-address={{ routeros_router_ipv6 }}/128"
       - dst-port=179
 
 - name: Converge public IPv6 TCP ingress to Cilium
@@ -229,23 +255,47 @@
       - dst-port=24454
 
 - name: Position managed input rules before the non-LAN drop
-  community.routeros.command:
-    commands:
-      - >-
-        /ip/firewall/filter/move [find where comment="ansible:cilium:bgp:v4:input"] destination=[find
-        where chain=input in-interface-list=!LAN action=drop]
-      - >-
-        /ipv6/firewall/filter/move [find where comment="ansible:cilium:bgp:v6:input"] destination=[find
-        where chain=input in-interface-list=!LAN action=drop]
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: "{{ item }}"
+    stdin_add_newline: true
+  loop:
+    - >-
+      /ip/firewall/filter/move [find where comment="ansible:cilium:bgp:v4:input"] [find where chain=input
+      comment="defconf: drop all not coming from LAN"]
+    - >-
+      /ipv6/firewall/filter/move [find where comment="ansible:cilium:bgp:v6:input"] [find where chain=input
+      comment="defconf: drop everything else not coming from LAN"]
   changed_when: false
+  delegate_to: localhost
 
 - name: Position public IPv6 rules before the non-LAN forward drop
-  community.routeros.command:
-    commands:
-      - >-
-        /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:tcp"] destination=[find
-        where chain=forward in-interface-list=!LAN action=drop]
-      - >-
-        /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:udp"] destination=[find
-        where chain=forward in-interface-list=!LAN action=drop]
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: "{{ item }}"
+    stdin_add_newline: true
+  loop:
+    - >-
+      /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:tcp"] [find where chain=forward
+      comment="defconf: drop everything else not coming from LAN"]
+    - >-
+      /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:udp"] [find where chain=forward
+      comment="defconf: drop everything else not coming from LAN"]
   changed_when: false
+  delegate_to: localhost

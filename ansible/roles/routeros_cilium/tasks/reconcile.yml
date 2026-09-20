@@ -3,28 +3,58 @@
 # SPDX-License-Identifier: 0BSD
 
 - name: "Inspect {{ routeros_resource_label }}"
-  community.routeros.command:
-    commands:
-      - "{{ routeros_resource_path }}/print detail where {{ routeros_resource_selector }}"
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: "{{ routeros_resource_path }}/print detail where {{ routeros_resource_selector }}"
+    stdin_add_newline: true
   register: routeros_cilium_resource_state
   changed_when: false
   no_log: "{{ routeros_resource_no_log | default(false) }}"
+  delegate_to: localhost
 
 - name: "Create {{ routeros_resource_label }}"
-  community.routeros.command:
-    commands:
-      - "{{ routeros_resource_path }}/add {{ routeros_resource_arguments }}"
-  when: routeros_cilium_resource_state.stdout[0] | trim == ""
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: "{{ routeros_resource_path }}/add {{ routeros_resource_arguments }}"
+    stdin_add_newline: true
+  when: routeros_cilium_resource_state.stdout | trim == ""
   no_log: "{{ routeros_resource_no_log | default(false) }}"
+  delegate_to: localhost
 
 - name: "Converge {{ routeros_resource_label }}"
-  community.routeros.command:
-    commands:
-      - >-
-        {{ routeros_resource_path }}/set [find where {{ routeros_resource_selector }}] {{ routeros_resource_arguments
-        }}
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ ansible_private_key_file }}"
+      - -o
+      - BatchMode=yes
+      - -o
+      - StrictHostKeyChecking=yes
+      - "{{ routeros_automation_user }}@{{ ansible_host }}"
+    stdin: >-
+      {{ routeros_resource_path }}/set [find where {{ routeros_resource_selector }}] {{ routeros_resource_arguments
+      }}
+    stdin_add_newline: true
   when:
-    - routeros_cilium_resource_state.stdout[0] | trim != ""
-    - routeros_resource_expected | reject('in', routeros_cilium_resource_state.stdout[0]) | list | length
+    - routeros_cilium_resource_state.stdout | trim != ""
+    - routeros_resource_expected | reject('in', routeros_cilium_resource_state.stdout) | list | length
       > 0
   no_log: "{{ routeros_resource_no_log | default(false) }}"
+  delegate_to: localhost
