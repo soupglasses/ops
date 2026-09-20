@@ -146,19 +146,32 @@ are never exported as metric labels or values.
 Flux declares the private node-exporter endpoint, a `ServiceMonitor`, and alerts for a
 missing signal, repeated listing failure, a snapshot older than ten hours, and a
 retention deficit that persists beyond the seven-day warm-up needed for 28 snapshots
-at the six-hour schedule. A minimal VictoriaMetrics stack converts the Prometheus
-objects, scrapes them with VMAgent, stores two days of disposable metrics in an
-ephemeral VMSingle, evaluates the rules with VMAlert, and sends firing alerts to
-VMAlertmanager. This single-node monitoring path deliberately has no PVC: a node loss
-may discard metric history, but the host textfile signal returns after rebuild and
-alerting resumes without restoring monitoring data.
+at the six-hour schedule. VictoriaMetrics Operator converts the Prometheus objects;
+there is no Prometheus server or second runtime operator. VMAgent uses an exact label
+selector, VMSingle keeps up to two days in ephemeral storage, and VMAlert evaluates
+the rules and forwards them to VMAlertmanager. VMSingle stops ingestion before the node
+has less than 5 GB free rather than letting monitoring exhaust the root filesystem.
 
-VMAlertmanager initially keeps alerts available through its API and UI, but has no
-external receiver. Before treating notification delivery as production-ready, add a
-monitoring-owned SOPS secret and receiver for the chosen mail or paging destination.
-Do not reuse an application's SMTP secret across namespaces. VictoriaLogs remains a
-separate follow-up: collect the snapshot check's journal entries and RKE2 service logs,
-but keep freshness and failure paging metric-based.
+The Prometheus Operator CRDs remain installed only as compatibility schemas for
+repository-owned `ServiceMonitor` and `PrometheusRule` objects. VictoriaMetrics
+Operator is the sole runtime reconciler and its converter produces the corresponding
+`VMServiceScrape` and `VMRule` resources.
+
+Metric history is useful operational context, but it is not authoritative application
+data. Pod or node replacement may discard it by design; VMAgent repopulates current
+signals automatically after the stack returns. Restore etcd and application data first.
+Grafana is likewise stateless: its
+VictoriaMetrics datasource and RKE2 snapshot dashboard are provisioned from Git, so its
+SQLite database is intentionally excluded from the backup contract. Grafana also
+installs the signed VictoriaLogs datasource plugin pinned to 0.32.0 and discovers its provisioned
+datasource and dashboards after VictoriaLogs is reconciled.
+
+VMAlertmanager sends firing and resolved notifications through
+`prod-mta-06.swg-srv.net:2525` with required TLS to `alerts+ops@finnes.dev`, using
+`alertmanager@noreply.finnes.dev` as its sender. Its authentication values arrive as
+Helm values from the monitoring-owned `alertmanager-smtp` Secret; do not reuse an
+application credential across namespaces. The raw Alertmanager configuration is stored
+in a generated Kubernetes Secret so credentials are not exposed in a custom resource.
 
 Verify the complete path after convergence:
 
@@ -172,6 +185,7 @@ curl --fail --silent http://172.21.71.10:9100/metrics \
 kubectl -n monitoring get endpointslice,servicemonitor,prometheusrule \
   -l app.kubernetes.io/name=rke2-host-metrics
 kubectl -n monitoring get vmservicescrape,vmrule,vmagent,vmsingle,vmalert,vmalertmanager
+kubectl -n monitoring get pvc
 kubectl -n monitoring port-forward \
   svc/vmagent-victoria-metrics-victoria-metrics-k8s-stack 8429:8429
 # In another shell, confirm rke2-host-metrics is up at http://127.0.0.1:8429/targets.
@@ -181,6 +195,9 @@ kubectl -n monitoring port-forward \
 kubectl -n monitoring port-forward \
   svc/vmalertmanager-victoria-metrics-victoria-metrics-k8s-stack 9093:9093
 # Confirm expected firing alerts appear at http://127.0.0.1:9093/#/alerts.
+# Retrieve the local break-glass username and password for https://grafana.${DOMAIN}
+# from the recovery password manager. Kubernetes reads the same values from the
+# SOPS-encrypted grafana-auth Secret; do not print that Secret during routine checks.
 ```
 
 A fresh timestamp and full retention count prove that RKE2 can list S3 objects; they

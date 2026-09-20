@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+# VictoriaLogs has no built-in authorization. Keep ingestion and query APIs
+# reachable only from workloads in the monitoring namespace; external access
+# must go through Grafana or a separately authenticated proxy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: victoria-logs-server
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: server
+      app.kubernetes.io/instance: victoria-logs
+      app.kubernetes.io/name: victoria-logs-single
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 9428
+          protocol: TCP
+  egress: []
+---
+# The collector needs Kubernetes API and DNS egress for metadata enrichment,
+# plus VictoriaLogs ingestion. Ingress is limited to its metrics endpoint from
+# this namespace. Its host mounts are separately read-only and log-only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: victoria-logs-vector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: victoria-logs
+      app.kubernetes.io/name: vector
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 9090
+          protocol: TCP

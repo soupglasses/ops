@@ -11,4 +11,5 @@ components:
 resources:
   - ./prometheus-operator-crds/ks.yaml
   - ./victoria-metrics/ks.yaml
+  - ./victoria-logs/ks.yaml
   - ./rke2-host-metrics/ks.yaml

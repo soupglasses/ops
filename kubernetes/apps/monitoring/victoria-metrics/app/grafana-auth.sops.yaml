@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-auth
+  namespace: monitoring
+stringData:
+  admin-user: ENC[AES256_GCM,data:3PeyNQw=,iv:d8+CiL+zyu8ZJXA/mVBl1QVtAzwx/FanRi22lrR5qIE=,tag:DTP0AAMhHzOqAfj37P8IsA==,type:str]
+  admin-password: ENC[AES256_GCM,data:OIg+g/zlMP0X7qhDFvdxq192hCYiL/taG+6JzkTMM1sjd9eOWFmX4ovs2w==,iv:5Qln0vPpGsxdQcRitweok+t1QmQ02jZ56rx7kcH8TJM=,tag:A7dxSlIckn5k3kMRv3uQvg==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB0NkdZSHVOcFJHTTRWZktC
+        WHM4cEtKbG5lTW5iTXA3aHA0bENIVWpXNUdRCmFlR2tQaUx3Uk92enNXdU13VnFp
+        VUV2MzFSMDMyT25oOXBldTZFaVFRM2cKLS0tIFJ6VlNScG1pWjI1OWRzMmd2ODZp
+        TUFiMGRyV2NPSjFtTjZCc2t3YUtNRk0Kc1tuN8NdVdGXdtI76biJHFz572TxCF0L
+        hT9rK1hVNweosVUeaEbMOYCUrGhn5N80Sb8fFVUT0of8qOvjWFtxaw==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age16k03wpjydrcr2wk68f0q9ypdxvh7vsy0fpx4lq72nc50zln8xf3qvkjxas
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-09-20T22:16:08Z"
+  mac: ENC[AES256_GCM,data:fxzIAi6vSgNredSfdgILQEGFpGgg30kewDkEitvXjBkdOgg6TdGvLr6dJn8TVngJvQQ7vKfaFG2bOxvNkE2LmPYNlJPi4zvBeHk7TXqUSljHuKRHi/46S8RgoQvayE86yAt6l+LmnMFlhj26bKjDR0IP3zvpaitKUlN79gkmA7I=,iv:SxhRm7fOZdUg+prsirroir8oIdm+BlRdiRLYXkH/TJo=,tag:6N60KktxOtGcXQ0fVUWAhA==,type:str]
+  version: 3.13.3

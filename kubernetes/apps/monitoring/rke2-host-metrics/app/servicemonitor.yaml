@@ -7,6 +7,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: rke2-host-metrics
+  labels:
+    monitoring.finnes.dev/enabled: "true"
 spec:
   endpoints:
     - interval: 1m

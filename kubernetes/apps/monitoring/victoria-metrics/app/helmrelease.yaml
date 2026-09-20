@@ -8,6 +8,10 @@ metadata:
   name: victoria-metrics
 spec:
   interval: 30m
+  valuesFrom:
+    - kind: Secret
+      name: alertmanager-smtp
+      valuesKey: values.yaml
   chart:
     spec:
       chart: victoria-metrics-k8s-stack
@@ -31,21 +35,23 @@ spec:
           # Never let removing this release delete unrelated VM custom resources.
           enabled: false
 
-    # This first deployment evaluates recovery alerts without making monitoring
-    # storage part of the recovery contract. Durable storage belongs in the later
-    # VictoriaMetrics/VictoriaLogs design.
+    # Metric history is operational cache, not application data. Keeping it
+    # ephemeral avoids an unbacked stateful recovery dependency: current
+    # signals, alerts, and dashboards rebuild entirely from Git after loss.
     vmsingle:
       enabled: true
       spec:
         retentionPeriod: 2d
         storage: null
+        extraArgs:
+          storage.minFreeDiskSpaceBytes: 5GB
         useStrictSecurity: true
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
+            cpu: 100m
+            memory: 256Mi
           limits:
-            memory: 512Mi
+            memory: 1Gi
 
     vmagent:
       enabled: true
@@ -53,7 +59,7 @@ spec:
         selectAllByDefault: false
         serviceScrapeSelector:
           matchLabels:
-            app.kubernetes.io/name: rke2-host-metrics
+            monitoring.finnes.dev/enabled: "true"
         scrapeInterval: 1m
         useStrictSecurity: true
         resources:
@@ -70,7 +76,7 @@ spec:
         evaluationInterval: 1m
         ruleSelector:
           matchLabels:
-            app.kubernetes.io/name: rke2-host-metrics
+            monitoring.finnes.dev/enabled: "true"
         useStrictSecurity: true
         resources:
           requests:
@@ -81,6 +87,9 @@ spec:
 
     alertmanager:
       enabled: true
+      # Raw configuration allows sensitive global SMTP authentication values to
+      # arrive through Helm valuesFrom without putting them in a rendered CR.
+      useManagedConfig: false
       spec:
         selectAllByDefault: false
         useStrictSecurity: true
@@ -91,22 +100,27 @@ spec:
           limits:
             memory: 128Mi
       config:
+        global:
+          smtp_from: alertmanager@noreply.finnes.dev
+          smtp_require_tls: true
+          smtp_smarthost: prod-mta-06.swg-srv.net:2525
         route:
-          receiver: local
+          receiver: monitoring-email
           group_by:
             - alertname
           group_wait: 30s
           group_interval: 5m
           repeat_interval: 12h
         receivers:
-          # Alertmanager retains active alerts for inspection. An external receiver
-          # is added separately with a monitoring-owned SOPS secret.
-          - name: local
+          - name: monitoring-email
+            email_configs:
+              - send_resolved: true
+                to: alerts+ops@finnes.dev
       monzoTemplate:
         enabled: false
 
-    # Avoid duplicate exporters and broad cluster scraping. The first deployment
-    # exists only to operate repository-owned ServiceMonitors and PrometheusRules.
+    # Avoid duplicate exporters and broad cluster scraping. VMAgent only selects
+    # explicitly labelled repository-owned ServiceMonitors.
     defaultDashboards:
       enabled: false
     syncJob:
@@ -114,7 +128,77 @@ spec:
     defaultRules:
       enabled: false
     grafana:
-      enabled: false
+      enabled: true
+      admin:
+        existingSecret: grafana-auth
+        userKey: admin-user
+        passwordKey: admin-password
+      defaultDashboardsTimezone: browser
+      plugins:
+        - victoriametrics-logs-datasource 0.32.0
+      ingress:
+        enabled: true
+        ingressClassName: nginx-public
+        annotations:
+          cert-manager.io/cluster-issuer: cloudflare-dns01-production
+          external-dns.alpha.kubernetes.io/hostname: grafana.${DOMAIN}
+          external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
+        hosts:
+          - grafana.${DOMAIN}
+        tls:
+          - secretName: grafana-tls
+            hosts:
+              - grafana.${DOMAIN}
+      persistence:
+        # Dashboards and datasources are provisioned from Git. Keeping Grafana
+        # stateless makes clean recovery deterministic and avoids backing up an
+        # otherwise authoritative SQLite database.
+        enabled: false
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      sidecar:
+        dashboards:
+          enabled: true
+          label: grafana_dashboard
+          labelValue: "1"
+          searchNamespace: monitoring
+        datasources:
+          enabled: true
+          label: grafana_datasource
+          labelValue: "1"
+          searchNamespace: monitoring
+      grafana.ini:
+        analytics:
+          check_for_updates: false
+          reporting_enabled: false
+        auth.anonymous:
+          enabled: false
+        security:
+          cookie_secure: true
+          disable_gravatar: true
+          strict_transport_security: true
+          strict_transport_security_max_age_seconds: 31536000
+        server:
+          domain: grafana.${DOMAIN}
+          root_url: https://grafana.${DOMAIN}
+        users:
+          allow_sign_up: false
+      assertNoLeakedSecrets: true
+    defaultDatasources:
+      victoriametrics:
+        # Use the Prometheus-compatible API built into Grafana. The optional
+        # VictoriaMetrics plugin is unnecessary for the initial deployment.
+        datasources:
+          - name: VictoriaMetrics
+            type: prometheus
+            access: proxy
+            uid: VictoriaMetrics
+            isDefault: true
+            editable: false
     prometheus-node-exporter:
       enabled: false
     kube-state-metrics:

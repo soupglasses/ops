@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: victoria-logs-grafana-datasource
+  labels:
+    grafana_datasource: "1"
+data:
+  victoria-logs.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: VictoriaLogs
+        uid: VictoriaLogs
+        type: victoriametrics-logs-datasource
+        access: proxy
+        url: http://victoria-logs-victoria-logs-single-server.monitoring.svc.cluster.local:9428
+        isDefault: false
+        editable: false

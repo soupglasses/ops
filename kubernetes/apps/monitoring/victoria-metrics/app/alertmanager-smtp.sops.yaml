@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-smtp
+  namespace: monitoring
+stringData:
+  values.yaml: ENC[AES256_GCM,data:eAzs+UZt9k1mZbLAJzeeCDzqUaPtJWzF76aIAKwZXPQZSMU5fKuA52Q3VZwEcVQ24gCoE60HM0/QwMpBT88CSV52lD2J0l0tCiYHNEuDx7MjmB4WP7QysjjXFfcmTIZMnP/38DwcqNMszHOiFYwM1v6bjmuy4xqX/I8ChElxxgB9it3q54E7KrSvkaPtLRT3lsSVVDTXClQUgLcxkN/Ob/nW4bkeU0WjOGKX2Ny8nGW1ryzGlT+MF1S2jsrgVljLUJM/oaOBGZs=,iv:2stEpV/fzyunHsjcdwTpKsK8fqQ3TGb85D/MKOncFpc=,tag:KvQM7ea2n2RabnX/fvjxsw==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWcEpwNmwvZkhsMVRyM1RD
+        ckQyRVNwWDkzbTlpcUZUZUgzbFBQZjFjOXdBClhlNmF5VXB3ckVhZDVMNmVKbVF2
+        VlgzSU5nR0dzSm9YRkhiRDduelgvWEEKLS0tIGQxT3FNdTVYemYybkpPb0E3WHFP
+        U3JYZG1zUktMT1NKbU0rbGErY2JqMlEKms8+TPKQPlV16tLBrbdko5ks9OSUbeBZ
+        yJn3njO7gdQ3MreoX8PmcAOQKZe2d07QZgyOI3MVW5CQYpZkhMNtVw==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age16k03wpjydrcr2wk68f0q9ypdxvh7vsy0fpx4lq72nc50zln8xf3qvkjxas
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-09-20T22:00:58Z"
+  mac: ENC[AES256_GCM,data:KfcHKmuezUZgDjm1AbgtxjYgLFAjP7jOZubgorIvaLz3XZTvqHqgLXd/Gngh0/MOCRNwxsBJ3mMdVTeHl53vM/bbfShC61VkOnboqpiurdzufB4jBbVMEPw3xlKJRJOWGpGNH8/lPMHQA44UHewEHncVSxritxIGnGCP8bBeoGs=,iv:1GzQURPoYvxkYCNeoRn73vbtpUOro9Fi+GvR5gZaotc=,tag:gTF2vsBy4H8wOrv11Ewedg==,type:str]
+  version: 3.13.3

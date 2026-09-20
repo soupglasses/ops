@@ -15,6 +15,10 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   dependsOn:
+    - name: cloudflare-issuers
+      namespace: cert-manager
+    - name: ingress-nginx-public
+      namespace: network
     - name: prometheus-operator-crds
       namespace: monitoring
   healthChecks:
