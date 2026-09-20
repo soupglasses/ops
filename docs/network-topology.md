@@ -32,7 +32,9 @@ Internet
 | Router on server VLAN | `172.21.71.1` |
 | Server VLAN IPv6 | `2a13:e745:1ee8:71::/64`, SLAAC; router `::1` |
 | Kubernetes node | `172.21.71.10` |
+| Kubernetes node IPv6 | `2a13:e745:1ee8:71::10` |
 | Public Cilium VIP | `172.21.68.10/32` |
+| Public Cilium IPv6 VIP | `2a13:e745:1ee8:68::10/128` |
 | Router ASN | `64513` |
 | Cilium ASN | `64512` |
 
@@ -47,10 +49,10 @@ exposing the node address itself.
 `bridge-servers`, not the trusted-LAN bridge. VLAN filtering is enabled only on this
 server bridge, so changes to it do not affect the access point or normal LAN ports.
 
-The node remains a DHCP client. RouterOS reserves `172.21.71.10` for its known MAC.
-This keeps the initial design simple while ensuring BGP and Kubernetes see a stable
-node address. A future managed switch can replace the access-port configuration with
-a tagged VLAN 71 trunk.
+Ubuntu uses an Ansible-managed native `systemd-networkd` configuration with static
+addresses `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`. RouterOS retains the IPv4
+DHCP reservation only as collision protection. A future managed switch can replace the
+access-port configuration with a tagged VLAN 71 trunk.
 
 The forwarding policy is intentionally asymmetric:
 
@@ -67,7 +69,8 @@ The IPv6 policy mirrors this without NAT:
   initiate connections to the trusted LAN;
 - unsolicited WAN forwarding remains denied;
 - RouterOS advertises itself as DNS through RDNSS on the trusted LAN and server VLAN;
-- the WireGuard and Kubernetes VIP `/64`s are reserved but not yet assigned.
+- the WireGuard `/64` remains reserved;
+- Cilium allocates `2a13:e745:1ee8:68::10/128` from the Kubernetes VIP `/64`.
 
 The ISP also offers DHCPv6-PD, but it delegated only
 `2a13:e745:1ee8:3700::/56`. The static configuration was tested using a source
@@ -96,13 +99,18 @@ Current public listeners sharing the VIP are:
 - Minecraft: TCP `25565`;
 - Minecraft voice chat: UDP `24454`.
 
+IPv6 uses the same ports on `2a13:e745:1ee8:68::10` without NAT. RouterOS accepts only
+those destination/port combinations from the WAN. Public AAAA records are enabled only
+after both BGP and end-to-end service tests pass.
+
 ## BGP
 
-Cilium peers with RouterOS at `172.21.71.1`. RouterOS accepts the public service VIP
-and installs:
+Cilium peers with RouterOS over both node address families. RouterOS accepts only the
+two public service VIP routes and installs:
 
 ```text
 172.21.68.10/32 -> 172.21.71.10
+2a13:e745:1ee8:68::10/128 -> 2a13:e745:1ee8:71::10
 ```
 
 Pod CIDRs are not advertised to RouterOS. Pod routing is internal to the cluster and

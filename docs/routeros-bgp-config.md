@@ -14,8 +14,8 @@ Private keys are never included.
 
 The ISP routes `2a13:e745:1ee8::/48` to the static WAN address. Each local network
 gets a `/64` whose subnet ID follows the corresponding IPv4 network or VLAN number.
-The Kubernetes and WireGuard ranges are reserved until those systems are configured
-for IPv6.
+The WireGuard range remains reserved. Kubernetes uses
+`2a13:e745:1ee8:68::10/128` as its shared public service VIP.
 
 ```routeros
 /ipv6/address
@@ -39,7 +39,7 @@ Router advertisements run only on the trusted bridge and server VLAN, never the 
 RDNSS points clients at the RouterOS DNS resolver. The active reservations are:
 
 ```text
-2a13:e745:1ee8:68::/64  Kubernetes public service VIPs
+2a13:e745:1ee8:68::10/128  Kubernetes public service VIP
 2a13:e745:1ee8:70::/64  remote-access WireGuard
 ```
 
@@ -153,20 +153,29 @@ The live DHCP server also runs the existing `dhcp-to-dns` lease script. It maint
 
 ```routeros
 /routing/filter/rule
-add chain=bgp-input-filter \
+add chain=cilium-bgp-in-v4 \
     rule="if (dst in 172.21.68.10/32) {accept}" \
     comment="Accept Cilium LoadBalancer IP"
-add chain=bgp-input-filter rule="reject" comment="Reject other BGP routes"
+add chain=cilium-bgp-in-v4 rule="reject" comment="Reject other Cilium IPv4 routes"
+add chain=cilium-bgp-in-v6 \
+    rule="if (dst in 2a13:e745:1ee8:68::10/128) {accept}" \
+    comment="Accept Cilium IPv6 LoadBalancer IP"
+add chain=cilium-bgp-in-v6 rule="reject" comment="Reject other Cilium IPv6 routes"
 
 /routing/bgp/connection
-add name=cilium-bgp remote.address=172.21.71.10 as=64512 \
+add name=cilium-bgp instance=bgp-instance-1 remote.address=172.21.71.10 remote.as=64512 \
     local.address=172.21.71.1 local.role=ebgp connect=no listen=yes \
-    multihop=yes input.filter=bgp-input-filter \
+    multihop=no input.filter=cilium-bgp-in-v4 \
     comment="Cilium BGP peering - home cluster"
+add name=cilium-bgp-v6 instance=bgp-instance-1 remote.address=2a13:e745:1ee8:71::10 remote.as=64512 \
+    local.address=2a13:e745:1ee8:71::1 local.role=ebgp connect=no listen=yes \
+    multihop=no input.filter=cilium-bgp-in-v6 \
+    comment="Cilium IPv6 BGP peering - home cluster"
 ```
 
-Cilium should advertise `172.21.68.10/32` with next hop `172.21.71.10`. RouterOS does
-not need the pod CIDR for ingress forwarding, so the filter deliberately rejects it.
+Cilium advertises `172.21.68.10/32` and `2a13:e745:1ee8:68::10/128` with their matching
+node-address next hops. RouterOS does not need either pod CIDR for ingress forwarding,
+so the filters deliberately reject every other route.
 
 ## Firewall policy
 
@@ -189,6 +198,11 @@ add chain=input action=accept in-interface=vlan71-servers \
 add chain=forward action=drop connection-state=new \
     src-address=172.21.71.0/24 dst-address=172.21.69.0/24 \
     comment="Block server VLAN initiating to trusted LAN"
+
+/ipv6/firewall/filter
+add chain=input action=accept in-interface=vlan71-servers \
+    src-address=2a13:e745:1ee8:71::10 dst-address=2a13:e745:1ee8:71::1 \
+    protocol=tcp dst-port=179 comment="Allow IPv6 BGP from Cilium"
 ```
 
 The established/related rule allows replies when a trusted-LAN client initiated the
@@ -225,6 +239,14 @@ add chain=input action=accept in-interface=ether1 dst-address=80.248.139.51 \
 add chain=forward action=accept connection-nat-state=dstnat \
     dst-address=172.21.68.10 \
     comment="Allow dstnat flows to Cilium LoadBalancer IP"
+
+/ipv6/firewall/filter
+add chain=forward action=accept in-interface=ether1 \
+    dst-address=2a13:e745:1ee8:68::10 protocol=tcp dst-port=80,443,25565 \
+    comment="Allow public IPv6 TCP services to Cilium"
+add chain=forward action=accept in-interface=ether1 \
+    dst-address=2a13:e745:1ee8:68::10 protocol=udp dst-port=24454 \
+    comment="Allow public IPv6 UDP services to Cilium"
 ```
 
 ## Verification
@@ -232,6 +254,7 @@ add chain=forward action=accept connection-nat-state=dstnat \
 ```routeros
 /routing/bgp/session/print detail
 /ip/route/print detail where dst-address=172.21.68.10/32
+/ipv6/route/print detail where dst-address=2a13:e745:1ee8:68::10/128
 /ip/dhcp-server/lease/print detail where address=172.21.71.10
 /interface/bridge/vlan/print detail where bridge=bridge-servers
 ```
@@ -240,6 +263,7 @@ Expected route:
 
 ```text
 172.21.68.10/32 gateway=172.21.71.10%vlan71-servers
+2a13:e745:1ee8:68::10/128 gateway=2a13:e745:1ee8:71::10%vlan71-servers
 ```
 
 From outside the home network, verify HTTPS, Minecraft TCP, voice-chat UDP, and

@@ -4,10 +4,10 @@
 
 # CiliumBGPPeerConfig defines the BGP peering settings for RouterOS
 # This is referenced by CiliumBGPClusterConfig
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumBGPPeerConfig
 metadata:
-  name: routeros-peer
+  name: routeros-ipv4
   namespace: kube-system
 spec:
   timers:
@@ -19,10 +19,28 @@ spec:
   gracefulRestart:
     enabled: true
     restartTimeSeconds: 30
-  ebgpMultihop: 1
   families:
-    # Only IPv4 is needed for this setup
     - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: "bgp"
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: routeros-ipv6
+  namespace: kube-system
+spec:
+  timers:
+    connectRetryTimeSeconds: 5
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 30
+  families:
+    - afi: ipv6
       safi: unicast
       advertisements:
         matchLabels:

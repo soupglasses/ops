@@ -11,6 +11,7 @@ metadata:
 spec:
   blocks:
     - cidr: "172.21.68.10/32"
+    - cidr: "2a13:e745:1ee8:68::10/128"
   # Only allocate to services with the bgp label
   serviceSelector:
     matchLabels:

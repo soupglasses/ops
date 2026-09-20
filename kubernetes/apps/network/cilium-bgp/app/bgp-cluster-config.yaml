@@ -4,7 +4,7 @@
 
 # CiliumBGPClusterConfig defines the BGP instance and peer configuration
 # This creates a BGP session between Cilium (on Kubernetes nodes) and RouterOS
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumBGPClusterConfig
 metadata:
   name: routeros-bgp
@@ -19,9 +19,13 @@ spec:
       # Cilium uses a private ASN (64512-65534 are private ASNs)
       localASN: 64512
       peers:
-        - name: "routeros-peer"
-          # RouterOS ASN (configure this to match RouterOS)
+        - name: "routeros-ipv4"
           peerASN: 64513
           peerAddress: 172.21.71.1
           peerConfigRef:
-            name: "routeros-peer"
+            name: "routeros-ipv4"
+        - name: "routeros-ipv6"
+          peerASN: 64513
+          peerAddress: 2a13:e745:1ee8:71::1
+          peerConfigRef:
+            name: "routeros-ipv6"

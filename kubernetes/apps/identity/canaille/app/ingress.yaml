@@ -10,7 +10,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: cloudflare-dns01-production
     external-dns.alpha.kubernetes.io/hostname: auth.${DOMAIN}
-    external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS}
+    external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
 spec:
   ingressClassName: nginx-public
   rules:

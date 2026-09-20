@@ -12,3 +12,4 @@ data:
   CLUSTER_NAME: "home"
   DOMAIN: "finnes.dev"
   IP_ADDRESS: 80.248.139.51
+  IPV6_ADDRESS: 2a13:e745:1ee8:68::10

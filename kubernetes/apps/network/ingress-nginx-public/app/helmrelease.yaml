@@ -26,18 +26,23 @@ spec:
       retries: 3
   values:
     controller:
-      allowSnippetAnnotations: true
+      allowSnippetAnnotations: false
       enableAnnotationValidations: true
       service:
         enabled: true
         annotations:
+          lbipam.cilium.io/ips: 172.21.68.10,2a13:e745:1ee8:68::10
           lbipam.cilium.io/sharing-key: public-services
           lbipam.cilium.io/sharing-cross-namespace: default
         labels:
           bgp: "enabled"
         type: LoadBalancer
         loadBalancerClass: io.cilium/bgp-control-plane
-        externalTrafficPolicy: Cluster
+        ipFamilies:
+          - IPv4
+          - IPv6
+        ipFamilyPolicy: RequireDualStack
+        externalTrafficPolicy: Local
       publishService:
         enabled: true
       ingressClassResource:
@@ -58,7 +63,7 @@ spec:
         custom-http-errors: 400,401,403,404,405,407,408,409,410,411,412,413,416,418,429,500,502,503,504,505
         enable-brotli: "true"
         enable-ocsp: "true"
-        enable-real-ip: "true"
+        enable-real-ip: "false"
         force-ssl-redirect: "true"
         hide-headers: Server,X-Powered-By
         hsts-max-age: 31449600
@@ -75,7 +80,7 @@ spec:
         proxy-buffer-size: "16k"
         proxy-busy-buffers-size: "16k"
         ssl-protocols: "TLSv1.3 TLSv1.2"
-        use-forwarded-headers: "true"
+        use-forwarded-headers: "false"
       metrics:
         enabled: true
         serviceMonitor:
