@@ -32,4 +32,3 @@ endpoints:
       - 172.21.71.10
     conditions:
       ready: true
-

@@ -51,4 +51,3 @@ spec:
           for: 8d
           labels:
             severity: warning
-

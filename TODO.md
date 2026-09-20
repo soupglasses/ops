@@ -45,6 +45,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Platform
 
+- [x] **Evaluate RKE2 backup alerts in-cluster.** Deploy an ephemeral, tightly selected
+  VictoriaMetrics stack so the host ServiceMonitor is scraped and its PrometheusRule is
+  evaluated and delivered to VMAlertmanager after a clean rebuild.
+- [ ] **Deliver Alertmanager notifications off-cluster.** Add the chosen recipient and
+  sender plus a monitoring-owned SOPS credential, then configure and test an external
+  VMAlertmanager receiver. Do not couple monitoring recovery to an application secret.
 - [ ] **Complete the Talos-to-RKE2 recovery.** Ansible now describes Ubuntu 26.04,
   systemd-networkd, the CIS-oriented host baseline, RKE2, bundled Cilium, ZFS, and
   RouterOS. Converge it, bootstrap Flux, complete both S3 restore passes from

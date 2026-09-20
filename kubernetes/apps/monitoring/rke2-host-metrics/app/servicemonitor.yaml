@@ -15,4 +15,3 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: rke2-host-metrics
-

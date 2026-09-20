@@ -17,6 +17,8 @@ spec:
   dependsOn:
     - name: prometheus-operator-crds
       namespace: monitoring
+    - name: victoria-metrics
+      namespace: monitoring
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -25,4 +27,3 @@ spec:
   retryInterval: 2m
   timeout: 5m
   prune: true
-

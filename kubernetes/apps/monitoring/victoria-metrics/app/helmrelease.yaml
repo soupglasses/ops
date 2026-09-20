@@ -1,0 +1,135 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-metrics
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: victoria-metrics-k8s-stack
+      version: 0.90.2
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics
+        namespace: flux-system
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    victoria-metrics-operator:
+      crds:
+        cleanup:
+          # Never let removing this release delete unrelated VM custom resources.
+          enabled: false
+
+    # This first deployment evaluates recovery alerts without making monitoring
+    # storage part of the recovery contract. Durable storage belongs in the later
+    # VictoriaMetrics/VictoriaLogs design.
+    vmsingle:
+      enabled: true
+      spec:
+        retentionPeriod: 2d
+        storage: null
+        useStrictSecurity: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+
+    vmagent:
+      enabled: true
+      spec:
+        selectAllByDefault: false
+        serviceScrapeSelector:
+          matchLabels:
+            app.kubernetes.io/name: rke2-host-metrics
+        scrapeInterval: 1m
+        useStrictSecurity: true
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+
+    vmalert:
+      enabled: true
+      spec:
+        selectAllByDefault: false
+        evaluationInterval: 1m
+        ruleSelector:
+          matchLabels:
+            app.kubernetes.io/name: rke2-host-metrics
+        useStrictSecurity: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+
+    alertmanager:
+      enabled: true
+      spec:
+        selectAllByDefault: false
+        useStrictSecurity: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+      config:
+        route:
+          receiver: local
+          group_by:
+            - alertname
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 12h
+        receivers:
+          # Alertmanager retains active alerts for inspection. An external receiver
+          # is added separately with a monitoring-owned SOPS secret.
+          - name: local
+      monzoTemplate:
+        enabled: false
+
+    # Avoid duplicate exporters and broad cluster scraping. The first deployment
+    # exists only to operate repository-owned ServiceMonitors and PrometheusRules.
+    defaultDashboards:
+      enabled: false
+    syncJob:
+      enabled: false
+    defaultRules:
+      enabled: false
+    grafana:
+      enabled: false
+    prometheus-node-exporter:
+      enabled: false
+    kube-state-metrics:
+      enabled: false
+    kubelet:
+      enabled: false
+    kubeApiServer:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    coreDns:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false

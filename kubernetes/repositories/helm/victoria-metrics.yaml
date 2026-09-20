@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: victoria-metrics
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://victoriametrics.github.io/helm-charts/

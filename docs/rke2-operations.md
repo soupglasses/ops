@@ -146,9 +146,19 @@ are never exported as metric labels or values.
 Flux declares the private node-exporter endpoint, a `ServiceMonitor`, and alerts for a
 missing signal, repeated listing failure, a snapshot older than ten hours, and a
 retention deficit that persists beyond the seven-day warm-up needed for 28 snapshots
-at the six-hour schedule. The repository currently installs Prometheus Operator CRDs,
-but not a Prometheus server; the host metric remains durable and locally inspectable
-until a compatible Prometheus deployment selects these resources.
+at the six-hour schedule. A minimal VictoriaMetrics stack converts the Prometheus
+objects, scrapes them with VMAgent, stores two days of disposable metrics in an
+ephemeral VMSingle, evaluates the rules with VMAlert, and sends firing alerts to
+VMAlertmanager. This single-node monitoring path deliberately has no PVC: a node loss
+may discard metric history, but the host textfile signal returns after rebuild and
+alerting resumes without restoring monitoring data.
+
+VMAlertmanager initially keeps alerts available through its API and UI, but has no
+external receiver. Before treating notification delivery as production-ready, add a
+monitoring-owned SOPS secret and receiver for the chosen mail or paging destination.
+Do not reuse an application's SMTP secret across namespaces. VictoriaLogs remains a
+separate follow-up: collect the snapshot check's journal entries and RKE2 service logs,
+but keep freshness and failure paging metric-based.
 
 Verify the complete path after convergence:
 
@@ -161,6 +171,16 @@ curl --fail --silent http://172.21.71.10:9100/metrics \
   | grep '^rke2_etcd_s3_snapshot_'
 kubectl -n monitoring get endpointslice,servicemonitor,prometheusrule \
   -l app.kubernetes.io/name=rke2-host-metrics
+kubectl -n monitoring get vmservicescrape,vmrule,vmagent,vmsingle,vmalert,vmalertmanager
+kubectl -n monitoring port-forward \
+  svc/vmagent-victoria-metrics-victoria-metrics-k8s-stack 8429:8429
+# In another shell, confirm rke2-host-metrics is up at http://127.0.0.1:8429/targets.
+kubectl -n monitoring port-forward \
+  svc/vmalert-victoria-metrics-victoria-metrics-k8s-stack 8080:8080
+# Confirm the snapshot rule group is healthy at http://127.0.0.1:8080/groups.
+kubectl -n monitoring port-forward \
+  svc/vmalertmanager-victoria-metrics-victoria-metrics-k8s-stack 9093:9093
+# Confirm expected firing alerts appear at http://127.0.0.1:9093/#/alerts.
 ```
 
 A fresh timestamp and full retention count prove that RKE2 can list S3 objects; they
