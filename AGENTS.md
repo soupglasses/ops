@@ -78,14 +78,25 @@ test. See `kubernetes/components/volsync/README.md` for the standard PVC contrac
 
 ## Agent Review Routing
 
-GitHub Issues and pull requests are the durable coordination record. All profiles use
-the shared `soupbot` GitHub identity, so each agent comment or review must state its
-logical profile and Hermes run/session identifier. A bare `@soupbot` mention routes to
-`opslead`. A named command such as `@soupbot security` is addressed to that specialist;
-the current single-webhook implementation uses opslead as a thin dispatcher because a
-Hermes webhook route is bound to one profile, but opslead must not redo or reinterpret
-the specialist's work. Read `docs/soupbot-github-routing.md` for accepted commands,
-automatic PR routing, labels, and webhook operations.
+GitHub Issues and pull requests are the durable coordination record. The profile names
+and identity rules in this section apply only to agents actually launched by Hermes.
+Those agents use the shared `soupbot` GitHub identity, so each Hermes-authored comment
+or review must state its logical profile and Hermes run/session identifier.
+
+Codex, humans, and other external agents are not Hermes profiles. They must not claim a
+Hermes profile, invent a Hermes run ID, use the Soup Bot identity, or follow a profile's
+runtime instructions merely because their work resembles that profile's role. They
+still follow this repository's review gates: request Hermes help with a collaborator-
+authored `@soupbot <profile>` command and identify only their actual runtime when useful
+(for example, `Requested by Codex session /root; not a Hermes run`). The responding
+Hermes specialist supplies its own profile and run/session attribution.
+
+A bare `@soupbot` mention routes to `opslead`. A named command such as
+`@soupbot security` is addressed to that specialist; the current single-webhook
+implementation uses opslead as a thin dispatcher because a Hermes webhook route is
+bound to one profile, but opslead must not redo or reinterpret the specialist's work.
+Read `docs/soupbot-github-routing.md` for accepted commands, automatic PR routing,
+labels, and webhook operations.
 
 - `opslead`: triage, deduplication, decomposition, routing, and closure criteria.
 - `incident`: evidence-first outage diagnosis and root-cause analysis.

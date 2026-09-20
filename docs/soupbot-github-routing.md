@@ -10,6 +10,14 @@ A single GitHub App webhook routes GitHub work to the logical Hermes profiles. T
 GitHub actor remains `soupbot`; comments identify the profile and run ID because
 Hermes profiles are not separate GitHub accounts.
 
+These profile names describe processes launched by Hermes, not generic job titles.
+Codex, humans, and other external agents must not identify themselves as `opslead`,
+`implementer`, or another Hermes profile and must not invent a Hermes run ID. They may
+request a specialist by posting `@soupbot <profile>` from an authorized collaborator
+account. The resulting Hermes response, not the requester, carries the profile and
+Hermes run/session attribution. An external requester may state its real runtime, such
+as `Requested by Codex session /root; not a Hermes run`.
+
 ## Canonical identity
 
 All Hermes profiles use this identity for agent-created commits and copyright headers:
