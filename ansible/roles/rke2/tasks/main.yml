@@ -182,7 +182,7 @@
       - /etc/rancher/rke2/rke2.yaml
       - apply
       - -f
-      - -
+      - "-"
     stdin: |
       apiVersion: v1
       kind: Secret
@@ -202,9 +202,18 @@
       stringData:
         password: {{ cilium_bgp_ipv6_password | to_json }}
   register: rke2_cilium_bgp_auth_secrets
+  failed_when: false
   changed_when: >-
     'created' in rke2_cilium_bgp_auth_secrets.stdout or 'configured' in rke2_cilium_bgp_auth_secrets.stdout
   no_log: true
+
+- name: Report a BGP authentication Secret apply failure without credential content
+  ansible.builtin.fail:
+    msg: >-
+      kubectl failed to apply the Cilium BGP authentication Secrets (rc={{ rke2_cilium_bgp_auth_secrets.rc
+      }}): {{ rke2_cilium_bgp_auth_secrets.stderr | replace(cilium_bgp_ipv4_password, '[redacted]') |
+      replace(cilium_bgp_ipv6_password, '[redacted]') }}
+  when: rke2_cilium_bgp_auth_secrets.rc != 0
 
 - name: Wait for the Cilium agent
   ansible.builtin.command:
