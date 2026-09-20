@@ -5,10 +5,11 @@
 routeros_automation_user: ansible
 routeros_automation_group: ansible
 routeros_automation_key_owner: ansible-controller
-# Override this when the controller uses a dedicated key at another path.
-routeros_automation_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
+routeros_automation_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/ansible.pub"
 routeros_automation_retire_key_owner: ""
-routeros_management_source_ipv4: 172.21.69.251/32
+ansible_private_key_file: "{{ lookup('env', 'HOME') }}/.ssh/ansible"
+ansible_network_cli_ssh_type: libssh
+routeros_management_source_ipv4: 172.21.69.10/32
 routeros_controller_mac_address: F4:C8:8A:B7:66:1E
 
 routeros_wan_interface: ether1

@@ -18,7 +18,9 @@
 - name: Validate the controller public key
   ansible.builtin.assert:
     that:
-      - routeros_bootstrap_public_key is regex('^ssh-(ed25519|rsa) [A-Za-z0-9+/=]+(?: .*)?$')
+      - routeros_bootstrap_public_key.split() | length >= 2
+      - routeros_bootstrap_public_key.split()[0] in ['ssh-ed25519', 'ssh-rsa']
+      - routeros_bootstrap_public_key.split()[1] | length >= 40
     fail_msg: routeros_automation_public_key_file must contain one OpenSSH Ed25519 or RSA public key.
 
 - name: Validate the dedicated management boundary
@@ -35,7 +37,14 @@
       - >-
         /ip/dhcp-server/lease/print detail where mac-address="{{ routeros_controller_mac_address }}"
       - >-
-        /ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"] dynamic
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        dynamic]
+      - >-
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        status]
+      - >-
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        address]
   register: routeros_bootstrap_controller_lease
   changed_when: false
 
@@ -43,7 +52,11 @@
   ansible.builtin.assert:
     that:
       - routeros_bootstrap_controller_lease.stdout[0] | trim | length > 0
-      - routeros_bootstrap_controller_lease.stdout[1] | trim in ['true', 'false']
+      - routeros_bootstrap_controller_lease.stdout_lines[1][-1] | trim in ['true', 'false']
+      - routeros_bootstrap_controller_lease.stdout_lines[2][-1] | trim == 'bound'
+      - >-
+        routeros_bootstrap_controller_lease.stdout_lines[3][-1] | trim == (routeros_management_source_ipv4
+        | ansible.utils.ipaddr('address'))
     fail_msg: >-
       Connect the controller through RouterOS DHCP and confirm its MAC before bootstrapping the address-restricted
       automation identity.
@@ -54,7 +67,7 @@
       - >-
         /ip/dhcp-server/lease/make-static [find where mac-address="{{ routeros_controller_mac_address
         }}"]
-  when: routeros_bootstrap_controller_lease.stdout[1] | trim == 'true'
+  when: routeros_bootstrap_controller_lease.stdout_lines[1][-1] | trim == 'true'
 
 - name: Converge the controller management reservation
   community.routeros.command:
@@ -65,6 +78,31 @@
   changed_when: >-
     ('address=' ~ (routeros_management_source_ipv4 | ansible.utils.ipaddr('address'))) not in routeros_bootstrap_controller_lease.stdout[0]
     or 'comment="ansible:controller-management"' not in routeros_bootstrap_controller_lease.stdout[0]
+
+- name: Re-read the controller management reservation
+  community.routeros.command:
+    commands:
+      - >-
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        dynamic]
+      - >-
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        status]
+      - >-
+        :put [/ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"]
+        address]
+  register: routeros_bootstrap_controller_lease_final
+  changed_when: false
+
+- name: Verify the bound static controller reservation
+  ansible.builtin.assert:
+    that:
+      - routeros_bootstrap_controller_lease_final.stdout_lines[0][-1] | trim == 'false'
+      - routeros_bootstrap_controller_lease_final.stdout_lines[1][-1] | trim == 'bound'
+      - >-
+        routeros_bootstrap_controller_lease_final.stdout_lines[2][-1] | trim == (routeros_management_source_ipv4
+        | ansible.utils.ipaddr('address'))
+    fail_msg: The controller DHCP reservation is not static, bound, and assigned to the expected address.
 
 - name: Inspect the automation group
   community.routeros.command:
@@ -103,8 +141,13 @@
     commands:
       - >-
         /user/add name="{{ routeros_automation_user }}" group="{{ routeros_automation_group }}" disabled=yes
-        address={{ routeros_management_source_ipv4 }} comment="ansible:cilium:automation-user"
+        address={{ routeros_management_source_ipv4 }} password={{ routeros_bootstrap_one_time_password
+        | community.routeros.quote_argument_value }} comment="ansible:cilium:automation-user"
+  no_log: true
   when: routeros_bootstrap_user_state.stdout[0] | trim == ""
+  vars:
+    routeros_bootstrap_one_time_password: >-
+      {{ lookup('community.general.random_string', length=64, special=false) }}
 
 - name: Keep the automation user disabled until its key is installed
   community.routeros.command:
@@ -122,19 +165,48 @@
   community.routeros.command:
     commands:
       - >-
-        /user/ssh-keys/print detail where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
-        }}"
+        :put [:len [/user/ssh-keys/find where user="{{ routeros_automation_user }}" info="{{ routeros_automation_key_owner
+        }}"]]
   register: routeros_bootstrap_key_state
   changed_when: false
 
-- name: Add the controller SSH public key
+- name: Import the controller SSH public key
+  when: routeros_bootstrap_key_state.stdout_lines[0][-1] | trim == '0'
+  block:
+    - name: Upload the controller SSH public key
+      ansible.netcommon.net_put:
+        src: "{{ routeros_automation_public_key_file }}"
+        dest: "{{ routeros_automation_key_owner }}.pub"
+        mode: binary
+        protocol: sftp
+
+    - name: Import the uploaded controller SSH public key
+      community.routeros.command:
+        commands:
+          - >-
+            /user/ssh-keys/import public-key-file="{{ routeros_automation_key_owner }}.pub" user="{{ routeros_automation_user
+            }}"
+  always:
+    - name: Remove the uploaded public-key file
+      community.routeros.command:
+        commands:
+          - /file/remove [find where name="{{ routeros_automation_key_owner }}.pub"]
+      changed_when: true
+
+- name: Re-read the controller SSH key count
   community.routeros.command:
     commands:
       - >-
-        /user/ssh-keys/add user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
-        }}" key={{ routeros_bootstrap_public_key | community.routeros.quote_argument_value }}
-  no_log: true
-  when: routeros_bootstrap_key_state.stdout[0] | trim == ""
+        :put [:len [/user/ssh-keys/find where user="{{ routeros_automation_user }}" info="{{ routeros_automation_key_owner
+        }}"]]
+  register: routeros_bootstrap_key_state_final
+  changed_when: false
+
+- name: Require exactly one controller SSH key before enabling automation
+  ansible.builtin.assert:
+    that:
+      - routeros_bootstrap_key_state_final.stdout_lines[0][-1] | trim == '1'
+    fail_msg: Keep the RouterOS automation user disabled until exactly one managed SSH key is installed.
 
 - name: Enable the keyed automation user
   community.routeros.command:
@@ -154,6 +226,6 @@
   community.routeros.command:
     commands:
       - >-
-        /user/ssh-keys/remove [find where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_retire_key_owner
+        /user/ssh-keys/remove [find where user="{{ routeros_automation_user }}" info="{{ routeros_automation_retire_key_owner
         }}"]
   when: routeros_automation_retire_key_owner | length > 0

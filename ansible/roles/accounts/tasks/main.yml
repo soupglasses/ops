@@ -22,8 +22,12 @@
     that:
       - automation_controller_ipv4 | ansible.utils.ipaddr('prefix') == 32
       - automation_controller_ipv6 | ansible.utils.ipaddr('prefix') == 128
-      - automation_controller_ipv4 | ansible.utils.ipaddr(automation_controller_allowed_ipv4_subnet)
-      - automation_controller_ipv6 | ansible.utils.ipaddr(automation_controller_allowed_ipv6_subnet)
+      - >-
+        (automation_controller_ipv4 | ansible.utils.ipaddr(automation_controller_allowed_ipv4_subnet))
+        != false
+      - >-
+        (automation_controller_ipv6 | ansible.utils.ipaddr(automation_controller_allowed_ipv6_subnet))
+        != false
     fail_msg: >-
       Controller sources must be exact /32 and /128 hosts inside the trusted management subnets.
   vars:

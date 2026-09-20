@@ -49,26 +49,23 @@ Run commands from this directory so `ansible.cfg` is discovered.
 ## Bootstrap and converge
 
 The committed inventory targets the final address. First create the automation account using the
-temporary installer address and the public half of its dedicated SSH key:
+temporary installer address. The inventory reads the public half of the dedicated key from
+`~/.ssh/ansible.pub`:
 
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
-  -u sofie -e ansible_host=172.21.71.254 \
-  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller", \
-       "automation_controller_sources":["172.21.69.42/32","2a13:e745:1ee8:69::42/128"]}'
+  -u sofie -e ansible_host=172.21.71.254
 ```
 
-Use a dedicated automation key held in a hardware-backed agent or controller credential store. Never
-put its private half in this repository, inventory, shell history, or on the managed server. The
+Use the dedicated automation key held in the controller credential store. Its private half is
+`~/.ssh/ansible`; back it up in the protected controller credential store, but never put it in this
+repository, SOPS, shell history, or on the managed server. Keep the independent hardware-backed
+`sofie` login as the recovery path. The
 installed key uses OpenSSH `from=` restrictions from `automation_controller_sources` plus `restrict`.
-This variable fails closed by default: record exactly one stable `/32` and one `/128`, both inside the
-trusted management subnet. Those exact hosts are added to the firewall policy; broader values are
-rejected. Replace the example addresses above with the controller's real addresses before bootstrap.
+The committed sources are the controller's static `172.21.69.10/32` reservation and current global
+IPv6 `/128`; both must remain inside the trusted management subnet. Those exact hosts are added to the
+firewall policy and broader values are rejected.
 `exclusive: true` removes replaced keys during rotation.
-
-Immediately after bootstrap, record those two non-secret addresses in
-`inventories/home/group_vars/all/main.yml`; subsequent plays intentionally fail while the default list
-is empty.
 
 The inventory pins SSH host-key verification to `nas.home.arpa`, whose key must already be present in
 the controller's `known_hosts`. This preserves strict checking across the `.254` to `.10` transition;
@@ -79,8 +76,7 @@ perform the network handoff:
 
 ```bash
 ansible-playbook playbooks/site.yml \
-  -u ansible -e ansible_host=172.21.71.254 \
-  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller"}'
+  -u ansible -e ansible_host=172.21.71.254
 ```
 
 Audit mode is the safe default. Before enforcement, inspect Hubble dropped/audited verdicts and prove
@@ -146,8 +142,7 @@ create only the new OpenEBS parent when authorized:
 
 ```bash
 ansible-playbook playbooks/site.yml \
-  -e zfs_create_dataset=true \
-  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller"}'
+  -e zfs_create_dataset=true
 ```
 
 Before enabling GPU workloads, run `ubuntu-drivers list --gpgpu` on the node and set
@@ -225,8 +220,8 @@ converts its active DHCP lease into the committed static reservation, and assign
 to the automation user's RouterOS `address` property before it enables the account.
 
 ```bash
-ansible-playbook playbooks/bootstrap-router.yml -u 'admin+cet1024w' \
-  -e routeros_automation_public_key_file="$HOME/.ssh/ansible.pub"
+ansible-playbook playbooks/bootstrap-router.yml -u admin \
+  -e ansible_private_key_file="$HOME/.ssh/sofi"
 ```
 
 Keep the private key in the controller's SSH agent or protected key store; it never belongs in this
