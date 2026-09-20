@@ -25,6 +25,8 @@ spec:
     endpointRoutes:
       enabled: true
     bpf:
+      # BBR bandwidth management requires the eBPF host-routing datapath.
+      hostLegacyRouting: false
       masquerade: true
       preallocateMaps: true
     bgpControlPlane:
