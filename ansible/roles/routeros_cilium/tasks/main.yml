@@ -1,0 +1,231 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Refuse unsupported RouterOS check mode
+  ansible.builtin.assert:
+    that:
+      - not ansible_check_mode
+    fail_msg: community.routeros.command cannot predict changes; inspect the scoped role and run it without
+      --check or --diff.
+
+- name: Require the RouterOS 7.20+ BGP instance model
+  community.routeros.command:
+    commands:
+      - /system/resource/print
+  register: routeros_cilium_resource_facts
+  changed_when: false
+
+- name: Extract the RouterOS version
+  ansible.builtin.set_fact:
+    routeros_cilium_version: >-
+      {{ routeros_cilium_resource_facts.stdout[0] | regex_findall('version:\\s+([0-9.]+)') | first }}
+
+- name: Require RouterOS 7.20 or newer
+  ansible.builtin.assert:
+    that:
+      - routeros_cilium_version is version('7.20', '>=')
+    fail_msg: RouterOS 7.20 or newer is required for explicit BGP instances.
+
+- name: Converge the dedicated Cilium BGP instance
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: Cilium BGP instance
+    routeros_resource_path: /routing/bgp/instance
+    routeros_resource_selector: name="{{ routeros_bgp_instance }}"
+    routeros_resource_arguments: >-
+      name="{{ routeros_bgp_instance }}" as={{ routeros_local_asn }} disabled=no
+    routeros_resource_expected:
+      - "as={{ routeros_local_asn }}"
+
+- name: Converge the exact IPv4 Cilium prefix accept
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv4 Cilium prefix accept
+    routeros_resource_path: /routing/filter/rule
+    routeros_resource_selector: comment="ansible:cilium:bgp:v4:accept"
+    routeros_resource_arguments: >-
+      chain="{{ routeros_cilium_v4_filter }}" rule="if (dst in {{ routeros_cilium_vip_ipv4 }}) {accept}"
+      comment="ansible:cilium:bgp:v4:accept" disabled=no
+    routeros_resource_expected:
+      - "chain={{ routeros_cilium_v4_filter }}"
+      - "dst in {{ routeros_cilium_vip_ipv4 }}"
+      - "{accept}"
+
+- name: Converge the IPv4 Cilium catch-all reject
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv4 Cilium catch-all reject
+    routeros_resource_path: /routing/filter/rule
+    routeros_resource_selector: comment="ansible:cilium:bgp:v4:reject"
+    routeros_resource_arguments: >-
+      chain="{{ routeros_cilium_v4_filter }}" rule="reject" comment="ansible:cilium:bgp:v4:reject" disabled=no
+    routeros_resource_expected:
+      - "chain={{ routeros_cilium_v4_filter }}"
+      - rule="reject"
+
+- name: Keep the IPv4 accept before the reject
+  community.routeros.command:
+    commands:
+      - >-
+        /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v4:accept"] destination=[find
+        where comment="ansible:cilium:bgp:v4:reject"]
+  changed_when: false
+
+- name: Converge the exact IPv6 Cilium prefix accept
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv6 Cilium prefix accept
+    routeros_resource_path: /routing/filter/rule
+    routeros_resource_selector: comment="ansible:cilium:bgp:v6:accept"
+    routeros_resource_arguments: >-
+      chain="{{ routeros_cilium_v6_filter }}" rule="if (dst in {{ routeros_cilium_vip_ipv6 }}) {accept}"
+      comment="ansible:cilium:bgp:v6:accept" disabled=no
+    routeros_resource_expected:
+      - "chain={{ routeros_cilium_v6_filter }}"
+      - "dst in {{ routeros_cilium_vip_ipv6 }}"
+      - "{accept}"
+
+- name: Converge the IPv6 Cilium catch-all reject
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv6 Cilium catch-all reject
+    routeros_resource_path: /routing/filter/rule
+    routeros_resource_selector: comment="ansible:cilium:bgp:v6:reject"
+    routeros_resource_arguments: >-
+      chain="{{ routeros_cilium_v6_filter }}" rule="reject" comment="ansible:cilium:bgp:v6:reject" disabled=no
+    routeros_resource_expected:
+      - "chain={{ routeros_cilium_v6_filter }}"
+      - rule="reject"
+
+- name: Keep the IPv6 accept before the reject
+  community.routeros.command:
+    commands:
+      - >-
+        /routing/filter/rule/move [find where comment="ansible:cilium:bgp:v6:accept"] destination=[find
+        where comment="ansible:cilium:bgp:v6:reject"]
+  changed_when: false
+
+- name: Preserve and converge the IPv4 Cilium BGP connection
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv4 Cilium BGP connection
+    routeros_resource_path: /routing/bgp/connection
+    routeros_resource_selector: name="{{ routeros_cilium_v4_connection }}"
+    routeros_resource_arguments: >-
+      name="{{ routeros_cilium_v4_connection }}" instance="{{ routeros_bgp_instance }}" remote.address={{
+      routeros_node_ipv4 }} remote.as={{ routeros_cilium_asn }} local.address={{ routeros_router_ipv4
+      }} local.role=ebgp connect=no listen=yes routing-table=main vrf=main multihop=no input.filter="{{
+      routeros_cilium_v4_filter }}" comment="ansible:cilium:bgp:v4:peer" disabled=no
+    routeros_resource_expected:
+      - "instance={{ routeros_bgp_instance }}"
+      - "remote.address={{ routeros_node_ipv4 }}"
+      - ".as={{ routeros_cilium_asn }}"
+      - "local.address={{ routeros_router_ipv4 }}"
+      - "as={{ routeros_local_asn }}"
+      - "input.filter={{ routeros_cilium_v4_filter }}"
+
+- name: Converge the IPv6 Cilium BGP connection
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv6 Cilium BGP connection
+    routeros_resource_path: /routing/bgp/connection
+    routeros_resource_selector: name="{{ routeros_cilium_v6_connection }}"
+    routeros_resource_arguments: >-
+      name="{{ routeros_cilium_v6_connection }}" instance="{{ routeros_bgp_instance }}" remote.address={{
+      routeros_node_ipv6 }} remote.as={{ routeros_cilium_asn }} local.address={{ routeros_router_ipv6
+      }} local.role=ebgp connect=no listen=yes routing-table=main vrf=main multihop=no input.filter="{{
+      routeros_cilium_v6_filter }}" comment="ansible:cilium:bgp:v6:peer" disabled=no
+    routeros_resource_expected:
+      - "instance={{ routeros_bgp_instance }}"
+      - "remote.address={{ routeros_node_ipv6 }}"
+      - ".as={{ routeros_cilium_asn }}"
+      - "local.address={{ routeros_router_ipv6 }}"
+      - "as={{ routeros_local_asn }}"
+      - "input.filter={{ routeros_cilium_v6_filter }}"
+
+- name: Converge the IPv4 BGP input rule
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv4 Cilium BGP firewall rule
+    routeros_resource_path: /ip/firewall/filter
+    routeros_resource_selector: comment="ansible:cilium:bgp:v4:input"
+    routeros_resource_arguments: >-
+      chain=input action=accept protocol=tcp in-interface={{ routeros_server_interface }} src-address={{
+      routeros_node_ipv4 }} dst-address={{ routeros_router_ipv4 }} dst-port=179 comment="ansible:cilium:bgp:v4:input"
+      disabled=no
+    routeros_resource_expected:
+      - chain=input
+      - action=accept
+      - "src-address={{ routeros_node_ipv4 }}"
+      - "dst-address={{ routeros_router_ipv4 }}"
+      - dst-port=179
+
+- name: Converge the IPv6 BGP input rule
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: IPv6 Cilium BGP firewall rule
+    routeros_resource_path: /ipv6/firewall/filter
+    routeros_resource_selector: comment="ansible:cilium:bgp:v6:input"
+    routeros_resource_arguments: >-
+      chain=input action=accept protocol=tcp in-interface={{ routeros_server_interface }} src-address={{
+      routeros_node_ipv6 }} dst-address={{ routeros_router_ipv6 }} dst-port=179 comment="ansible:cilium:bgp:v6:input"
+      disabled=no
+    routeros_resource_expected:
+      - chain=input
+      - action=accept
+      - "src-address={{ routeros_node_ipv6 }}"
+      - "dst-address={{ routeros_router_ipv6 }}"
+      - dst-port=179
+
+- name: Converge public IPv6 TCP ingress to Cilium
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: public IPv6 TCP ingress to Cilium
+    routeros_resource_path: /ipv6/firewall/filter
+    routeros_resource_selector: comment="ansible:cilium:public:v6:tcp"
+    routeros_resource_arguments: >-
+      chain=forward action=accept protocol=tcp in-interface={{ routeros_wan_interface }} dst-address={{
+      routeros_cilium_vip_ipv6 }} dst-port=80,443,25565 comment="ansible:cilium:public:v6:tcp" disabled=no
+    routeros_resource_expected:
+      - chain=forward
+      - action=accept
+      - "dst-address={{ routeros_cilium_vip_ipv6 }}"
+      - dst-port=80,443,25565
+
+- name: Converge public IPv6 UDP ingress to Cilium
+  ansible.builtin.include_tasks: reconcile.yml
+  vars:
+    routeros_resource_label: public IPv6 UDP ingress to Cilium
+    routeros_resource_path: /ipv6/firewall/filter
+    routeros_resource_selector: comment="ansible:cilium:public:v6:udp"
+    routeros_resource_arguments: >-
+      chain=forward action=accept protocol=udp in-interface={{ routeros_wan_interface }} dst-address={{
+      routeros_cilium_vip_ipv6 }} dst-port=24454 comment="ansible:cilium:public:v6:udp" disabled=no
+    routeros_resource_expected:
+      - chain=forward
+      - action=accept
+      - "dst-address={{ routeros_cilium_vip_ipv6 }}"
+      - dst-port=24454
+
+- name: Position managed input rules before the non-LAN drop
+  community.routeros.command:
+    commands:
+      - >-
+        /ip/firewall/filter/move [find where comment="ansible:cilium:bgp:v4:input"] destination=[find
+        where chain=input in-interface-list=!LAN action=drop]
+      - >-
+        /ipv6/firewall/filter/move [find where comment="ansible:cilium:bgp:v6:input"] destination=[find
+        where chain=input in-interface-list=!LAN action=drop]
+  changed_when: false
+
+- name: Position public IPv6 rules before the non-LAN forward drop
+  community.routeros.command:
+    commands:
+      - >-
+        /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:tcp"] destination=[find
+        where chain=forward in-interface-list=!LAN action=drop]
+      - >-
+        /ipv6/firewall/filter/move [find where comment="ansible:cilium:public:v6:udp"] destination=[find
+        where chain=forward in-interface-list=!LAN action=drop]
+  changed_when: false

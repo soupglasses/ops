@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: rke2-cilium
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ipv4:
+      enabled: true
+    ipv6:
+      enabled: true
+    ipam:
+      mode: kubernetes
+    kubeProxyReplacement: true
+    k8sServiceHost: 127.0.0.1
+    k8sServicePort: 6443
+    routingMode: native
+    ipv4NativeRoutingCIDR: "{{ rke2_cluster_cidrs[0] }}"
+    ipv6NativeRoutingCIDR: "{{ rke2_cluster_cidrs[1] }}"
+    autoDirectNodeRoutes: true
+    endpointRoutes:
+      enabled: true
+    bpf:
+      masquerade: true
+      preallocateMaps: true
+    bgpControlPlane:
+      enabled: true
+    bandwidthManager:
+      enabled: true
+      bbr: true
+    loadBalancer:
+      algorithm: maglev
+      mode: snat
+    l7Proxy: true
+    envoy:
+      enabled: true
+    hubble:
+      enabled: true
+      metrics:
+        enabled:
+          - dns
+          - drop
+          - flow
+          - httpV2
+          - icmp
+          - tcp
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+    prometheus:
+      enabled: true
+    operator:
+      replicas: 1
+      prometheus:
+        enabled: true
+    hostFirewall:
+      enabled: true
+    encryption:
+      enabled: false

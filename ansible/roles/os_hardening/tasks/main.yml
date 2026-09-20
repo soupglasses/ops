@@ -1,0 +1,279 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install the host security baseline
+  ansible.builtin.apt:
+    name:
+      - apparmor
+      - apparmor-utils
+      - aide
+      - auditd
+      - chrony
+      - libpam-pwquality
+      - needrestart
+      - unattended-upgrades
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable security services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - apparmor.service
+    - auditd.service
+    - chrony.service
+
+- name: Prefer the local router as the time source
+  ansible.builtin.copy:
+    dest: /etc/chrony/conf.d/50-ansible-router.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible.
+      server {{ network_ntp_servers[0] }} iburst prefer
+  notify: Restart chrony
+
+- name: Configure automatic security updates without automatic reboot
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52ansible-unattended-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      // Managed by Ansible.
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::Automatic-Reboot "false";
+
+- name: Lock the root password
+  ansible.builtin.user:
+    name: root
+    password_lock: true
+
+- name: Configure password quality
+  ansible.builtin.copy:
+    dest: /etc/security/pwquality.conf.d/50-ansible-cis.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible.
+      minlen = 14
+      minclass = 4
+      difok = 4
+      maxrepeat = 3
+      maxsequence = 3
+      gecoscheck = 1
+      dictcheck = 1
+
+- name: Configure conservative login defaults
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^{{ item.key }}\\s+"
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - {key: UMASK, value: "027"}
+    - {key: PASS_MAX_DAYS, value: "365"}
+    - {key: PASS_MIN_DAYS, value: "1"}
+    - {key: PASS_WARN_AGE, value: "14",}
+
+- name: Disable core dumps
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/50-ansible-cis.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible.
+      * hard core 0
+
+- name: Configure audit log retention and failure behavior
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: "^\\s*{{ item.key }}\\s*="
+    line: "{{ item.key }} = {{ item.value }}"
+  loop:
+    - {key: max_log_file_action, value: keep_logs}
+    - {key: space_left_action, value: syslog}
+    - {key: admin_space_left_action, value: suspend}
+    - {key: disk_full_action, value: suspend}
+    - {key: disk_error_action, value: suspend}
+  notify: Restart auditd
+
+- name: Harden the SSH daemon while preserving key-based automation
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/50-ansible-hardening.conf
+    owner: root
+    group: root
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+    content: |
+      # Managed by Ansible.
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitEmptyPasswords no
+      PubkeyAuthentication yes
+      X11Forwarding no
+      AllowAgentForwarding no
+      AllowTcpForwarding no
+      MaxAuthTries 4
+      LoginGraceTime 30
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+      LogLevel VERBOSE
+  notify: Restart SSH
+
+- name: Load kernel modules required by RKE2, Cilium, and ZFS
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/60-rke2.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible.
+      br_netfilter
+      overlay
+      zfs
+
+- name: Load required kernel modules now
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+    - zfs
+
+- name: Configure a CIS-oriented kernel baseline with Kubernetes exceptions
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/60-rke2-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible. Forwarding, bridge netfilter, BPF, and namespaces are
+      # intentionally enabled for RKE2 and Cilium.
+      fs.protected_fifos = 2
+      fs.protected_hardlinks = 1
+      fs.protected_regular = 2
+      fs.protected_symlinks = 1
+      kernel.core_uses_pid = 1
+      kernel.dmesg_restrict = 1
+      kernel.keys.root_maxbytes = 25000000
+      kernel.keys.root_maxkeys = 1000000
+      kernel.panic = 10
+      kernel.panic_on_oops = 1
+      kernel.kptr_restrict = 2
+      kernel.perf_event_paranoid = 3
+      kernel.randomize_va_space = 2
+      kernel.unprivileged_bpf_disabled = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.bridge.bridge-nf-call-iptables = 1
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.all.forwarding = 1
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.all.rp_filter = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv4.conf.default.rp_filter = 0
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.tcp_syncookies = 1
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.all.forwarding = 1
+      net.ipv6.conf.default.accept_redirects = 0
+      user.max_user_namespaces = 28633
+      vm.overcommit_memory = 1
+      vm.panic_on_oom = 0
+      vm.unprivileged_userfaultfd = 0
+  notify: Reload sysctl
+
+- name: Create the RKE2 configuration directory for audit watches
+  ansible.builtin.file:
+    path: /etc/rancher/rke2
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Add high-value audit rules
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/60-rke2-host.rules
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      ## Managed by Ansible.
+      -w /etc/rancher/rke2/ -p wa -k rke2_config
+      -w /etc/systemd/network/ -p wa -k network_config
+      -w /etc/ssh/sshd_config -p wa -k sshd_config
+      -w /etc/ssh/sshd_config.d/ -p wa -k sshd_config
+      -w /etc/sudoers -p wa -k sudoers
+      -w /etc/sudoers.d/ -p wa -k sudoers
+      -a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change
+      -a always,exit -F arch=b64 -S sethostname,setdomainname -k system-locale
+      -a always,exit -F arch=b64 -S unlink,unlinkat,rename,renameat,rmdir -F auid>=1000 -F auid!=unset -k delete
+      -a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k modules
+  notify: Reload audit rules
+
+- name: Initialize the AIDE integrity database
+  ansible.builtin.command: /usr/sbin/aideinit
+  args:
+    creates: /var/lib/aide/aide.db
+
+- name: Install the daily AIDE check service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/ansible-aidecheck.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+      #
+      # SPDX-License-Identifier: 0BSD
+
+      [Unit]
+      Description=Daily AIDE filesystem integrity check
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/aide --check
+
+- name: Install the daily AIDE check timer
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/ansible-aidecheck.timer
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+      #
+      # SPDX-License-Identifier: 0BSD
+
+      [Unit]
+      Description=Schedule daily AIDE filesystem integrity checks
+
+      [Timer]
+      OnCalendar=daily
+      RandomizedDelaySec=30m
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Enable the daily AIDE check
+  ansible.builtin.systemd_service:
+    name: ansible-aidecheck.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply the kernel and audit baseline before RKE2 starts
+  ansible.builtin.meta: flush_handlers

@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+[Match]
+Name={{ network_interface }}
+
+[Network]
+Address={{ network_ipv4_address }}
+Address={{ network_ipv6_address }}
+DNS={{ network_dns_servers | join(' ') }}
+NTP={{ network_ntp_servers | join(' ') }}
+DHCP=no
+IPv6AcceptRA=no
+LLDP=yes
+EmitLLDP=yes
+
+[Route]
+Gateway={{ network_ipv4_gateway }}
+
+[Route]
+Gateway={{ network_ipv6_gateway }}
+
+[Link]
+RequiredForOnline=routable

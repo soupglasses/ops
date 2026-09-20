@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install ZFS administration tools
+  ansible.builtin.apt:
+    name:
+      - smartmontools
+      - zfsutils-linux
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: List imported ZFS pools
+  ansible.builtin.command: zpool list -H -o name
+  register: zfs_imported_pools
+  changed_when: false
+  failed_when: zfs_imported_pools.rc not in [0, 1]
+
+- name: Inspect importable ZFS pools without changing them
+  ansible.builtin.command: zpool import
+  register: zfs_importable_pools
+  changed_when: false
+  failed_when: false
+  when: zfs_pool_name not in zfs_imported_pools.stdout_lines
+
+- name: Require the existing pool to be discoverable
+  ansible.builtin.assert:
+    that:
+      - >-
+        zfs_pool_name in zfs_imported_pools.stdout_lines or ('pool: ' ~ zfs_pool_name) in (zfs_importable_pools.stdout
+        | default(''))
+    fail_msg: >-
+      Existing pool {{ zfs_pool_name }} was not found. This role never creates or destroys a pool.
+
+- name: Import the existing pool without mounting old datasets
+  ansible.builtin.command: zpool import -N -o cachefile=none {{ zfs_pool_name }}
+  when: zfs_pool_name not in zfs_imported_pools.stdout_lines
+  changed_when: true
+
+- name: Read the pool import-cache setting
+  ansible.builtin.command: zpool get -H -o value cachefile {{ zfs_pool_name }}
+  register: zfs_pool_cachefile
+  changed_when: false
+
+- name: Prevent the generic ZFS mount service from importing the safety-net datasets
+  ansible.builtin.command: zpool set cachefile=none {{ zfs_pool_name }}
+  when: zfs_pool_cachefile.stdout != 'none'
+  changed_when: true
+
+- name: Install a non-mounting pool import service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/zfspool-import-nomount.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+      #
+      # SPDX-License-Identifier: 0BSD
+
+      [Unit]
+      Description=Import {{ zfs_pool_name }} without mounting preserved datasets
+      After=zfs-import.target zfs-mount.service
+      Before=rke2-server.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/bin/sh -ec '/usr/sbin/zpool list {{ zfs_pool_name }} >/dev/null 2>&1 || \
+        /usr/sbin/zpool import -N -o cachefile=none {{ zfs_pool_name }}'
+
+      [Install]
+      WantedBy=multi-user.target
+- name: Enable the non-mounting pool import service
+  ansible.builtin.systemd_service:
+    name: zfspool-import-nomount.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: List all existing datasets without mounting or modifying them
+  ansible.builtin.command: zfs list -H -r -o name,mountpoint,mounted {{ zfs_pool_name }}
+  register: zfs_existing_datasets
+  changed_when: false
+
+- name: Show preserved datasets for operator review
+  ansible.builtin.debug:
+    var: zfs_existing_datasets.stdout_lines
+
+- name: Check whether the Kubernetes child dataset exists
+  ansible.builtin.command: zfs list -H -o name {{ zfs_dataset_name }}
+  register: zfs_kubernetes_dataset
+  changed_when: false
+  failed_when: false
+
+- name: Create the Kubernetes child dataset when explicitly enabled
+  ansible.builtin.command: >-
+    zfs create -o compression=zstd -o atime=off -o xattr=sa -o mountpoint=none {{ zfs_dataset_name }}
+  when:
+    - zfs_create_dataset | bool
+    - zfs_kubernetes_dataset.rc != 0
+  changed_when: true
+
+- name: Enable ZFS event and scrub services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - zfs-zed.service
+  failed_when: false
+
+- name: Enable the monthly pool scrub timer
+  ansible.builtin.systemd_service:
+    name: zfs-scrub-monthly@{{ zfs_pool_name }}.timer
+    enabled: true
+    state: started

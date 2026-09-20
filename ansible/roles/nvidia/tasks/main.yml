@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install NVIDIA build and discovery prerequisites
+  ansible.builtin.apt:
+    name:
+      - linux-headers-generic
+      - ubuntu-drivers-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: List supported server GPU drivers
+  ansible.builtin.command: ubuntu-drivers list --gpgpu
+  register: nvidia_supported_drivers
+  changed_when: false
+  failed_when: false
+
+- name: Show supported NVIDIA driver packages
+  ansible.builtin.debug:
+    var: nvidia_supported_drivers.stdout_lines
+
+- name: Refuse an unsupported selected NVIDIA driver package
+  ansible.builtin.assert:
+    that:
+      - nvidia_driver_package in nvidia_supported_drivers.stdout_lines
+    fail_msg: Select a package printed by `ubuntu-drivers list --gpgpu`.
+  when: nvidia_driver_package | length > 0
+
+- name: Install the explicitly selected NVIDIA driver
+  ansible.builtin.apt:
+    name: "{{ nvidia_driver_package }}"
+    state: present
+  when: nvidia_driver_package | length > 0

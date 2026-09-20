@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Reload networkd
+  ansible.builtin.systemd_service:
+    name: systemd-networkd
+    state: restarted
+    enabled: true
+  async: 45
+  poll: 0
+  listen: Reload networkd

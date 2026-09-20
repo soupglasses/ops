@@ -6,8 +6,8 @@ SPDX-License-Identifier: 0BSD
 
 # CLAUDE.md
 
-Single-node Talos Kubernetes cluster (`nas`), fully managed by Flux from this repo on
-Codeberg (Forgejo, not GitHub).
+Single-node RKE2 Kubernetes cluster (`nas`) on Ansible-managed Ubuntu, with workloads
+managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
 
 ## Values
 

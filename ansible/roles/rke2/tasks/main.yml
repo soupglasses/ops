@@ -1,0 +1,234 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Validate the pinned RKE2 configuration
+  ansible.builtin.assert:
+    that:
+      - rke2_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+rke2r[0-9]+$')
+      - rke2_cluster_cidrs | length == 2
+      - rke2_service_cidrs | length == 2
+      - rke2_tarball_sha256 is match('^[0-9a-f]{64}$')
+      - "':' in rke2_cluster_cidrs[1]"
+      - "':' in rke2_service_cidrs[1]"
+
+- name: Require a stable recovery token before first boot
+  ansible.builtin.assert:
+    that:
+      - rke2_token | length >= 32
+    fail_msg: Define rke2_token in the encrypted SOPS inventory before starting RKE2.
+  no_log: true
+
+- name: Require complete etcd S3 settings when enabled
+  ansible.builtin.assert:
+    that:
+      - rke2_etcd_s3_endpoint | length > 0
+      - rke2_etcd_s3_region | length > 0
+      - rke2_etcd_s3_bucket | length > 0
+      - rke2_etcd_s3_access_key | length > 0
+      - rke2_etcd_s3_secret_key | length > 0
+    fail_msg: Supply all etcd S3 settings through encrypted inventory variables.
+  when: rke2_etcd_s3_enabled | bool
+
+- name: Create the etcd service identity required by the CIS profile
+  ansible.builtin.user:
+    name: etcd
+    system: true
+    home: /var/lib/rancher/rke2/server/db
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create RKE2 configuration directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: /etc/rancher/rke2
+      mode: "0750"
+    - path: /var/lib/rancher/rke2/server/manifests
+      mode: "0750"
+
+- name: Read the installed RKE2 version
+  ansible.builtin.command: /usr/local/bin/rke2 --version
+  register: rke2_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Select the immutable RKE2 release URL
+  ansible.builtin.set_fact:
+    rke2_release_url: >-
+      https://github.com/rancher/rke2/releases/download/{{ rke2_version | replace('+', '%2B') }}
+  when: rke2_version not in rke2_installed_version.stdout
+
+- name: Create the RKE2 artifact cache
+  ansible.builtin.file:
+    path: /var/cache/rke2
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  when: rke2_version not in rke2_installed_version.stdout
+
+- name: Download the immutable RKE2 release artifact
+  ansible.builtin.get_url:
+    url: "{{ rke2_release_url }}/rke2.linux-amd64.tar.gz"
+    dest: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+    owner: root
+    group: root
+    mode: "0640"
+    checksum: "sha256:{{ rke2_tarball_sha256 }}"
+  when: rke2_version not in rke2_installed_version.stdout
+
+- name: Install the verified pinned RKE2 release without starting it
+  ansible.builtin.unarchive:
+    src: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+    dest: /usr/local
+    remote_src: true
+  changed_when: true
+  notify: Restart RKE2
+  when: rke2_version not in rke2_installed_version.stdout
+
+- name: Install the RKE2 server configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/rke2/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: "{{ (rke2_etcd_s3_enabled | bool) or (rke2_token | length > 0) }}"
+  notify: Restart RKE2
+
+- name: Install the bootstrap Cilium configuration
+  ansible.builtin.template:
+    src: rke2-cilium-config.yaml.j2
+    dest: /var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Restart RKE2
+
+- name: Enable and start RKE2
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending RKE2 restart before readiness checks
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the Kubernetes API
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - get
+      - --raw=/readyz
+  register: rke2_kubernetes_ready
+  retries: 36
+  delay: 5
+  until: rke2_kubernetes_ready.rc == 0 and rke2_kubernetes_ready.stdout == 'ok'
+  changed_when: false
+
+- name: Wait for the Cilium agent
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - daemonset/cilium
+      - --timeout=300s
+  changed_when: false
+
+- name: Find the local Cilium pod
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - get
+      - pods
+      - -l
+      - k8s-app=cilium
+      - --field-selector
+      - spec.nodeName=nas
+      - -o
+      - jsonpath={.items[0].metadata.name}
+  register: rke2_cilium_pod
+  changed_when: false
+
+- name: Find the Cilium host endpoint
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - exec
+      - "{{ rke2_cilium_pod.stdout }}"
+      - --
+      - cilium-dbg
+      - endpoint
+      - get
+      - -l
+      - reserved:host
+      - -o
+      - jsonpath={$[0].id}
+  register: rke2_cilium_host_endpoint
+  changed_when: false
+
+- name: Set Cilium host-firewall audit mode before applying policy
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - exec
+      - "{{ rke2_cilium_pod.stdout }}"
+      - --
+      - cilium-dbg
+      - endpoint
+      - config
+      - "{{ rke2_cilium_host_endpoint.stdout }}"
+      - "PolicyAuditMode={{ 'Enabled' if host_firewall_audit_mode | bool else 'Disabled' }}"
+  changed_when: true
+
+- name: Install the Cilium host policy definition
+  ansible.builtin.template:
+    src: host-firewall.yaml.j2
+    dest: /etc/rancher/rke2/host-firewall.yaml
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Apply the Cilium host policy
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - apply
+      - -f
+      - /etc/rancher/rke2/host-firewall.yaml
+  register: rke2_cilium_host_policy
+  changed_when: >-
+    'configured' in rke2_cilium_host_policy.stdout or 'created' in rke2_cilium_host_policy.stdout
+
+- name: Report the server-token recovery requirement without exposing it
+  ansible.builtin.debug:
+    msg: >-
+      Preserve /var/lib/rancher/rke2/server/token independently; it is required with an etcd snapshot
+      for disaster recovery. This role deliberately does not read or print it.

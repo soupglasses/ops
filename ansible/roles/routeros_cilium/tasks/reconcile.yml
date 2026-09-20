@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: "Inspect {{ routeros_resource_label }}"
+  community.routeros.command:
+    commands:
+      - "{{ routeros_resource_path }}/print detail where {{ routeros_resource_selector }}"
+  register: routeros_cilium_resource_state
+  changed_when: false
+
+- name: "Create {{ routeros_resource_label }}"
+  community.routeros.command:
+    commands:
+      - "{{ routeros_resource_path }}/add {{ routeros_resource_arguments }}"
+  when: routeros_cilium_resource_state.stdout[0] | trim == ""
+
+- name: "Converge {{ routeros_resource_label }}"
+  community.routeros.command:
+    commands:
+      - >-
+        {{ routeros_resource_path }}/set [find where {{ routeros_resource_selector }}] {{ routeros_resource_arguments
+        }}
+  when:
+    - routeros_cilium_resource_state.stdout[0] | trim != ""
+    - routeros_resource_expected | reject('in', routeros_cilium_resource_state.stdout[0]) | list | length
+      > 0

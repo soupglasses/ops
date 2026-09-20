@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Refuse unsupported RouterOS check mode
+  ansible.builtin.assert:
+    that:
+      - not ansible_check_mode
+    fail_msg: community.routeros.command cannot predict changes; run this bootstrap without --check or
+      --diff.
+
+- name: Read the controller public key
+  ansible.builtin.set_fact:
+    routeros_bootstrap_public_key: >-
+      {{ lookup('ansible.builtin.file', routeros_automation_public_key_file) | trim }}
+  no_log: true
+
+- name: Validate the controller public key
+  ansible.builtin.assert:
+    that:
+      - routeros_bootstrap_public_key is regex('^ssh-(ed25519|rsa) [A-Za-z0-9+/=]+(?: .*)?$')
+    fail_msg: routeros_automation_public_key_file must contain one OpenSSH Ed25519 or RSA public key.
+
+- name: Inspect the automation group
+  community.routeros.command:
+    commands:
+      - /user/group/print detail where name="{{ routeros_automation_group }}"
+  register: routeros_bootstrap_group_state
+  changed_when: false
+
+- name: Create the least-privilege automation group
+  community.routeros.command:
+    commands:
+      - >-
+        /user/group/add name="{{ routeros_automation_group }}" policy=ssh,read,write,test comment="ansible:cilium:automation-group"
+  when: routeros_bootstrap_group_state.stdout[0] | trim == ""
+
+- name: Converge the automation group policy
+  community.routeros.command:
+    commands:
+      - >-
+        /user/group/set [find where name="{{ routeros_automation_group }}"] policy=ssh,read,write,test
+        comment="ansible:cilium:automation-group"
+  changed_when: >-
+    'policy=ssh,read,write,test' not in routeros_bootstrap_group_state.stdout[0] or 'comment="ansible:cilium:automation-group"'
+    not in routeros_bootstrap_group_state.stdout[0]
+  when: routeros_bootstrap_group_state.stdout[0] | trim != ""
+
+- name: Inspect the automation user
+  community.routeros.command:
+    commands:
+      - /user/print detail where name="{{ routeros_automation_user }}"
+  register: routeros_bootstrap_user_state
+  changed_when: false
+
+- name: Create the automation user
+  community.routeros.command:
+    commands:
+      - >-
+        /user/add name="{{ routeros_automation_user }}" group="{{ routeros_automation_group }}" disabled=yes
+        comment="ansible:cilium:automation-user"
+  when: routeros_bootstrap_user_state.stdout[0] | trim == ""
+
+- name: Keep the automation user disabled until its key is installed
+  community.routeros.command:
+    commands:
+      - >-
+        /user/set [find where name="{{ routeros_automation_user }}"] group="{{ routeros_automation_group
+        }}" disabled=yes comment="ansible:cilium:automation-user"
+  changed_when: >-
+    ('group=' ~ routeros_automation_group) not in routeros_bootstrap_user_state.stdout[0] or 'disabled=no'
+    in routeros_bootstrap_user_state.stdout[0] or 'comment="ansible:cilium:automation-user"' not in routeros_bootstrap_user_state.stdout[0]
+  when: routeros_bootstrap_user_state.stdout[0] | trim != ""
+
+- name: Inspect the controller SSH key
+  community.routeros.command:
+    commands:
+      - >-
+        /user/ssh-keys/print detail where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
+        }}"
+  register: routeros_bootstrap_key_state
+  changed_when: false
+
+- name: Remove the old controller key when rotation is authorized
+  community.routeros.command:
+    commands:
+      - >-
+        /user/ssh-keys/remove [find where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
+        }}"]
+  when:
+    - routeros_replace_automation_key | bool
+    - routeros_bootstrap_key_state.stdout[0] | trim != ""
+
+- name: Add the controller SSH public key
+  community.routeros.command:
+    commands:
+      - >-
+        /user/ssh-keys/add user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
+        }}" key={{ routeros_bootstrap_public_key | community.routeros.quote_argument_value }}
+  no_log: true
+  when: >-
+    routeros_bootstrap_key_state.stdout[0] | trim == "" or routeros_replace_automation_key | bool
+
+- name: Enable the keyed automation user
+  community.routeros.command:
+    commands:
+      - >-
+        /user/set [find where name="{{ routeros_automation_user }}"] group="{{ routeros_automation_group
+        }}" disabled=no comment="ansible:cilium:automation-user"

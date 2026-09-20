@@ -69,6 +69,7 @@ kubernetes/
   clusters/               # Flux cluster configurations
     home/                 # Cluster-specific configs
 talos/                    # Talos Linux machine configs
+ansible/                  # Ubuntu, RKE2, and RouterOS host management
 .taskfiles/              # Task (taskfile.dev) automation
 ```
 

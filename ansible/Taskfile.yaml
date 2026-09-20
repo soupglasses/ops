@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  deps:
+    desc: Install pinned Ansible collections
+    cmds:
+      - ansible-galaxy collection install -r requirements.yml
+
+  test:
+    desc: Run offline syntax and lint checks
+    cmds:
+      - ansible-playbook playbooks/bootstrap.yml --syntax-check
+      - ansible-playbook playbooks/site.yml --syntax-check
+      - ansible-playbook playbooks/verify.yml --syntax-check
+      - ansible-playbook playbooks/upgrade-rke2.yml --syntax-check
+      - ansible-playbook playbooks/bootstrap-router.yml --syntax-check
+      - ansible-playbook playbooks/router.yml --syntax-check
+      - ansible-playbook playbooks/verify-router.yml --syntax-check
+      - ansible-lint
+
+  check:
+    desc: Preview host changes without applying them
+    cmds:
+      - ansible-playbook playbooks/site.yml --check --diff
+
+  apply:
+    desc: Converge the RKE2 server
+    cmds:
+      - ansible-playbook playbooks/site.yml
+
+  verify:
+    desc: Verify host, Kubernetes, Cilium, and ZFS health
+    cmds:
+      - ansible-playbook playbooks/verify.yml
+
+  router:bootstrap:
+    desc: Create the dedicated RouterOS automation identity using an existing administrator
+    cmds:
+      - ansible-playbook playbooks/bootstrap-router.yml
+
+  router:apply:
+    desc: Converge the RouterOS Cilium BGP and IPv6 boundary
+    cmds:
+      - ansible-playbook playbooks/router.yml
+
+  router:verify:
+    desc: Verify Cilium BGP sessions, routes, and scoped firewall counters
+    cmds:
+      - ansible-playbook playbooks/verify-router.yml

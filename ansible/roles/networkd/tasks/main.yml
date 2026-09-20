@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Validate the network handoff inputs
+  ansible.builtin.assert:
+    that:
+      - network_interface | length > 0
+      - "'/' in network_ipv4_address"
+      - "':' in network_ipv6_address"
+
+- name: Create the cloud-init configuration directory
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Disable cloud-init network rendering
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible: systemd-networkd owns host networking.
+      network: {config: disabled}
+
+- name: Find Netplan source files
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns:
+      - "*.yaml"
+      - "*.yml"
+    file_type: file
+  register: networkd_netplan_sources
+
+- name: Preserve and disable Netplan source files
+  ansible.builtin.command:
+    argv:
+      - mv
+      - "{{ item.path }}"
+      - "{{ item.path }}.disabled-by-ansible"
+  loop: "{{ networkd_netplan_sources.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: networkd_netplan_sources.matched > 0
+  changed_when: true
+  notify: Reload networkd
+
+- name: Find ephemeral Netplan-generated networkd units
+  ansible.builtin.find:
+    paths: /run/systemd/network
+    patterns: "*netplan*"
+    file_type: any
+  register: networkd_generated_netplan_units
+
+- name: Remove ephemeral Netplan-generated networkd units
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ networkd_generated_netplan_units.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  notify: Reload networkd
+
+- name: Install the native systemd-networkd configuration
+  ansible.builtin.template:
+    src: 10-server.network.j2
+    dest: /etc/systemd/network/10-server.network
+    owner: root
+    group: systemd-network
+    mode: "0640"
+  notify: Reload networkd
+
+- name: Enable networkd and resolved
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - systemd-networkd.service
+    - systemd-resolved.service
+
+- name: Link the resolver configuration to systemd-resolved
+  ansible.builtin.file:
+    src: /run/systemd/resolve/stub-resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+
+- name: Apply the network handoff before reconnecting
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for SSH on the static address
+  ansible.builtin.wait_for:
+    host: "{{ network_ipv4_address.split('/')[0] }}"
+    port: 22
+    timeout: 90
+  delegate_to: localhost
+  become: false
+
+- name: Point the remaining play at the static address
+  ansible.builtin.set_fact:
+    ansible_host: "{{ network_ipv4_address.split('/')[0] }}"
+
+- name: Reconnect after the address transition
+  ansible.builtin.meta: reset_connection

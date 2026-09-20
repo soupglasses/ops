@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Verify the RouterOS boundary for Cilium
+  hosts: routers
+  gather_facts: false
+  tasks:
+    - name: Read Cilium BGP sessions
+      community.routeros.command:
+        commands:
+          - /routing/bgp/session/print detail where name~"cilium-bgp"
+      register: routeros_bgp_sessions
+      changed_when: false
+
+    - name: Require established IPv4 and IPv6 BGP sessions
+      ansible.builtin.assert:
+        that:
+          - >-
+            routeros_bgp_sessions.stdout[0] is regex('(?m)^\\s*\\d+\\s+E\\s+name="' ~ routeros_cilium_v4_connection
+            ~ '(?:-|\")')
+          - >-
+            routeros_bgp_sessions.stdout[0] is regex('(?m)^\\s*\\d+\\s+E\\s+name="' ~ routeros_cilium_v6_connection
+            ~ '(?:-|\")')
+        fail_msg: Both Cilium BGP sessions must be established.
+
+    - name: Read accepted Cilium routes
+      community.routeros.command:
+        commands:
+          - /ip/route/print detail where dst-address={{ routeros_cilium_vip_ipv4 }}
+          - /ipv6/route/print detail where dst-address={{ routeros_cilium_vip_ipv6 }}
+      register: routeros_cilium_routes
+      changed_when: false
+
+    - name: Require both Cilium VIP routes
+      ansible.builtin.assert:
+        that:
+          - routeros_node_ipv4 in routeros_cilium_routes.stdout[0]
+          - routeros_node_ipv6 in routeros_cilium_routes.stdout[1]
+        fail_msg: RouterOS did not install both Cilium VIP routes with the node as next hop.
+
+    - name: Show scoped firewall counters
+      community.routeros.command:
+        commands:
+          - /ip/firewall/filter/print stats where comment~"ansible:cilium"
+          - /ipv6/firewall/filter/print stats where comment~"ansible:cilium"
+      register: routeros_cilium_firewall_stats
+      changed_when: false
+
+    - name: Report BGP and firewall state
+      ansible.builtin.debug:
+        msg:
+          - "{{ routeros_bgp_sessions.stdout[0] }}"
+          - "{{ routeros_cilium_routes.stdout | join('\n') }}"
+          - "{{ routeros_cilium_firewall_stats.stdout | join('\n') }}"

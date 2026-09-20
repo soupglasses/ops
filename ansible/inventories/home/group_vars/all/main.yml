@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+automation_user: ansible
+# Set this on the command line for bootstrap, or add the public key here. Never add a private key.
+automation_authorized_key: ""
+
+network_interface: "{{ ansible_default_ipv4.interface }}"
+network_ipv4_address: 172.21.71.10/24
+network_ipv4_gateway: 172.21.71.1
+network_ipv6_address: 2a13:e745:1ee8:71::10/64
+network_ipv6_gateway: 2a13:e745:1ee8:71::1
+network_dns_servers:
+  - 172.21.71.1
+  - 2a13:e745:1ee8:71::1
+network_ntp_servers:
+  - 172.21.71.1
+
+host_firewall_management_ipv4:
+  - 172.21.69.0/24
+  - 172.21.70.0/24
+host_firewall_management_ipv6:
+  - 2a13:e745:1ee8:69::/64
+  - 2a13:e745:1ee8:70::/64
+host_firewall_ssh_ipv4:
+  - 172.21.0.0/16
+host_firewall_ssh_ipv6:
+  - 2a13:e745:1ee8::/48
+host_firewall_audit_mode: false
+
+zfs_pool_name: zfspool
+zfs_dataset_name: zfspool/k8s
+# Dataset creation is safe but intentionally requires an explicit choice after inspecting the old datasets.
+zfs_create_dataset: false
+
+# Driver installation is opt-in after `ubuntu-drivers list --gpgpu` identifies the supported package.
+nvidia_driver_package: ""
+
+rke2_version: v1.34.11+rke2r1
+rke2_tarball_sha256: 88cbe2eb111ac7ed96c17466451dbe853a8510fc3639d96dd42237cf18c7a071
+rke2_token: "{{ (stringData | default({})).get('rke2_token', '') }}"
+rke2_cluster_cidrs:
+  - 10.42.0.0/16
+  - fd94:a259:ebb8:4200::/56
+rke2_service_cidrs:
+  - 10.43.0.0/16
+  - fd94:a259:ebb8:4300::/112
+rke2_tls_sans:
+  - nas
+  - k8s.home.arpa
+  - 172.21.71.10
+  - 2a13:e745:1ee8:71::10
+rke2_etcd_snapshot_schedule: "0 */6 * * *"
+rke2_etcd_snapshot_retention: 28
+rke2_etcd_s3_enabled: true
+rke2_etcd_s3_endpoint: "{{ (stringData | default({})).get('rke2_etcd_s3_endpoint', '') }}"
+rke2_etcd_s3_region: "{{ (stringData | default({})).get('rke2_etcd_s3_region', '') }}"
+rke2_etcd_s3_bucket: "{{ (stringData | default({})).get('rke2_etcd_s3_bucket', '') }}"
+rke2_etcd_s3_folder: rke2-etcd
+rke2_etcd_s3_access_key: "{{ (stringData | default({})).get('rke2_etcd_s3_access_key', '') }}"
+rke2_etcd_s3_secret_key: "{{ (stringData | default({})).get('rke2_etcd_s3_secret_key', '') }}"

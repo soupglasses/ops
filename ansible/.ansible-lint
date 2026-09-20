@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# yamlfmt is the repository's authoritative YAML formatter.
+skip_list:
+  - yaml
+exclude_paths:
+  - inventories/home/group_vars/all/secrets.example.yaml

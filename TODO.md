@@ -26,10 +26,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   `kubernetes/components/volsync/replicationsource.yaml`); corruption unnoticed for
   longer is unrecoverable. Enable bucket versioning or object lock, add a monthly
   retention tier, and run a periodic `restic check` CronJob.
-- [ ] **Restore destroys the only local copy before verifying.** volsync uses
-  `openebs-zfs` with the default Delete reclaim; `scripts/volsync-restore.sh` deletes
-  the PVC (and thus the ZFS dataset) before the repopulated volume is proven good.
-  Take a VolumeSnapshot in the script before deleting the PVC.
+- [x] **Restore destroys the only local copy before verifying.** The restore helper now
+  takes and waits for a local VolumeSnapshot before deleting the PVC, and retains it
+  until application-level validation succeeds.
 - [x] **volsync cache PVCs inherit the data size.** `cacheCapacity` defaults to
   `${VOLSYNC_CAPACITY}`, so minecraft allocates a 50Gi restic cache that needs ~5Gi.
   Introduce a separate `VOLSYNC_CACHE_CAPACITY` variable.
@@ -46,24 +45,24 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Platform
 
-- [ ] **Cilium is outside GitOps and unpinned.** Installed by an inline Talos job
-  running `quay.io/cilium/cilium-cli:latest` (`talos/patches/cilium.yaml`); config
-  changes need a machine-config re-apply. Keep a minimal day-0 inline install, then
-  manage Cilium as a Flux HelmRelease that takes over. Prerequisite for enabling
-  Gateway API support.
-- [ ] **Cilium native-routing CIDR does not match the live pod CIDR.** Pods run in
-  10.244.0.0/16 (Talos default; `talconfig.yaml` sets no podSubnets), while Cilium has
-  `ipv4NativeRoutingCIDR=10.42.0.0/16`. Pod CIDR advertisement to RouterOS was removed
-  because the router needs only Service VIP routes, but the internal Cilium setting
-  should still be aligned deliberately.
-- [ ] **Talos/K8s upgrades pending, must be walked.** Node runs Talos 1.11.6 /
-  K8s 1.34.2; Renovate PRs #33 (installer 1.13.5) and #29 (kubelet 1.36.2) must not
-  be merged blind. Upgrade one minor at a time (1.11 -> 1.12 -> 1.13,
-  1.34 -> 1.35 -> 1.36) as deliberate sessions, merging the config bump with each hop.
-- [ ] **Node IP relies on a DHCP reservation.** `talconfig.yaml` uses `dhcp: true`
-  while BGP peering and cluster DNS assume 172.21.71.10. The RouterOS reservation is
-  working and keeps the VLAN migration simple; consider pinning the address statically
-  in machine config later.
+- [ ] **Complete the Talos-to-RKE2 recovery.** Ansible now describes Ubuntu 26.04,
+  systemd-networkd, the CIS-oriented host baseline, RKE2, bundled Cilium, ZFS, and
+  RouterOS. Converge it, bootstrap Flux, complete both S3 restore passes from
+  `docs/zfs-s3-recovery.md`, then remove the preserved Talos configuration.
+- [ ] **Add VictoriaLogs security and platform logging.** Collect SSH/sudo authentication,
+  auditd, AIDE, kernel/AppArmor, RKE2/containerd, Cilium/Hubble policy verdicts,
+  RouterOS firewall/BGP, VolSync/restore, and Flux/controller reconciliation events.
+  Keep health/rate alerts in Prometheus and event detail in VictoriaLogs/Grafana.
+
+- [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
+  pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
+  IPv6 pod CIDR. Flux owns the post-bootstrap Cilium policy resources.
+- [ ] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.34.11+rke2r1`.
+  Confirm fresh S3/etcd backups and the recovery token, then upgrade one Kubernetes
+  minor at a time with the Ansible upgrade playbook and full post-upgrade verification.
+- [x] **Use static node addresses.** Ansible configures native systemd-networkd with
+  `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`; the DHCP reservation remains only
+  as collision protection.
 - [ ] **PodSecurity: workloads violate `restricted`.** canaille lacked
   allowPrivilegeEscalation=false, drop ALL, runAsNonRoot, seccompProfile; likely
   repo-wide. Sweep all Deployments and chart values.
@@ -95,10 +94,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Networking / future
 
-- [ ] **Enable IPv6 dual stack in Talos and Cilium.** Configure IPv6 pod and service
-  CIDRs, Cilium IPAM, and dual-stack services, then verify pod, service, and egress
-  connectivity before advertising public service `/128`s.
-- [ ] **Complete native IPv6 application exposure.** RouterOS uses the ISP's static
+- [ ] **Verify RKE2 and Cilium dual stack live.** Day-zero config now has IPv6 pod and
+  service CIDRs, dual-stack IPAM, and dual-stack public Services. Prove pod, service,
+  DNS, and egress connectivity before considering this complete.
+- [ ] **Complete and verify native IPv6 application exposure.** RouterOS uses the ISP's static
   `2a13:e745:1ee8::/48`; trusted LAN and server VLAN SLAAC are live on subnet IDs 69
   and 71. Reserve subnet 68 for Kubernetes service VIPs and 70 for WireGuard. After
   dual stack is live, advertise IPv6 service `/128`s over BGP, then add explicit WAN

@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Configure the RKE2 server
+  hosts: rke2_servers
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Require Ubuntu 26.04
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version is version('26.04', '>=')
+        fail_msg: This playbook supports Ubuntu 26.04 or newer only.
+  roles:
+    - accounts
+    - networkd
+    - os_hardening
+    - zfs
+    - nvidia
+    - rke2

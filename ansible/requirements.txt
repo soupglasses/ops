@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+ansible-core==2.21.3
+ansible-lint==26.8.0
