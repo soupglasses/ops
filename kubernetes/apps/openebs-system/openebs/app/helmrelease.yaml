@@ -42,9 +42,6 @@ spec:
     zfs-localpv:
       zfsNode:
         encrKeysDir: /var/openebs/keys
-      zfs:
-        # ZFS is installed to a non-standard path on Talos Linux
-        bin: /usr/local/sbin/zfs
       crds:
         csi:
           volumeSnapshots:

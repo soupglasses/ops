@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: openebs-zfs-snapshot-retain
+driver: zfs.csi.openebs.io
+deletionPolicy: Retain
+parameters:
+  recordsize: "128k"
+  compression: "zstd"
+  dedup: "off"
+  fstype: "zfs"
+  poolname: "zfspool/k8s"

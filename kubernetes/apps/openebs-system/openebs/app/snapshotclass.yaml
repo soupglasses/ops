@@ -10,7 +10,7 @@ driver: zfs.csi.openebs.io
 deletionPolicy: Delete
 parameters:
   recordsize: "128k"
-  compression: "lz4"
+  compression: "zstd"
   dedup: "off"
   fstype: "zfs"
-  poolname: "zfspool"
+  poolname: "zfspool/k8s"

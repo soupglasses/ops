@@ -11,10 +11,10 @@ provisioner: zfs.csi.openebs.io
 allowVolumeExpansion: true
 parameters:
   recordsize: "128k"
-  compression: "lz4"
+  compression: "zstd"
   dedup: "off"
   fstype: "zfs"
-  poolname: "zfspool"
+  poolname: "zfspool/k8s"
 allowedTopologies:
   - matchLabelExpressions:
       - key: kubernetes.io/hostname
@@ -31,11 +31,11 @@ allowVolumeExpansion: true
 reclaimPolicy: Retain
 parameters:
   recordsize: "1M"
-  compression: "lz4"
+  compression: "zstd"
   dedup: "off"
   fstype: "zfs"
   shared: "yes"
-  poolname: "zfspool"
+  poolname: "zfspool/k8s"
 allowedTopologies:
   - matchLabelExpressions:
       - key: kubernetes.io/hostname

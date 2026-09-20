@@ -27,6 +27,9 @@
 #   TIMEOUT         kubectl wait timeout (default: 5m)
 #   RESTIC_IMAGE    image with restic+jq for the picker
 #                   (default: quay.io/backube/volsync:0.15.0)
+#   ROLLBACK_SNAPSHOT_CLASS
+#                   VolumeSnapshotClass used to preserve the source PVC
+#                   (default: openebs-zfs-snapshot-retain)
 #   YES             set to 1 to skip the confirmation prompt
 #
 # Ctrl+C at any point exits cleanly; if the workload was already scaled to 0,
@@ -61,8 +64,10 @@ ARG2="${2:-}"
 NS="${NS:-default}"
 TIMEOUT="${TIMEOUT:-5m}"
 RESTIC_IMAGE="${RESTIC_IMAGE:-quay.io/backube/volsync:0.15.0}"
+ROLLBACK_SNAPSHOT_CLASS="${ROLLBACK_SNAPSHOT_CLASS:-openebs-zfs-snapshot-retain}"
 FLUX_KS="${FLUX_KS-${APP}}"
 RD="${APP}-dst"
+rollback_snapshot="${APP}-pre-restore-$(date -u +%Y%m%d%H%M%S)"
 
 # --- pick or use given timestamp -------------------------------------------
 
@@ -192,6 +197,7 @@ if [[ "${YES:-0}" != "1" ]]; then
     echo
     echo "About to:"
     echo "  - scale ${WORKLOAD} in ns/${NS} from ${original_replicas} → 0"
+    echo "  - preserve pvc/${APP} as volumesnapshot/${rollback_snapshot}"
     echo "  - delete pvc/${APP} in ns/${NS}"
     if [[ -n "$FLUX_KS" ]] && command -v flux >/dev/null 2>&1; then
         echo "  - reconcile flux ks/${FLUX_KS} so it re-creates the PVC"
@@ -205,7 +211,7 @@ if [[ "${YES:-0}" != "1" ]]; then
     esac
 fi
 
-# --- nuke & rebind --------------------------------------------------------
+# --- preserve, replace, and rebind ----------------------------------------
 
 echo "==> Scaling ${WORKLOAD} to 0"
 SCALED_DOWN=1
@@ -213,6 +219,23 @@ kubectl -n "$NS" scale "$WORKLOAD" --replicas=0
 kubectl -n "$NS" wait --for=delete pod \
     -l "app.kubernetes.io/instance=${APP}" \
     --timeout="$TIMEOUT" 2>/dev/null || true
+
+echo "==> Preserving PVC/${APP} as VolumeSnapshot/${rollback_snapshot}"
+kubectl -n "$NS" create -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+    name: ${rollback_snapshot}
+    labels:
+        app.kubernetes.io/name: ${APP}
+        app.kubernetes.io/managed-by: volsync-restore
+spec:
+    volumeSnapshotClassName: ${ROLLBACK_SNAPSHOT_CLASS}
+    source:
+        persistentVolumeClaimName: ${APP}
+EOF
+kubectl -n "$NS" wait --for=jsonpath='{.status.readyToUse}'=true \
+    "volumesnapshot/${rollback_snapshot}" --timeout="$TIMEOUT"
 
 echo "==> Deleting PVC/${APP} (if present)"
 kubectl -n "$NS" delete pvc "$APP" --ignore-not-found --wait=true --timeout="$TIMEOUT"
@@ -241,3 +264,6 @@ echo "==> Waiting for ${WORKLOAD} rollout"
 kubectl -n "$NS" rollout status "$WORKLOAD" --timeout="$TIMEOUT"
 
 echo "==> Restore complete."
+echo "    Rollback snapshot retained: volumesnapshot/${rollback_snapshot}"
+echo "    After application validation, patch its VolumeSnapshotContent deletionPolicy to Delete"
+echo "    before deleting the VolumeSnapshot; this also cleans up the backend ZFS snapshot."

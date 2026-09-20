@@ -53,8 +53,12 @@ and then never again. Implications:
 
 To force a fresh restore without a full rebuild, use `scripts/volsync-restore.sh`
 (also exposed via `task volsync:restore APP=<name>`). It bumps the RD trigger,
-waits for `latestImage` to refresh, scales the workload to 0, deletes + rebinds
-the PVC, then scales the workload back up. Point-in-time variants:
+waits for `latestImage` to refresh, scales the workload to 0, preserves the
+current PVC in a `VolumeSnapshot`, deletes + rebinds the PVC, then scales the
+workload back up. The rollback snapshot uses the Retain class. After application
+validation, patch its bound `VolumeSnapshotContent` deletion policy to `Delete`
+before deleting the VolumeSnapshot so the controller also cleans up the backend
+ZFS snapshot. Point-in-time variants:
 
 ```bash
 task volsync:restore APP=minecraft                          # newest snapshot
