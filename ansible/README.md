@@ -23,9 +23,9 @@ tracked in `docs/cis-control-mapping.md`.
 - The ZFS role never creates, destroys, exports, rolls back, or mounts the existing pool or its old
   datasets. It imports `zfspool` with `-N`, keeps it out of the generic import cache, and prints the
   dataset inventory. A dedicated systemd unit repeats that non-mounting import after reboot.
-- `zfspool/k8s` is created only with `zfs_create_dataset=true`. Existing datasets remain a temporary
-  safety net; recover applications from off-cluster S3 backups into the new dataset and prove their
-  contents before considering any pool recreation.
+- `zfspool/k8s` is the approved isolated parent and is created without mounting or changing existing
+  datasets. Those datasets remain a temporary safety net; recover applications from off-cluster S3
+  backups into the new parent and prove their contents before considering any pool recreation.
 - Reformatting to RAIDZ2 requires a separate resilience review, successful application-level S3
   restore drills, an independently preserved rollback point, and explicit destructive approval.
   There is deliberately no destructive ZFS task here.
@@ -137,12 +137,11 @@ Rotate the controller key, update `automation_authorized_key`, restore the file 
 rerun `bootstrap.yml` from the independent administrator session. Never rely on `passwd -l` alone to
 revoke public-key authentication.
 
-Later runs use the committed `172.21.71.10` inventory directly. After reviewing the old datasets,
-create only the new OpenEBS parent when authorized:
+Later runs use the committed `172.21.71.10` inventory directly. The reviewed inventory creates only
+the new OpenEBS parent and preserves all legacy datasets:
 
 ```bash
-ansible-playbook playbooks/site.yml \
-  -e zfs_create_dataset=true
+ansible-playbook playbooks/site.yml
 ```
 
 Before enabling GPU workloads, run `ubuntu-drivers list --gpgpu` on the node and set
