@@ -15,27 +15,27 @@
 - name: Require a stable recovery token before first boot
   ansible.builtin.assert:
     that:
-      - rke2_token | length >= 32
+      - (rke2_token | default('')) | length >= 32
     fail_msg: Define rke2_token in the encrypted SOPS inventory before starting RKE2.
   no_log: true
 
 - name: Require complete etcd S3 settings when enabled
   ansible.builtin.assert:
     that:
-      - rke2_etcd_s3_endpoint | length > 0
-      - rke2_etcd_s3_region | length > 0
-      - rke2_etcd_s3_bucket | length > 0
-      - rke2_etcd_s3_access_key | length > 0
-      - rke2_etcd_s3_secret_key | length > 0
+      - (rke2_etcd_s3_endpoint | default('')) | length > 0
+      - (rke2_etcd_s3_region | default('')) | length > 0
+      - (rke2_etcd_s3_bucket | default('')) | length > 0
+      - (rke2_etcd_s3_access_key | default('')) | length > 0
+      - (rke2_etcd_s3_secret_key | default('')) | length > 0
     fail_msg: Supply all etcd S3 settings through encrypted inventory variables.
   when: rke2_etcd_s3_enabled | bool
 
 - name: Require independent high-entropy BGP authentication passwords
   ansible.builtin.assert:
     that:
-      - cilium_bgp_ipv4_password is match('^[A-Za-z0-9_-]{32,80}$')
-      - cilium_bgp_ipv6_password is match('^[A-Za-z0-9_-]{32,80}$')
-      - cilium_bgp_ipv4_password != cilium_bgp_ipv6_password
+      - (cilium_bgp_ipv4_password | default('')) is match('^[A-Za-z0-9_-]{32,80}$')
+      - (cilium_bgp_ipv6_password | default('')) is match('^[A-Za-z0-9_-]{32,80}$')
+      - (cilium_bgp_ipv4_password | default('')) != (cilium_bgp_ipv6_password | default(''))
     fail_msg: >-
       Supply distinct, randomly generated, 32-80 character base64url-safe BGP passwords through encrypted
       inventory variables. Hexadecimal values are valid.
@@ -124,7 +124,7 @@
     owner: root
     group: root
     mode: "0600"
-  no_log: "{{ (rke2_etcd_s3_enabled | bool) or (rke2_token | length > 0) }}"
+  no_log: "{{ (rke2_etcd_s3_enabled | bool) or ((rke2_token | default('')) | length > 0) }}"
   notify: Restart RKE2
 
 - name: Install the bootstrap Cilium configuration

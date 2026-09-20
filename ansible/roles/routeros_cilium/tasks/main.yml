@@ -12,9 +12,9 @@
 - name: Require strong and distinct BGP authentication secrets from SOPS
   ansible.builtin.assert:
     that:
-      - cilium_bgp_ipv4_password is match('^[A-Za-z0-9_-]{32,80}$')
-      - cilium_bgp_ipv6_password is match('^[A-Za-z0-9_-]{32,80}$')
-      - cilium_bgp_ipv4_password != cilium_bgp_ipv6_password
+      - (cilium_bgp_ipv4_password | default('')) is match('^[A-Za-z0-9_-]{32,80}$')
+      - (cilium_bgp_ipv6_password | default('')) is match('^[A-Za-z0-9_-]{32,80}$')
+      - (cilium_bgp_ipv4_password | default('')) != (cilium_bgp_ipv6_password | default(''))
       - cilium_bgp_ipv4_auth_generation | int >= 1
       - cilium_bgp_ipv6_auth_generation | int >= 1
     fail_msg: Define distinct cilium_bgp_ipv4_password and cilium_bgp_ipv6_password values in encrypted

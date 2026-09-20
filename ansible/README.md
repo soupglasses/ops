@@ -158,8 +158,7 @@ its Ubuntu 26.04 support; Kubernetes device-plugin resources remain Flux-owned.
 ## Configuration and secrets
 
 Non-secret defaults live in `inventories/home/group_vars/all/main.yml`. A human operator must create
-`inventories/home/group_vars/all/secrets.sops.yaml` once, with a top-level `stringData` mapping and
-these keys:
+`inventories/home/group_vars/all/secrets.sops.yaml` once, with these top-level keys:
 
 - `rke2_token`
 - `rke2_etcd_s3_endpoint`
@@ -178,8 +177,9 @@ sops --encrypt --in-place inventories/home/group_vars/all/secrets.sops.yaml
 
 The pinned `community.sops` vars plugin decrypts it in memory on the controller. Never pass secrets
 with `-e`, which exposes them to shell history and process listings. Follow the repository's SOPS
-rules; existing encrypted files must never be edited or decrypted by automation agents. Keep the
-`stringData` wrapper because it matches the repository's SOPS encryption rule.
+rules; existing encrypted files must never be edited or decrypted by automation agents. The
+repository's path-specific SOPS rule encrypts every value in non-Kubernetes SOPS files, so these are
+ordinary top-level Ansible variables; do not wrap them in Kubernetes `data` or `stringData`.
 
 The role refuses to start RKE2 without a stable token, complete S3 etcd settings, and two distinct,
 random, 32-80 character base64url-safe BGP passwords from that file. It streams the Secret definitions
@@ -236,8 +236,8 @@ absence of password login constrain access. RouterOS firewall rules cannot match
 role does not add a router-wide SSH drop that could destroy the independent admin or WireGuard
 recovery path.
 
-The real encrypted inventory file contains the RKE2/S3 values plus distinct
-`cilium_bgp_ipv4_password` and `cilium_bgp_ipv6_password` entries beneath `stringData`. A human
+The real encrypted inventory file contains the RKE2/S3 values plus distinct top-level
+`cilium_bgp_ipv4_password` and `cilium_bgp_ipv6_password` entries. A human
 operator updates an existing encrypted file through their SOPS editor; automation agents must not
 decrypt or edit it. For initial creation only, populate the new file in an editor and encrypt it once:
 
