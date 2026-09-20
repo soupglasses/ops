@@ -9,4 +9,5 @@ resources:
   - ./alertmanager-smtp.sops.yaml
   - ./grafana-auth.sops.yaml
   - ./grafana-dashboard.yaml
+  - ./grafana-rbac.yaml
   - ./helmrelease.yaml

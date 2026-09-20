@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+# Grafana and its provisioning sidecars share one ServiceAccount token. Keep
+# that token useful only for Git-managed discovery in this namespace; neither
+# container needs to read Kubernetes Secrets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: victoria-metrics-grafana-configmaps
+  namespace: monitoring
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch

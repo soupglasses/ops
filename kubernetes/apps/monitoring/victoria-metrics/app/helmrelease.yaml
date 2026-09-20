@@ -129,6 +129,12 @@ spec:
       enabled: false
     grafana:
       enabled: true
+      rbac:
+        create: true
+        namespaced: true
+        # The chart still generates the namespace-local binding, but its
+        # built-in Role always includes Secrets. Bind our ConfigMap-only Role.
+        useExistingRole: victoria-metrics-grafana-configmaps
       admin:
         existingSecret: grafana-auth
         userKey: admin-user
@@ -165,11 +171,13 @@ spec:
           enabled: true
           label: grafana_dashboard
           labelValue: "1"
+          resource: configmap
           searchNamespace: monitoring
         datasources:
           enabled: true
           label: grafana_datasource
           labelValue: "1"
+          resource: configmap
           searchNamespace: monitoring
       grafana.ini:
         analytics:
