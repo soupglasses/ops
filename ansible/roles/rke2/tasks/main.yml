@@ -101,6 +101,17 @@
     mode: "0750"
   when: rke2_version not in rke2_installed_version.stdout
 
+- name: Explain the fresh-host RKE2 check-mode boundary
+  ansible.builtin.debug:
+    msg: >-
+      RKE2 configuration, recovery, S3, and BGP inputs are valid. Check mode will not create the artifact
+      cache or install RKE2, so installation-dependent checks continue after the first convergence.
+  when: ansible_check_mode and rke2_version not in rke2_installed_version.stdout
+
+- name: Stop installation-dependent RKE2 checks on a fresh host
+  ansible.builtin.meta: end_role
+  when: ansible_check_mode and rke2_version not in rke2_installed_version.stdout
+
 - name: Download the immutable RKE2 release artifact
   ansible.builtin.get_url:
     url: "{{ rke2_release_url }}/rke2.linux-amd64.tar.gz"

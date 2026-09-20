@@ -37,6 +37,15 @@ RAIDZ1 cannot be converted to RAIDZ2 in place.
    sudo zfs list -r -t filesystem,snapshot -o name,used,refer,mountpoint,mounted zfspool
    ```
 
+   The read-only inventory on 2026-09-21 found the unmounted root plus six unmounted
+   legacy datasets: `pvc-2e2da4b0-eba4-4906-a9c1-c3b33ade8935`,
+   `pvc-4ed97cc6-4985-45cb-b240-c401a75f50d6`,
+   `pvc-5193448c-ccf6-4bb4-8415-72f161454648`,
+   `pvc-78cffec4-94e5-448a-973c-bb87f0d568f4`,
+   `pvc-ad295d14-60b1-43f5-9e03-a3d0ac138e20`, and
+   `pvc-fc9a71dd-4fd3-4c93-8833-1187258185e9`. None is mounted and
+   `zfspool/k8s` does not yet exist.
+
 3. Create the empty parent `zfspool/k8s` through the explicit Ansible switch.
 4. Bootstrap Flux and let OpenEBS create new datasets beneath that parent.
 5. Let each VolSync `ReplicationDestination` pull from S3 and populate a fresh PVC.

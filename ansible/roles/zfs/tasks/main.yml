@@ -14,12 +14,14 @@
 - name: List imported ZFS pools
   ansible.builtin.command: zpool list -H -o name
   register: zfs_imported_pools
+  check_mode: false
   changed_when: false
   failed_when: zfs_imported_pools.rc not in [0, 1]
 
 - name: Inspect importable ZFS pools without changing them
   ansible.builtin.command: zpool import
   register: zfs_importable_pools
+  check_mode: false
   changed_when: false
   failed_when: false
   when: zfs_pool_name not in zfs_imported_pools.stdout_lines
@@ -32,6 +34,17 @@
         | default(''))
     fail_msg: >-
       Existing pool {{ zfs_pool_name }} was not found. This role never creates or destroys a pool.
+
+- name: Explain the non-mounting pool-import check-mode boundary
+  ansible.builtin.debug:
+    msg: >-
+      The existing pool is importable. Check mode will not import it; dataset inspection continues after
+      the first convergence imports it with -N.
+  when: ansible_check_mode and zfs_pool_name not in zfs_imported_pools.stdout_lines
+
+- name: Stop pool-dependent checks before a first import
+  ansible.builtin.meta: end_role
+  when: ansible_check_mode and zfs_pool_name not in zfs_imported_pools.stdout_lines
 
 - name: Import the existing pool without mounting old datasets
   ansible.builtin.command: zpool import -N -o cachefile=none {{ zfs_pool_name }}
@@ -78,6 +91,7 @@
     enabled: true
     state: started
     daemon_reload: true
+  when: not ansible_check_mode
 
 - name: List all existing datasets without mounting or modifying them
   ansible.builtin.command: zfs list -H -r -o name,mountpoint,mounted {{ zfs_pool_name }}

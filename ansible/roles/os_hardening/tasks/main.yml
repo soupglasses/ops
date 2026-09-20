@@ -17,6 +17,22 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Check whether fresh-host hardening prerequisites are installed
+  ansible.builtin.stat:
+    path: /etc/audit/auditd.conf
+  register: os_hardening_audit_config
+
+- name: Explain the fresh-host check-mode boundary
+  ansible.builtin.debug:
+    msg: >-
+      Package installation is simulated in check mode, so package-owned services and files cannot be validated
+      until the first convergence installs them.
+  when: ansible_check_mode and not os_hardening_audit_config.stat.exists
+
+- name: Stop package-dependent hardening checks on a fresh host
+  ansible.builtin.meta: end_role
+  when: ansible_check_mode and not os_hardening_audit_config.stat.exists
+
 - name: Enable security services
   ansible.builtin.systemd_service:
     name: "{{ item }}"

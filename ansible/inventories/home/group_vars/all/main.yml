@@ -42,8 +42,9 @@ host_firewall_enforcement_acknowledgement: ""
 
 zfs_pool_name: zfspool
 zfs_dataset_name: zfspool/k8s
-# Dataset creation is safe but intentionally requires an explicit choice after inspecting the old datasets.
-zfs_create_dataset: false
+# The parent does not exist in the imported Talos-era pool. Create this isolated child without mounting or
+# modifying the preserved legacy PVC datasets listed in the recovery record.
+zfs_create_dataset: true
 
 # Driver installation is opt-in after `ubuntu-drivers list --gpgpu` identifies the supported package.
 nvidia_driver_package: ""
