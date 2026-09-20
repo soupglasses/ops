@@ -100,4 +100,3 @@
       ansible.builtin.command:
         argv: "{{ kubectl_argv + ['get', 'ciliumclusterwidenetworkpolicy/rke2-host-ingress'] }}"
       changed_when: false
-

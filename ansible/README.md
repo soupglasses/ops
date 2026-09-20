@@ -284,3 +284,30 @@ the matching Ansible-owned `kube-system` Secret, and verify that family before r
 session or route does not return, restore the prior encrypted value and generation, rerun the router and
 site playbooks in that order, and verify both sessions and exact VIP routes before reopening the
 maintenance window.
+
+### Emergency BGP credential revocation
+
+From the independent RouterOS administrator path, disable both peers first so the `/32` and `/128`
+are withdrawn immediately:
+
+```routeros
+/routing/bgp/connection disable [find where name="cilium-bgp"]
+/routing/bgp/connection disable [find where name="cilium-bgp-v6"]
+/routing/bgp/session print detail
+/ip/route print detail where dst-address=172.21.68.10/32
+/ipv6/route print detail where dst-address=2a13:e745:1ee8:68::10/128
+```
+
+From the server console, revoke the in-cluster copies without displaying either value:
+
+```bash
+/var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml \
+  -n kube-system delete secret cilium-bgp-ipv4-auth cilium-bgp-ipv6-auth --ignore-not-found
+```
+
+A human operator then replaces both values in the encrypted Ansible inventory and increments both
+non-secret authentication generations. Run `playbooks/site.yml` to create the replacement Secrets,
+then `playbooks/router.yml` to update and re-enable the peers. Do not re-enable them manually. Run
+`playbooks/verify-router.yml`, confirm only the exact service routes returned, and test public traffic
+over both families. If the controller key may also be compromised, keep the peers disabled and use the
+automation-user revocation procedure above before installing new credentials.
