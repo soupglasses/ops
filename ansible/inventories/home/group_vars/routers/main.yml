@@ -8,8 +8,8 @@ routeros_automation_key_owner: ansible-controller
 # Override this when the controller uses a dedicated key at another path.
 routeros_automation_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
 routeros_automation_retire_key_owner: ""
-# Fail closed until this exact /32 is reserved or configured for the controller.
-routeros_management_source_ipv4: ""
+routeros_management_source_ipv4: 172.21.69.251/32
+routeros_controller_mac_address: F4:C8:8A:B7:66:1E
 
 routeros_wan_interface: ether1
 routeros_server_interface: vlan71-servers

@@ -26,7 +26,45 @@
     that:
       - routeros_management_source_ipv4 is ansible.utils.ipv4
       - (routeros_management_source_ipv4 | ansible.utils.ipaddr('prefix') | int) == 32
+      - routeros_controller_mac_address is match('^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$')
     fail_msg: Set routeros_management_source_ipv4 to the controller's stable IPv4 /32.
+
+- name: Inspect the controller DHCP reservation
+  community.routeros.command:
+    commands:
+      - >-
+        /ip/dhcp-server/lease/print detail where mac-address="{{ routeros_controller_mac_address }}"
+      - >-
+        /ip/dhcp-server/lease/get [find where mac-address="{{ routeros_controller_mac_address }}"] dynamic
+  register: routeros_bootstrap_controller_lease
+  changed_when: false
+
+- name: Require one active controller lease before reserving it
+  ansible.builtin.assert:
+    that:
+      - routeros_bootstrap_controller_lease.stdout[0] | trim | length > 0
+      - routeros_bootstrap_controller_lease.stdout[1] | trim in ['true', 'false']
+    fail_msg: >-
+      Connect the controller through RouterOS DHCP and confirm its MAC before bootstrapping the address-restricted
+      automation identity.
+
+- name: Convert the controller lease to a static reservation
+  community.routeros.command:
+    commands:
+      - >-
+        /ip/dhcp-server/lease/make-static [find where mac-address="{{ routeros_controller_mac_address
+        }}"]
+  when: routeros_bootstrap_controller_lease.stdout[1] | trim == 'true'
+
+- name: Converge the controller management reservation
+  community.routeros.command:
+    commands:
+      - >-
+        /ip/dhcp-server/lease/set [find where mac-address="{{ routeros_controller_mac_address }}"] address={{
+        routeros_management_source_ipv4 | ansible.utils.ipaddr('address') }} comment="ansible:controller-management"
+  changed_when: >-
+    ('address=' ~ (routeros_management_source_ipv4 | ansible.utils.ipaddr('address'))) not in routeros_bootstrap_controller_lease.stdout[0]
+    or 'comment="ansible:controller-management"' not in routeros_bootstrap_controller_lease.stdout[0]
 
 - name: Inspect the automation group
   community.routeros.command:

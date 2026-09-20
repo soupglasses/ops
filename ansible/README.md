@@ -220,9 +220,9 @@ upgrade one Kubernetes minor at a time and run the full verification afterward.
 ## RouterOS
 
 Bootstrap the dedicated RouterOS identity once through the existing administrator,
-then use the committed `ansible` inventory identity. First reserve or statically assign
-`routeros_management_source_ipv4` to the controller; the bootstrap assigns that `/32` to the
-automation user's RouterOS `address` property before it enables the account.
+then use the committed `ansible` inventory identity. The bootstrap verifies the controller MAC,
+converts its active DHCP lease into the committed static reservation, and assigns that exact `/32`
+to the automation user's RouterOS `address` property before it enables the account.
 
 ```bash
 ansible-playbook playbooks/bootstrap-router.yml -u 'admin+cet1024w' \
