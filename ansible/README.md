@@ -186,9 +186,11 @@ random, 32-80 character base64url-safe BGP passwords from that file. It streams 
 to `kubectl apply -f -` only after API readiness, under `no_log`, leaving no rendered plaintext file.
 The resulting `cilium-bgp-ipv4-auth` and `cilium-bgp-ipv6-auth` Secrets use the key `password` in
 `kube-system`. The same encrypted variables are the single source for RouterOS peer authentication.
-Local compressed snapshots run every six hours; S3 adds the independent copy needed for clean-host
-recovery. Preserve the token separately because snapshot restore requires the same token used to
-encrypt bootstrap data.
+Local and S3 retention are both 28 compressed snapshots at a six-hour cadence: a nominal six-hour RPO
+and seven-day directly selectable history when every run succeeds. The bucket must independently keep
+deleted/noncurrent versions for at least 30 days. Preserve the token separately because snapshot
+restore requires the same token used to encrypt bootstrap data. The exact RKE2 `v1.34.11+rke2r1`
+clean-host sequence and its Flux/VolSync boundary are in `docs/rke2-s3-etcd-restore.md`.
 
 RKE2 is pinned to `v1.34.11+rke2r1` and configured at cluster creation with dual-stack pod and service
 CIDRs. Its bootstrap Cilium values enable native routing, kube-proxy replacement, dual stack, BPF

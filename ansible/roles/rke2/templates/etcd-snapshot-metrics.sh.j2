@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+set -euo pipefail
+
+readonly metrics_directory=/var/lib/prometheus/node-exporter
+readonly metrics_file="${metrics_directory}/rke2-etcd-s3-snapshots.prom"
+readonly snapshot_list="${metrics_directory}/.rke2-etcd-s3-snapshots.list.$$"
+readonly metrics_tmp="${metrics_file}.tmp.$$"
+readonly retention_target={{ rke2_etcd_s3_retention | int }}
+
+umask 077
+trap 'rm -f "${snapshot_list}" "${metrics_tmp}"' EXIT
+
+list_success=0
+snapshot_count=0
+latest_timestamp=0
+
+# RKE2 loads its root-only S3 configuration from /etc/rancher/rke2/config.yaml.
+# --etcd-s3 explicitly includes remote objects. The pinned RKE2 defaults this
+# single-node command to https://127.0.0.1:9345, so no mutable server is selected.
+# Suppress command output and export only aggregate, non-secret state below.
+if /usr/bin/timeout 4m /usr/local/bin/rke2 etcd-snapshot list \
+  --etcd-s3 >"${snapshot_list}" 2>/dev/null; then
+  list_success=1
+
+  while IFS= read -r created_epoch; do
+    snapshot_count=$((snapshot_count + 1))
+    if ((created_epoch > latest_timestamp)); then
+      latest_timestamp=${created_epoch}
+    fi
+  done < <(
+    # Scheduled snapshot names end in their Unix creation timestamp. This is
+    # stable across timestamp display formats and avoids parsing S3 object data.
+    /usr/bin/awk '
+      $1 ~ /^etcd-snapshot-/ && $2 ~ /^s3:\/\// {
+        count = split($1, name_parts, "-")
+        if (name_parts[count] ~ /^[0-9]+$/) print name_parts[count]
+      }
+    ' "${snapshot_list}"
+  )
+fi
+
+cat >"${metrics_tmp}" <<EOF
+# HELP rke2_etcd_s3_snapshot_list_success Whether RKE2 successfully listed the configured S3 snapshots.
+# TYPE rke2_etcd_s3_snapshot_list_success gauge
+rke2_etcd_s3_snapshot_list_success ${list_success}
+# HELP rke2_etcd_s3_snapshot_last_check_timestamp_seconds Unix timestamp of the latest S3 listing attempt.
+# TYPE rke2_etcd_s3_snapshot_last_check_timestamp_seconds gauge
+rke2_etcd_s3_snapshot_last_check_timestamp_seconds $(/usr/bin/date +%s)
+# HELP rke2_etcd_s3_snapshot_latest_timestamp_seconds Unix timestamp of the newest scheduled S3 snapshot.
+# TYPE rke2_etcd_s3_snapshot_latest_timestamp_seconds gauge
+rke2_etcd_s3_snapshot_latest_timestamp_seconds ${latest_timestamp}
+# HELP rke2_etcd_s3_snapshot_count Number of scheduled snapshots currently listed in S3.
+# TYPE rke2_etcd_s3_snapshot_count gauge
+rke2_etcd_s3_snapshot_count ${snapshot_count}
+# HELP rke2_etcd_s3_snapshot_retention_target Configured RKE2 S3 snapshot retention target.
+# TYPE rke2_etcd_s3_snapshot_retention_target gauge
+rke2_etcd_s3_snapshot_retention_target ${retention_target}
+EOF
+
+/usr/bin/chmod 0644 "${metrics_tmp}"
+/usr/bin/mv -f "${metrics_tmp}" "${metrics_file}"

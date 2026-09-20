@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rke2-etcd-s3-snapshots
+spec:
+  groups:
+    - name: rke2-etcd-s3-snapshots.rules
+      rules:
+        - alert: RKE2EtcdS3SnapshotMetricsAbsent
+          annotations:
+            summary: RKE2 S3 snapshot metrics have disappeared from Prometheus.
+          expr: |
+            absent(rke2_etcd_s3_snapshot_list_success)
+          for: 30m
+          labels:
+            severity: critical
+        - alert: RKE2EtcdS3SnapshotListingFailed
+          annotations:
+            summary: RKE2 has been unable to list its configured S3 snapshots for one hour.
+          expr: |
+            rke2_etcd_s3_snapshot_list_success == 0
+          for: 1h
+          labels:
+            severity: warning
+        - alert: RKE2EtcdS3SnapshotStale
+          annotations:
+            summary: No fresh scheduled RKE2 etcd snapshot is visible in S3.
+          expr: |
+            (
+              rke2_etcd_s3_snapshot_latest_timestamp_seconds == 0
+              or time() - rke2_etcd_s3_snapshot_latest_timestamp_seconds > 10 * 60 * 60
+            )
+            and on(instance) rke2_etcd_s3_snapshot_list_success == 1
+          for: 30m
+          labels:
+            severity: critical
+        - alert: RKE2EtcdS3SnapshotRetentionBelowTarget
+          annotations:
+            summary: RKE2 S3 scheduled snapshot history remains below its configured retention target.
+          expr: |
+            (
+              rke2_etcd_s3_snapshot_count
+                < on(instance) rke2_etcd_s3_snapshot_retention_target
+            )
+            and on(instance) rke2_etcd_s3_snapshot_list_success == 1
+          for: 8d
+          labels:
+            severity: warning
+

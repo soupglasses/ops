@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# Managed by Ansible. Bind the private node address and enable the textfile collector.
+ARGS="--web.listen-address={{ network_ipv4_address.split('/')[0] }}:9100 --collector.textfile.directory=/var/lib/prometheus/node-exporter"

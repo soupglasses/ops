@@ -10,3 +10,4 @@ components:
   - ../../components/common
 resources:
   - ./prometheus-operator-crds/ks.yaml
+  - ./rke2-host-metrics/ks.yaml

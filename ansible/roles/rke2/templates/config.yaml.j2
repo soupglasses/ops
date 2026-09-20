@@ -31,6 +31,7 @@ etcd-snapshot-retention: {{ rke2_etcd_snapshot_retention }}
 etcd-snapshot-compress: true
 {% if rke2_etcd_s3_enabled %}
 etcd-s3: true
+etcd-s3-retention: {{ rke2_etcd_s3_retention }}
 etcd-s3-endpoint: {{ rke2_etcd_s3_endpoint | to_json }}
 etcd-s3-region: {{ rke2_etcd_s3_region | to_json }}
 etcd-s3-bucket: {{ rke2_etcd_s3_bucket | to_json }}

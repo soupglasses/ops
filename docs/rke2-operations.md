@@ -102,6 +102,12 @@ exactly once according to `AGENTS.md`. The minimum independent recovery set is:
 The operator must copy the RKE2 token to encrypted offline storage. Ansible deliberately
 does not read or print it.
 
+Both local and S3 etcd retention are explicitly 28 compressed snapshots at a six-hour cadence. This
+is a nominal six-hour RPO and seven-day directly selectable history when every run succeeds. The S3
+bucket must retain deleted/noncurrent versions for at least 30 days so delayed corruption is not
+bounded by the rolling RKE2 window. Use `docs/rke2-s3-etcd-restore.md` for the version-matched clean-host
+restore procedure and its strict ordering relative to Flux and VolSync.
+
 ## CIS posture
 
 RKE2 runs with `profile: cis`, secret encryption, protected kernel defaults, and
@@ -126,6 +132,40 @@ Before an RKE2 or kernel change:
 
 The cluster is single-node. A drain or reboot is planned downtime, not a highly
 available rollout.
+
+## S3 snapshot monitoring
+
+Ansible installs a root-only systemd timer that runs `rke2 etcd-snapshot list` every
+15 minutes using the S3 configuration already protected in
+`/etc/rancher/rke2/config.yaml`. Raw command output is held briefly in a mode `0600`
+file and discarded. Only the listing status, check time, newest scheduled snapshot
+time, scheduled snapshot count, and configured retention target are written to the
+node exporter's textfile directory. Bucket names, object names, endpoints, and errors
+are never exported as metric labels or values.
+
+Flux declares the private node-exporter endpoint, a `ServiceMonitor`, and alerts for a
+missing signal, repeated listing failure, a snapshot older than ten hours, and a
+retention deficit that persists beyond the seven-day warm-up needed for 28 snapshots
+at the six-hour schedule. The repository currently installs Prometheus Operator CRDs,
+but not a Prometheus server; the host metric remains durable and locally inspectable
+until a compatible Prometheus deployment selects these resources.
+
+Verify the complete path after convergence:
+
+```bash
+sudo systemctl start rke2-etcd-snapshot-metrics.service
+sudo systemctl status rke2-etcd-snapshot-metrics.timer
+sudo grep '^rke2_etcd_s3_snapshot_' \
+  /var/lib/prometheus/node-exporter/rke2-etcd-s3-snapshots.prom
+curl --fail --silent http://172.21.71.10:9100/metrics \
+  | grep '^rke2_etcd_s3_snapshot_'
+kubectl -n monitoring get endpointslice,servicemonitor,prometheusrule \
+  -l app.kubernetes.io/name=rke2-host-metrics
+```
+
+A fresh timestamp and full retention count prove that RKE2 can list S3 objects; they
+do not prove that a snapshot is restorable. Continue to require the documented clean
+host S3 restore drill and application-level validation.
 
 ## Verification
 

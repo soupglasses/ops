@@ -52,7 +52,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [ ] **Add VictoriaLogs security and platform logging.** Collect SSH/sudo authentication,
   auditd, AIDE, kernel/AppArmor, RKE2/containerd, Cilium/Hubble policy verdicts,
   RouterOS firewall/BGP, VolSync/restore, and Flux/controller reconciliation events.
-  Keep health/rate alerts in Prometheus and event detail in VictoriaLogs/Grafana.
+  Keep health/rate alerts in Prometheus and event detail in VictoriaLogs/Grafana. Include
+  the sanitized `rke2-etcd-snapshot-metrics.service` failure event, but never ingest its
+  transient raw snapshot listing, S3 object names, endpoint, or credentials.
 
 - [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
   pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
