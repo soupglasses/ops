@@ -8,7 +8,6 @@ apiVersion: cilium.io/v2
 kind: CiliumBGPAdvertisement
 metadata:
   name: bgp-advertisements
-  namespace: kube-system
   labels:
     # This label is matched by CiliumBGPPeerConfig
     advertise: bgp

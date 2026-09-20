@@ -9,6 +9,27 @@
       - automation_authorized_key is match('^(ssh-|sk-ssh-)')
     fail_msg: Pass automation_authorized_key as a public SSH key; never store its private key here.
 
+- name: Require at least one stable automation-controller source
+  ansible.builtin.assert:
+    that:
+      - automation_controller_sources | length == 2
+      - automation_controller_sources | ansible.utils.ipv4 | length == 1
+      - automation_controller_sources | ansible.utils.ipv6 | length == 1
+    fail_msg: Define exactly one stable controller IPv4 /32 and IPv6 /128.
+
+- name: Require exact controller hosts within the trusted management subnet
+  ansible.builtin.assert:
+    that:
+      - automation_controller_ipv4 | ansible.utils.ipaddr('prefix') == 32
+      - automation_controller_ipv6 | ansible.utils.ipaddr('prefix') == 128
+      - automation_controller_ipv4 | ansible.utils.ipaddr(automation_controller_allowed_ipv4_subnet)
+      - automation_controller_ipv6 | ansible.utils.ipaddr(automation_controller_allowed_ipv6_subnet)
+    fail_msg: >-
+      Controller sources must be exact /32 and /128 hosts inside the trusted management subnets.
+  vars:
+    automation_controller_ipv4: "{{ (automation_controller_sources | ansible.utils.ipv4)[0] }}"
+    automation_controller_ipv6: "{{ (automation_controller_sources | ansible.utils.ipv6)[0] }}"
+
 - name: Create the locked automation account
   ansible.builtin.user:
     name: "{{ automation_user }}"
@@ -21,6 +42,8 @@
   ansible.posix.authorized_key:
     user: "{{ automation_user }}"
     key: "{{ automation_authorized_key }}"
+    key_options: >-
+      from="{{ automation_controller_sources | join(',') }}",restrict
     exclusive: true
     state: present
 

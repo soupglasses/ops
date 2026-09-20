@@ -10,7 +10,6 @@ metadata:
   namespace: &namespace network
 spec:
   path: ./kubernetes/apps/network/cilium-bgp/app
-  targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app

@@ -8,12 +8,14 @@
       - "{{ routeros_resource_path }}/print detail where {{ routeros_resource_selector }}"
   register: routeros_cilium_resource_state
   changed_when: false
+  no_log: "{{ routeros_resource_no_log | default(false) }}"
 
 - name: "Create {{ routeros_resource_label }}"
   community.routeros.command:
     commands:
       - "{{ routeros_resource_path }}/add {{ routeros_resource_arguments }}"
   when: routeros_cilium_resource_state.stdout[0] | trim == ""
+  no_log: "{{ routeros_resource_no_log | default(false) }}"
 
 - name: "Converge {{ routeros_resource_label }}"
   community.routeros.command:
@@ -25,3 +27,4 @@
     - routeros_cilium_resource_state.stdout[0] | trim != ""
     - routeros_resource_expected | reject('in', routeros_cilium_resource_state.stdout[0]) | list | length
       > 0
+  no_log: "{{ routeros_resource_no_log | default(false) }}"

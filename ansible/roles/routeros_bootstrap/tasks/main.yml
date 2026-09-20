@@ -21,6 +21,13 @@
       - routeros_bootstrap_public_key is regex('^ssh-(ed25519|rsa) [A-Za-z0-9+/=]+(?: .*)?$')
     fail_msg: routeros_automation_public_key_file must contain one OpenSSH Ed25519 or RSA public key.
 
+- name: Validate the dedicated management boundary
+  ansible.builtin.assert:
+    that:
+      - routeros_management_source_ipv4 is ansible.utils.ipv4
+      - (routeros_management_source_ipv4 | ansible.utils.ipaddr('prefix') | int) == 32
+    fail_msg: Set routeros_management_source_ipv4 to the controller's stable IPv4 /32.
+
 - name: Inspect the automation group
   community.routeros.command:
     commands:
@@ -58,7 +65,7 @@
     commands:
       - >-
         /user/add name="{{ routeros_automation_user }}" group="{{ routeros_automation_group }}" disabled=yes
-        comment="ansible:cilium:automation-user"
+        address={{ routeros_management_source_ipv4 }} comment="ansible:cilium:automation-user"
   when: routeros_bootstrap_user_state.stdout[0] | trim == ""
 
 - name: Keep the automation user disabled until its key is installed
@@ -66,10 +73,11 @@
     commands:
       - >-
         /user/set [find where name="{{ routeros_automation_user }}"] group="{{ routeros_automation_group
-        }}" disabled=yes comment="ansible:cilium:automation-user"
+        }}" address={{ routeros_management_source_ipv4 }} disabled=yes comment="ansible:cilium:automation-user"
   changed_when: >-
     ('group=' ~ routeros_automation_group) not in routeros_bootstrap_user_state.stdout[0] or 'disabled=no'
-    in routeros_bootstrap_user_state.stdout[0] or 'comment="ansible:cilium:automation-user"' not in routeros_bootstrap_user_state.stdout[0]
+    in routeros_bootstrap_user_state.stdout[0] or ('address=' ~ routeros_management_source_ipv4) not in
+    routeros_bootstrap_user_state.stdout[0] or 'comment="ansible:cilium:automation-user"' not in routeros_bootstrap_user_state.stdout[0]
   when: routeros_bootstrap_user_state.stdout[0] | trim != ""
 
 - name: Inspect the controller SSH key
@@ -81,16 +89,6 @@
   register: routeros_bootstrap_key_state
   changed_when: false
 
-- name: Remove the old controller key when rotation is authorized
-  community.routeros.command:
-    commands:
-      - >-
-        /user/ssh-keys/remove [find where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
-        }}"]
-  when:
-    - routeros_replace_automation_key | bool
-    - routeros_bootstrap_key_state.stdout[0] | trim != ""
-
 - name: Add the controller SSH public key
   community.routeros.command:
     commands:
@@ -98,12 +96,26 @@
         /user/ssh-keys/add user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_key_owner
         }}" key={{ routeros_bootstrap_public_key | community.routeros.quote_argument_value }}
   no_log: true
-  when: >-
-    routeros_bootstrap_key_state.stdout[0] | trim == "" or routeros_replace_automation_key | bool
+  when: routeros_bootstrap_key_state.stdout[0] | trim == ""
 
 - name: Enable the keyed automation user
   community.routeros.command:
     commands:
       - >-
         /user/set [find where name="{{ routeros_automation_user }}"] group="{{ routeros_automation_group
-        }}" disabled=no comment="ansible:cilium:automation-user"
+        }}" address={{ routeros_management_source_ipv4 }} disabled=no comment="ansible:cilium:automation-user"
+
+- name: Validate an explicitly retired key owner
+  ansible.builtin.assert:
+    that:
+      - routeros_automation_retire_key_owner != routeros_automation_key_owner
+    fail_msg: The active controller key cannot be retired in the same run.
+  when: routeros_automation_retire_key_owner | length > 0
+
+- name: Retire the old controller key after replacement validation
+  community.routeros.command:
+    commands:
+      - >-
+        /user/ssh-keys/remove [find where user="{{ routeros_automation_user }}" key-owner="{{ routeros_automation_retire_key_owner
+        }}"]
+  when: routeros_automation_retire_key_owner | length > 0

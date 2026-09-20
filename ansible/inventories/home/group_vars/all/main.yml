@@ -5,6 +5,10 @@
 automation_user: ansible
 # Set this on the command line for bootstrap, or add the public key here. Never add a private key.
 automation_authorized_key: ""
+# Fail closed until the controller's stable addresses are recorded as one /32 and one /128.
+automation_controller_sources: []
+automation_controller_allowed_ipv4_subnet: 172.21.69.0/24
+automation_controller_allowed_ipv6_subnet: 2a13:e745:1ee8:69::/64
 
 network_interface: "{{ ansible_default_ipv4.interface }}"
 network_ipv4_address: 172.21.71.10/24
@@ -24,10 +28,13 @@ host_firewall_management_ipv6:
   - 2a13:e745:1ee8:69::/64
   - 2a13:e745:1ee8:70::/64
 host_firewall_ssh_ipv4:
-  - 172.21.0.0/16
+  - 172.21.69.0/24
+  - 172.21.70.0/24
 host_firewall_ssh_ipv6:
-  - 2a13:e745:1ee8::/48
-host_firewall_audit_mode: false
+  - 2a13:e745:1ee8:69::/64
+  - 2a13:e745:1ee8:70::/64
+host_firewall_audit_mode: true
+host_firewall_enforcement_acknowledgement: ""
 
 zfs_pool_name: zfspool
 zfs_dataset_name: zfspool/k8s
@@ -60,3 +67,5 @@ rke2_etcd_s3_bucket: "{{ (stringData | default({})).get('rke2_etcd_s3_bucket', '
 rke2_etcd_s3_folder: rke2-etcd
 rke2_etcd_s3_access_key: "{{ (stringData | default({})).get('rke2_etcd_s3_access_key', '') }}"
 rke2_etcd_s3_secret_key: "{{ (stringData | default({})).get('rke2_etcd_s3_secret_key', '') }}"
+cilium_bgp_ipv4_password: "{{ (stringData | default({})).get('cilium_bgp_ipv4_password', '') }}"
+cilium_bgp_ipv6_password: "{{ (stringData | default({})).get('cilium_bgp_ipv6_password', '') }}"

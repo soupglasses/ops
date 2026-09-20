@@ -7,7 +7,9 @@ routeros_automation_group: ansible
 routeros_automation_key_owner: ansible-controller
 # Override this when the controller uses a dedicated key at another path.
 routeros_automation_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
-routeros_replace_automation_key: false
+routeros_automation_retire_key_owner: ""
+# Fail closed until this exact /32 is reserved or configured for the controller.
+routeros_management_source_ipv4: ""
 
 routeros_wan_interface: ether1
 routeros_server_interface: vlan71-servers
@@ -25,3 +27,8 @@ routeros_cilium_v4_filter: cilium-bgp-in-v4
 routeros_cilium_v6_filter: cilium-bgp-in-v6
 routeros_cilium_v4_connection: cilium-bgp
 routeros_cilium_v6_connection: cilium-bgp-v6
+cilium_bgp_ipv4_auth_secret_name: cilium-bgp-ipv4-auth
+cilium_bgp_ipv6_auth_secret_name: cilium-bgp-ipv6-auth
+cilium_bgp_auth_secret_key: password
+cilium_bgp_ipv4_auth_generation: 1
+cilium_bgp_ipv6_auth_generation: 1

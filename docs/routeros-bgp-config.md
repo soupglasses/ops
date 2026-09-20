@@ -177,6 +177,11 @@ Cilium advertises `172.21.68.10/32` and `2a13:e745:1ee8:68::10/128` with their m
 node-address next hops. RouterOS does not need either pod CIDR for ingress forwarding,
 so the filters deliberately reject every other route.
 
+The Ansible role also configures distinct TCP-MD5 passwords on both sessions. They come only from
+`ansible/inventories/home/group_vars/all/secrets.sops.yaml` and are intentionally absent from the
+command examples above. Cilium reads the identical values from the `password` keys in
+`cilium-bgp-ipv4-auth` and `cilium-bgp-ipv6-auth` through each peer's `authSecretRef`.
+
 ## Firewall policy
 
 These input accepts must be before `defconf: drop all not coming from LAN`. The
@@ -269,3 +274,13 @@ Expected route:
 From outside the home network, verify HTTPS, Minecraft TCP, voice-chat UDP, and
 UDP/51821. NAT and filter counters can confirm UDP packets where the application does
 not provide a probe response.
+
+## Ansible management boundary
+
+The RouterOS bootstrap role assigns the stable controller `/32` to the automation user's `address`
+property before enabling it. Confirm the address is reserved or static before bootstrap. Firewall
+rules cannot match RouterOS usernames, so the role preserves global SSH policy and the independent
+admin/WireGuard recovery path instead of adding a router-wide drop. The automation group has only
+`ssh,read,write,test`; broad `write` is a RouterOS limitation and is constrained operationally by
+exact selectors and `ansible:cilium:*` comments. Key custody, immediate revocation, staged key
+rotation, BGP password rotation, rollback, and smoke tests are documented in `ansible/README.md`.

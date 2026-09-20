@@ -46,21 +46,35 @@ cd ansible
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-galaxy collection install -r requirements.yml
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/bootstrap.yml \
   -e ansible_host=172.21.71.254 -e ansible_user=sofie \
-  -e "automation_authorized_key=$(<~/.ssh/sofi.pub)"
+  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller", \
+       "automation_controller_sources":["172.21.69.42/32","2a13:e745:1ee8:69::42/128"]}'
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/site.yml \
   -e ansible_host=172.21.71.254 \
-  -e host_firewall_audit_mode=true \
-  -e "automation_authorized_key=$(<~/.ssh/sofi.pub)"
+  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller", \
+       "automation_controller_sources":["172.21.69.42/32","2a13:e745:1ee8:69::42/128"]}'
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/verify.yml
 ```
 
 The network role reconnects at `.10`. Run it from the trusted LAN or WireGuard and
 keep a local console available for the first handoff. Never disable SSH host-key
-checking to make the transition pass.
+checking to make the transition pass. Replace the example controller addresses with its
+stable addresses. The role fails closed unless it receives exactly one `/32` and one
+`/128` in the trusted management subnet; record those non-secret values in inventory
+after bootstrap so every convergence uses the same key boundary.
 
 While audit mode is active, open a new SSH session and exercise API, monitoring, BGP,
-backup, IPv4, and IPv6 paths while inspecting Hubble verdicts. Only then rerun without
-the audit override. TCP/22 stays allowed from `172.21.0.0/16` and the owned IPv6 `/48`.
+backup, IPv4, and IPv6 paths while inspecting Hubble verdicts. Audit is the default and
+direct enforcement fails unless the current host endpoint is already audited, both BGP
+peers are established, fresh dual-stack SSH/API probes pass, and the lockout-risk phrase
+is acknowledged. Promote and run the post-enforcement probes with:
+
+```bash
+task firewall:promote
+```
+
+TCP/22 stays limited to the trusted-LAN and WireGuard `/24` and `/64` networks plus the
+controller's exact `/32` and `/128`. See `ansible/README.md` for console rollback and key
+revocation commands.
 
 `zfs_create_dataset` defaults to false. Enable it only after the imported Talos-era
 datasets have been inventoried:
@@ -68,7 +82,7 @@ datasets have been inventoried:
 ```bash
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/site.yml \
   -e zfs_create_dataset=true \
-  -e "automation_authorized_key=$(<~/.ssh/sofi.pub)"
+  -e '{"automation_authorized_key":"ssh-ed25519 AAAA... ansible@controller"}'
 ```
 
 The role may create `zfspool/k8s`; it never destroys a pool or old dataset.

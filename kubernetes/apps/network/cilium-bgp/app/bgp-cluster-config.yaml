@@ -8,7 +8,6 @@ apiVersion: cilium.io/v2
 kind: CiliumBGPClusterConfig
 metadata:
   name: routeros-bgp
-  namespace: kube-system
 spec:
   # Apply to all nodes (only nas currently)
   nodeSelector:

@@ -17,6 +17,7 @@ tasks:
       - ansible-playbook playbooks/bootstrap.yml --syntax-check
       - ansible-playbook playbooks/site.yml --syntax-check
       - ansible-playbook playbooks/verify.yml --syntax-check
+      - ansible-playbook playbooks/verify-host-firewall.yml --syntax-check
       - ansible-playbook playbooks/upgrade-rke2.yml --syntax-check
       - ansible-playbook playbooks/bootstrap-router.yml --syntax-check
       - ansible-playbook playbooks/router.yml --syntax-check
@@ -37,6 +38,19 @@ tasks:
     desc: Verify host, Kubernetes, Cilium, and ZFS health
     cmds:
       - ansible-playbook playbooks/verify.yml
+
+  firewall:promote:
+    desc: Enforce the Cilium host firewall after the documented audit drill
+    cmds:
+      - >-
+        ansible-playbook playbooks/site.yml -e '{"host_firewall_audit_mode":false, "host_firewall_enforcement_acknowledgement":
+        "I_HAVE_VERIFIED_DUAL_STACK_HOST_ACCESS_AND_ACCEPT_LOCKOUT_RISK"}'
+      - ansible-playbook playbooks/verify-host-firewall.yml
+
+  firewall:verify:
+    desc: Verify enforced host policy through fresh dual-stack connections and BGP state
+    cmds:
+      - ansible-playbook playbooks/verify-host-firewall.yml
 
   router:bootstrap:
     desc: Create the dedicated RouterOS automation identity using an existing administrator

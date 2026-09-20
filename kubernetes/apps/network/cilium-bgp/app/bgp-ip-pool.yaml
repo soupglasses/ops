@@ -7,7 +7,6 @@ apiVersion: cilium.io/v2
 kind: CiliumLoadBalancerIPPool
 metadata:
   name: bgp-pool
-  namespace: kube-system
 spec:
   blocks:
     - cidr: "172.21.68.10/32"

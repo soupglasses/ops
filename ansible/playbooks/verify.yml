@@ -105,10 +105,11 @@
       register: cilium_host_audit_mode
       changed_when: false
 
-    - name: Require host-firewall enforcement outside the audit drill
+    - name: Require the configured host-firewall mode
       ansible.builtin.assert:
         that:
-          - cilium_host_audit_mode.stdout == 'Disabled'
+          - >-
+            cilium_host_audit_mode.stdout == ('Enabled' if host_firewall_audit_mode | bool else 'Disabled')
 
     - name: Check node addresses
       ansible.builtin.command:

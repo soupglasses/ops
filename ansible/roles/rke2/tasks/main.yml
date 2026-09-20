@@ -30,6 +30,27 @@
     fail_msg: Supply all etcd S3 settings through encrypted inventory variables.
   when: rke2_etcd_s3_enabled | bool
 
+- name: Require independent high-entropy BGP authentication passwords
+  ansible.builtin.assert:
+    that:
+      - cilium_bgp_ipv4_password is match('^[A-Za-z0-9_-]{32,80}$')
+      - cilium_bgp_ipv6_password is match('^[A-Za-z0-9_-]{32,80}$')
+      - cilium_bgp_ipv4_password != cilium_bgp_ipv6_password
+    fail_msg: >-
+      Supply distinct, randomly generated, 32-80 character base64url-safe BGP passwords through encrypted
+      inventory variables. Hexadecimal values are valid.
+  no_log: true
+
+- name: Require explicit acknowledgement before enforcing the host firewall
+  ansible.builtin.assert:
+    that:
+      - >-
+        host_firewall_enforcement_acknowledgement == 'I_HAVE_VERIFIED_DUAL_STACK_HOST_ACCESS_AND_ACCEPT_LOCKOUT_RISK'
+    fail_msg: >-
+      Leave host_firewall_audit_mode=true until the promotion checks pass. Enforcement requires the documented
+      acknowledgement phrase and console access.
+  when: not host_firewall_audit_mode | bool
+
 - name: Create the etcd service identity required by the CIS profile
   ansible.builtin.user:
     name: etcd
@@ -50,6 +71,11 @@
       mode: "0750"
     - path: /var/lib/rancher/rke2/server/manifests
       mode: "0750"
+
+- name: Remove any legacy rendered BGP authentication manifest
+  ansible.builtin.file:
+    path: /var/lib/rancher/rke2/server/manifests/cilium-bgp-auth-secrets.yaml
+    state: absent
 
 - name: Read the installed RKE2 version
   ansible.builtin.command: /usr/local/bin/rke2 --version
@@ -134,6 +160,38 @@
   until: rke2_kubernetes_ready.rc == 0 and rke2_kubernetes_ready.stdout == 'ok'
   changed_when: false
 
+- name: Apply Cilium BGP authentication Secrets without persistent plaintext
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - apply
+      - -f
+      - -
+    stdin: |
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: cilium-bgp-ipv4-auth
+        namespace: kube-system
+      type: Opaque
+      stringData:
+        password: {{ cilium_bgp_ipv4_password | to_json }}
+      ---
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: cilium-bgp-ipv6-auth
+        namespace: kube-system
+      type: Opaque
+      stringData:
+        password: {{ cilium_bgp_ipv6_password | to_json }}
+  register: rke2_cilium_bgp_auth_secrets
+  changed_when: >-
+    'created' in rke2_cilium_bgp_auth_secrets.stdout or 'configured' in rke2_cilium_bgp_auth_secrets.stdout
+  no_log: true
+
 - name: Wait for the Cilium agent
   ansible.builtin.command:
     argv:
@@ -187,6 +245,10 @@
       - jsonpath={$[0].id}
   register: rke2_cilium_host_endpoint
   changed_when: false
+
+- name: Run promotion probes before disabling host-firewall audit mode
+  ansible.builtin.include_tasks: host_firewall_promotion_preflight.yml
+  when: not host_firewall_audit_mode | bool
 
 - name: Set Cilium host-firewall audit mode before applying policy
   ansible.builtin.command:

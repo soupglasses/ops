@@ -1,0 +1,121 @@
+# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Require the audit-phase host policy before promotion
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - get
+      - ciliumclusterwidenetworkpolicy/rke2-host-ingress
+  changed_when: false
+
+- name: Read the current host-endpoint mode before promotion
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - exec
+      - "{{ rke2_cilium_pod.stdout }}"
+      - --
+      - cilium-dbg
+      - endpoint
+      - get
+      - -l
+      - reserved:host
+      - -o
+      - jsonpath={[0].spec.options.PolicyAuditMode}
+  register: rke2_firewall_preflight_audit_mode
+  changed_when: false
+
+- name: Require a completed audit phase before promotion
+  ansible.builtin.assert:
+    that:
+      - rke2_firewall_preflight_audit_mode.stdout == 'Enabled'
+    fail_msg: Run site.yml in its default audit mode and review Hubble verdicts before enforcement.
+
+- name: Open a fresh IPv4 SSH session before enforcement
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -4
+      - -F
+      - /dev/null
+      - -o
+      - BatchMode=yes
+      - -o
+      - ConnectTimeout=10
+      - -o
+      - HostKeyAlias=nas.home.arpa
+      - "{{ automation_user }}@{{ network_ipv4_address.split('/')[0] }}"
+      - /bin/true
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Open a fresh IPv6 SSH session before enforcement
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -6
+      - -F
+      - /dev/null
+      - -o
+      - BatchMode=yes
+      - -o
+      - ConnectTimeout=10
+      - -o
+      - HostKeyAlias=nas.home.arpa
+      - "{{ automation_user }}@{{ network_ipv6_address.split('/')[0] }}"
+      - /bin/true
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Open a new IPv4 Kubernetes API connection before enforcement
+  ansible.builtin.wait_for:
+    host: "{{ network_ipv4_address.split('/')[0] }}"
+    port: 6443
+    connect_timeout: 5
+    timeout: 15
+  delegate_to: localhost
+  become: false
+
+- name: Open a new IPv6 Kubernetes API connection before enforcement
+  ansible.builtin.wait_for:
+    host: "{{ network_ipv6_address.split('/')[0] }}"
+    port: 6443
+    connect_timeout: 5
+    timeout: 15
+  delegate_to: localhost
+  become: false
+
+- name: Read BGP peer state before enforcement
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - exec
+      - "{{ rke2_cilium_pod.stdout }}"
+      - --
+      - cilium-dbg
+      - bgp
+      - peers
+  register: rke2_firewall_preflight_bgp_peers
+  changed_when: false
+
+- name: Require both BGP peers before enforcement
+  ansible.builtin.assert:
+    that:
+      - network_ipv4_gateway in rke2_firewall_preflight_bgp_peers.stdout
+      - network_ipv6_gateway in rke2_firewall_preflight_bgp_peers.stdout
+      - rke2_firewall_preflight_bgp_peers.stdout.lower().count('established') >= 2
+    fail_msg: Both router BGP peers must be established before host-firewall enforcement.

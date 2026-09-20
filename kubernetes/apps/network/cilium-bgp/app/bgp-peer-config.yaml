@@ -8,8 +8,9 @@ apiVersion: cilium.io/v2
 kind: CiliumBGPPeerConfig
 metadata:
   name: routeros-ipv4
-  namespace: kube-system
 spec:
+  # The RKE2 Ansible role creates this Secret in kube-system from the encrypted inventory.
+  authSecretRef: cilium-bgp-ipv4-auth
   timers:
     # Fast failure detection for home network
     connectRetryTimeSeconds: 5
@@ -30,8 +31,9 @@ apiVersion: cilium.io/v2
 kind: CiliumBGPPeerConfig
 metadata:
   name: routeros-ipv6
-  namespace: kube-system
 spec:
+  # Keep a distinct credential so either address family can be rotated independently.
+  authSecretRef: cilium-bgp-ipv6-auth
   timers:
     connectRetryTimeSeconds: 5
     holdTimeSeconds: 9

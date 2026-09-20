@@ -26,7 +26,7 @@ spec:
             - {port: "4244", protocol: TCP}
             - {port: "9100", protocol: TCP}
     - fromCIDR:
-{% for cidr in host_firewall_ssh_ipv4 + host_firewall_ssh_ipv6 %}
+{% for cidr in host_firewall_ssh_ipv4 + host_firewall_ssh_ipv6 + automation_controller_sources %}
         - {{ cidr }}
 {% endfor %}
       toPorts:
