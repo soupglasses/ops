@@ -4,7 +4,7 @@
 
 collections:
   - name: ansible.netcommon
-    version: 8.6.1
+    version: 8.7.1
   - name: ansible.posix
     version: 2.1.0
   - name: ansible.utils
