@@ -44,6 +44,12 @@ tasks:
         msg: Install the existing Git and SOPS credentials first; see docs/rke2-operations.md.
       - kubectl -n kube-system rollout status deployment/rke2-snapshot-controller --timeout=120s
     cmds:
+      - kubectl apply --server-side -k kubernetes/apps/network/cilium-gateway/crds
+      - >-
+        kubectl wait --for=condition=Established --timeout=120s -k kubernetes/apps/network/cilium-gateway/crds
+      # Cilium discovers Gateway API CRDs only when the operator starts.
+      - kubectl -n kube-system rollout restart deployment/cilium-operator
+      - kubectl -n kube-system rollout status deployment/cilium-operator --timeout=180s
       - kubectl apply -k kubernetes/clusters/home/flux-system
       - flux reconcile kustomization flux-system --with-source
 

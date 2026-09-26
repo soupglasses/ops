@@ -116,6 +116,12 @@ This procedure applies to retired restore sources, not to the current
 ReplicationDestination image used for future PVC recovery. Do not promote or
 delete the active OpenLDAP or Minecraft restore sources as part of this repair.
 
+Snapshot restores create dependent clones. OpenEBS ZFS 2.11.1 still
+[does not promote them automatically](https://github.com/openebs/zfs-localpv/blob/v2.11.1/pkg/zfs/zfs_util.go#L714).
+After future restores, inspect dependencies before retiring the source image.
+Sources containing application data require a fresh recovery assessment before
+promotion or cleanup.
+
 ## Artifact recovery
 
 Collector and recovery-init image digests are pinned in the workload manifests.

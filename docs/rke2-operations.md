@@ -83,8 +83,12 @@ The import task streams these encrypted sources through SSH into namespace
 
 Both imports must report created, configured or unchanged before bootstrap.
 Keep shell tracing disabled while importing credentials. Bootstrap requires both
-Secrets and the bundled snapshot controller, then applies the committed Flux
-synchronization configuration.
+Secrets and the bundled snapshot controller. It installs the committed Gateway API
+CRDs, waits for them to become established, and restarts the Cilium operator before
+applying the Flux synchronization configuration. Cilium 1.19 discovers these CRDs
+at operator startup, so the restart is required on a clean cluster where Cilium
+starts before Flux. Subsequent CRD management belongs to Flux. Ordinary
+`task flux:reconcile` does not restart the operator.
 
 For recovery from an etcd snapshot, follow [etcd recovery](rke2-s3-etcd-restore.md).
 
