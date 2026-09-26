@@ -19,6 +19,9 @@ spec:
     cacheStorageClassName: ${VOLSYNC_CACHE_SNAPSHOTCLASS:=openebs-hostpath}
     copyMethod: Snapshot
     moverSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
       runAsUser: ${VOLSYNC_PUID:=1000}
       runAsGroup: ${VOLSYNC_PGID:=1000}
       fsGroup: ${VOLSYNC_PGID:=1000}
