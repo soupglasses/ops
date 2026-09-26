@@ -50,6 +50,7 @@ spec:
         memory: 1024M
         cpu: 1000m
     extraEnv:
+      INIT_MEMORY: 1024M
       USER_API_PROVIDER: mojang
       EXISTING_WHITELIST_FILE: SYNCHRONIZE
       EXISTING_OPS_FILE: SYNCHRONIZE
@@ -67,6 +68,8 @@ spec:
       rcon:
         enabled: true
       memory: 4096M
+      # Permit unused heap to return to the OS while the empty server is paused.
+      jvmXXOpts: "-XX:G1PeriodicGCInterval=300000"
       pvp: true
       eula: true
       type: FABRIC
