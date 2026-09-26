@@ -9,8 +9,6 @@ metadata:
   name: &app victoria-logs
   namespace: &namespace monitoring
 spec:
-  # Resume in Git after validating this application recovery point.
-  suspend: true
   path: ./kubernetes/apps/monitoring/victoria-logs/app
   targetNamespace: *namespace
   commonMetadata:

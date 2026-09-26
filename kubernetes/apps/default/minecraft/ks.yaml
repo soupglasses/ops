@@ -9,8 +9,6 @@ metadata:
   name: &app minecraft
   namespace: &namespace default
 spec:
-  # Resume in Git after validating this application recovery point.
-  suspend: true
   path: ./kubernetes/apps/default/minecraft/app
   targetNamespace: *namespace
   dependsOn:

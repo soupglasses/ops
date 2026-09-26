@@ -82,9 +82,9 @@ spec:
     resources:
       requests:
         cpu: 25m
-        memory: 64Mi
+        memory: 128Mi
       limits:
-        memory: 256Mi
+        memory: 512Mi
     customConfig:
       data_dir: /vector-data-dir
       api:
@@ -130,6 +130,8 @@ spec:
           mode: bulk
           api_version: v8
           compression: gzip
+          batch:
+            max_bytes: 1048576
           healthcheck:
             enabled: true
           buffer:
@@ -137,6 +139,7 @@ spec:
             max_size: 536870912
             when_full: block
           request:
+            concurrency: 2
             headers:
               VL-Time-Field: timestamp
               VL-Stream-Fields: source,node_name,kubernetes.pod_namespace,kubernetes.container_name,_SYSTEMD_UNIT
@@ -144,7 +147,7 @@ spec:
               AccountID: '0'
               ProjectID: '0'
           endpoints:
-            - http://victoria-logs-victoria-logs-single-server.monitoring.svc:9428/insert/elasticsearch/
+            - http://victoria-logs-victoria-logs-single-server.monitoring.svc.cluster.local.:9428/insert/elasticsearch/
     fullnameOverride: log-collector
     service:
       enabled: true

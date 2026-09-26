@@ -9,8 +9,6 @@ metadata:
   name: &app ldap-system-users
   namespace: &namespace identity
 spec:
-  # Resume in Git after validating this application recovery point.
-  suspend: true
   path: ./kubernetes/apps/identity/ldap-system-users/app
   targetNamespace: *namespace
   dependsOn:

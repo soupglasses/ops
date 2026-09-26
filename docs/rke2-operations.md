@@ -85,9 +85,9 @@ snapshot controller. It does not bootstrap over a restored etcd database; use
 
 ## Application recovery
 
-The migration commits suspend OpenLDAP, Canaille, LDAP provisioning, Minecraft,
-VictoriaLogs and host-policy promotion. Infrastructure can reconcile first. Change
-these gates in Git as each stage completes; a live `flux resume` is overwritten by Git.
+Recover infrastructure before applications, and LDAP before its consumers. For a
+staged recovery, suspend application Kustomizations in Git until their prerequisites
+are verified; a live `flux resume` cannot override a suspension declared in Git.
 
 1. Verify Flux infrastructure, OpenEBS and VolSync, then validate dual-stack BGP and VIP
    routing with [the router checks](routeros-bgp-config.md).
@@ -137,6 +137,13 @@ point; events collected since the last successful backup can be lost with the no
 which lets this use the same ZFS/VolSync recovery path as other applications.
 
 A clean rebuild restores the newest backup through the PVC's VolSync data source.
+On a replacement cluster, install Flux, VolSync and a CSI driver with snapshot support,
+import the existing recovery credentials, and set the `VOLSYNC_STORAGECLASS`,
+`VOLSYNC_SNAPSHOTCLASS` and `VOLSYNC_CACHE_SNAPSHOTCLASS` substitutions for that cluster.
+Restic restores files from S3; it does not require the original ZFS pool or node.
+Retain the application namespaces and repository names so the existing credentials
+and backups resolve correctly. The database startup checks reject empty restores.
+
 To replace an existing PVC with the newest or a selected recovery point:
 
 ```bash

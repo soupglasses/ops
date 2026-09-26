@@ -9,8 +9,6 @@ metadata:
   name: &app canaille
   namespace: &namespace identity
 spec:
-  # Resume in Git after validating this application recovery point.
-  suspend: true
   path: ./kubernetes/apps/identity/canaille/app
   targetNamespace: *namespace
   dependsOn:

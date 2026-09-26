@@ -14,11 +14,3 @@ resources:
   - ./storage-alerts.yaml
 components:
   - ../../../../components/volsync
-patches:
-  # Enable after migrating the existing metrics and proving the first restore.
-  - target:
-      kind: ReplicationSource
-    patch: |-
-      - op: add
-        path: /spec/paused
-        value: true
