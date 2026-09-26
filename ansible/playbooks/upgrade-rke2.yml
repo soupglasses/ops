@@ -101,16 +101,16 @@
 
     - name: Name the pre-upgrade recovery point
       ansible.builtin.set_fact:
-        upgrade_snapshot: "pre-upgrade-{{ ansible_date_time.epoch }}"
+        upgrade_snapshot: "pre-upgrade-{{ ansible_facts.date_time.epoch }}"
 
     - name: Create an off-cluster etcd recovery point
       ansible.builtin.command:
-        argv: [/usr/local/bin/rke2, etcd-snapshot, save, --s3, --name, "{{ upgrade_snapshot }}"]
+        argv: [/usr/local/bin/rke2, etcd-snapshot, save, --name, "{{ upgrade_snapshot }}"]
       changed_when: true
       no_log: true
 
     - name: Confirm the new snapshot is listed in S3
-      ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls --s3
+      ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls
       register: upgrade_snapshots
       changed_when: false
       # The listing also contains local copies, which cannot prove off-node survival.
