@@ -83,9 +83,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   delivered to VMAlertmanager after a clean rebuild. Metrics and logs now target one
   year of HDD ZFS storage with encrypted S3 recovery; complete the migration and restore
   evidence before considering their persistence verified.
-- [ ] **Prove Alertmanager notifications off-cluster.** The evaluator, dedicated SMTP
-  receiver, and encrypted `alertmanager-smtp` Secret are declared. Trigger and receive a
-  test firing/resolved notification after bootstrap.
+- [x] **Prove Alertmanager notifications off-cluster.** Email delivery through the
+  configured SMTP receiver was confirmed by the operator on 2026-09-26.
 - [ ] **Complete the Talos-to-RKE2 recovery.** Ansible now describes Ubuntu 26.04,
   systemd-networkd, the CIS-oriented host baseline, RKE2, bundled Cilium, ZFS, and
   RouterOS. Converge it, bootstrap Flux, complete both S3 restore passes from

@@ -57,10 +57,12 @@ logs without restarting during the subsequent restore verification. Its unsuppor
 Elasticsearch cluster-health request is disabled; VictoriaLogs remains monitored
 through its own metrics and health checks.
 
+Alertmanager email delivery was confirmed by the operator on 2026-09-26.
+
 ## Remaining acceptance work
 
 Final specialist review, Flux host-policy adoption, controlled host reboot and
 post-reboot checks remain open. Full etcd disaster restoration on a replacement
-machine and receipt of firing/resolved email notifications have not been proven
-by these application drills. Router automation-account retirement waits for an
-independently stored encrypted RouterOS backup. Legacy datasets remain preserved.
+machine has not been proven by these application drills. Router automation-account
+retirement waits for an independently stored encrypted RouterOS backup. Legacy
+datasets remain preserved.
