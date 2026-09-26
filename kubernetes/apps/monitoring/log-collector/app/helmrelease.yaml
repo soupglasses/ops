@@ -189,6 +189,12 @@ spec:
             } else if severity == "trace" {
               .level = "trace"
             }
+            if .level == "unknown" {
+              message = string(.message) ?? string(.log.msg) ?? string(.log.message) ?? string(.log) ?? ""
+              if match(message, r'(?i)^\s*warn(?:ing)?(?:\s|:|$)') {
+                .level = "warning"
+              }
+            }
       tests:
         - name: klog error
           inputs:
@@ -372,6 +378,61 @@ spec:
                 message: " \t "
           no_outputs_from:
             - severity
+        - name: mixed case warning prefix
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "wArNiNg: connection slow"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning")'
+        - name: short warning prefix
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "Warn operation delayed"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning")'
+        - name: warning word boundary
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "Warned about an earlier issue"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown")'
+        - name: embedded warning word
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "There was a WARNING earlier"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown")'
+        - name: explicit severity wins
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "{\"level\":\"info\",\"message\":\"WARNING: quoted application text\"}"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info")'
       sinks:
         exporter:
           type: prometheus_exporter

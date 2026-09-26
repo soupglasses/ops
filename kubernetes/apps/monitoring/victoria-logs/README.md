@@ -53,7 +53,9 @@ The container timestamp remains the event time, including for formats without a 
 
 `level` is normalized to `critical`, `error`, `warning`, `info`, `debug`, `trace`, or
 `unknown`. Explicit `log.level` wins over a top-level JSON `level` or `severity`.
-Journal entries use `PRIORITY`. OpenLDAP connection statistics are informational,
+Journal entries use `PRIORITY`. When no recognized severity exists, a message starting
+with the standalone word `WARN` or `WARNING` is classified as warning regardless of
+capitalization. Words embedded elsewhere in the message do not affect severity. OpenLDAP connection statistics are informational,
 and their LDAP result code remains separately searchable as `log.fields.err`.
 Other slapd messages without severity remain unknown. Ingress access logs use HTTP
 status: 5xx is error, 4xx is warning, and other responses are info unless an explicit
