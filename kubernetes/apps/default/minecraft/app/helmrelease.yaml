@@ -103,6 +103,11 @@ spec:
       overrideServerProperties: true
       serviceType: LoadBalancer
       loadBalancerClass: io.cilium/bgp-control-plane
+      externalTrafficPolicy: Cluster
+      ipFamilies:
+        - IPv4
+        - IPv6
+      ipFamilyPolicy: RequireDualStack
       extraPorts:
         - name: voice-chat
           containerPort: 24454
@@ -119,10 +124,6 @@ spec:
       lbipam.cilium.io/sharing-cross-namespace: network
     serviceLabels:
       bgp: "enabled"
-    ipFamilies:
-      - IPv4
-      - IPv6
-    ipFamilyPolicy: RequireDualStack
     persistence:
       dataDir:
         enabled: true

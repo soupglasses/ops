@@ -42,7 +42,8 @@ spec:
           - IPv4
           - IPv6
         ipFamilyPolicy: RequireDualStack
-        externalTrafficPolicy: Local
+        # The shared VIP selects different backends, requiring Cluster policy.
+        externalTrafficPolicy: Cluster
       publishService:
         enabled: true
       ingressClassResource:

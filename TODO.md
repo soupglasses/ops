@@ -152,6 +152,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Networking / future
 
+- [ ] **Reassess shared VIP policy with Cilium 1.21.** Minecraft and public ingress
+  use `externalTrafficPolicy: Cluster` because Cilium 1.19 rejects shared `Local`
+  Services selecting different pods. [Upstream change #45819](https://github.com/cilium/cilium/pull/45819)
+  adds `lbipam.cilium.io/sharing-permit-different-pods`. Verify availability in the
+  RKE2-supported release and BGP behavior before adopting it: the annotation relaxes
+  allocation checks but does not ensure every advertising node has both backends.
+  Consider dedicated IPv6 Service addresses with ExternalDNS and `Local` policy
+  instead. Validate Minecraft and HTTPS over both families after any change.
+
 - [ ] **Verify RKE2 and Cilium dual stack live.** Day-zero config now has IPv6 pod and
   service CIDRs, dual-stack IPAM, and dual-stack public Services. Prove pod, service,
   DNS, and egress connectivity before considering this complete.
