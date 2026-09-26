@@ -26,7 +26,7 @@
           - -o
           - ConnectTimeout=10
           - -o
-          - HostKeyAlias=nas.home.arpa
+          - HostKeyAlias=nas.home.finnes.dev
           - "{{ automation_user }}@{{ network_ipv4_address.split('/')[0] }}"
           - /bin/true
       delegate_to: localhost
@@ -47,7 +47,7 @@
           - -o
           - ConnectTimeout=10
           - -o
-          - HostKeyAlias=nas.home.arpa
+          - HostKeyAlias=nas.home.finnes.dev
           - "{{ automation_user }}@{{ network_ipv6_address.split('/')[0] }}"
           - /bin/true
       delegate_to: localhost

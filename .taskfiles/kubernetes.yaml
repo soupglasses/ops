@@ -15,8 +15,10 @@ tasks:
       - command -v ssh
       - command -v kubectl
       - command -v yq
+      - command -v bash
     cmds:
       - |
+        bash -eu <<'BASH'
         set -eu
         umask 077
         mkdir -p .secure
@@ -24,7 +26,7 @@ tasks:
         trap 'rm -f "$temporary"' EXIT
         ssh -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 \
           -i "$HOME/.ssh/ansible" -o StrictHostKeyChecking=yes \
-          -o HostKeyAlias=nas.home.arpa ansible@172.21.71.10 \
+          -o HostKeyAlias=nas.home.finnes.dev ansible@172.21.71.10 \
           'sudo -n cat /etc/rancher/rke2/rke2.yaml' > "$temporary"
         yq -i '.clusters[].cluster.server = "https://k8s.home.finnes.dev:6443"' "$temporary"
         kubectl --kubeconfig "$temporary" --request-timeout=15s get nodes
@@ -33,6 +35,7 @@ tasks:
         fi
         mv "$temporary" .secure/kubeconfig
         printf '%s\n' 'Installed .secure/kubeconfig; mise selects it in this repository.'
+        BASH
 
   clean-pods:
     desc: Delete all pods with a Failed/Pending/Succeeded status

@@ -62,8 +62,8 @@ unless `HERMES_KUBECONFIG` overrides it. Do not share this administrator credent
 
 After a clean cluster rebuild, repeat the task to obtain the new CA and client
 certificate. An old kubeconfig can report `certificate signed by unknown authority`;
-do not disable TLS verification. The SSH host-key alias currently remains
-`nas.home.arpa` to use the independently verified key; it performs no DNS lookup.
+do not disable TLS verification. Bootstrap SSH connects directly to the node IP and verifies the independently
+recorded `nas.home.finnes.dev` host key; this remains usable during DNS outages.
 
 ## Flux bootstrap
 

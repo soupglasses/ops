@@ -33,7 +33,7 @@ task ansible:test
 
 Use console access for networking changes. Never override `ansible_host` during the
 handoff: `initial_ansible_host` lets the play reconnect at the final address.
-`nas.home.arpa` must have a verified entry in the controller's SSH `known_hosts`.
+`nas.home.finnes.dev` must have a verified entry in the controller's SSH `known_hosts`.
 
 Routine apply does not manage networking, router configuration or host-firewall mode.
 An installed RKE2 version mismatch fails with instructions to use the upgrade task.
