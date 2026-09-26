@@ -277,7 +277,7 @@ preserve the original pre-upgrade snapshot, and complete the restart and checks
 before uncordoning. Use the matching release and snapshot for recovery if needed.
 
 Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
-The next pinned release is [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
+The pinned release is [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
 one Kubernetes minor above the recovered cluster. It retains Cilium 1.19.6, etcd
 3.6.14, containerd 2.2.7 and the snapshot-controller chart, keeping the networking
 and storage rollout separate from the control-plane upgrade. Cilium 1.19.6

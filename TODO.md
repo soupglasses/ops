@@ -184,16 +184,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   is now the VLAN 71 access port, the node is 172.21.71.10, Cilium advertises the
   shared 172.21.68.10 VIP to RouterOS, and 80.248.139.51 is DNATed to that VIP. New
   server-to-trusted-LAN connections are blocked while replies and internet egress work.
-- [ ] **Gateway API migration (before palworld/nextcloud/immich).** Replace
-  ingress-nginx and the lbipam sharing-key hack with one Gateway owning the single BGP
-  IP 172.21.68.10. Recommended implementation: Envoy Gateway (Flux-managed, supports
-  TCPRoute/UDPRoute/TLSRoute; Cilium's implementation has no UDPRoute). Steps:
-  experimental-channel Gateway API CRDs as their own ks, Envoy Gateway in `network/`,
-  one Gateway with HTTPS/TCP/UDP listeners, convert the single canaille Ingress to an
-  HTTPRoute, point external-dns at gateway-httproute sources, let cert-manager issue
-  via the Gateway, retire ingress-nginx-public. Keep ingress-nginx-tailscale until a
-  Tailscale-class Gateway replaces it. Game servers may stay direct LoadBalancer
-  Services on the shared IP if the Envoy hop shows in latency.
+- [x] **Gateway API migration.** Cilium serves public HTTP/TLS through HTTPRoutes,
+  with native LoadBalancer Services for Minecraft TCP/UDP on the shared dual-stack
+  VIP. Both nginx controllers and all Ingress resources are removed. ExternalDNS
+  follows Services and HTTPRoutes. Public application checks passed over IPv4 and
+  IPv6, with backend isolation and management access preserved.
 - [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
   `components/ldap-account` + `tofu/ldap/service-account` (design in
   `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
@@ -236,14 +231,20 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Log ingestion follow-up
 
+- [ ] Track Cilium's internal access-log UTF-8 handling. A synthetic HTTP header
+  containing byte `0xff` reproduces a rejected protobuf record in 1.19.6 while
+  forwarding and native JSON access logs succeed. The agent and proxy schemas match.
+  [The proxy copies raw header values into string fields](https://github.com/cilium/proxy/blob/edeb3f2af56c37c407efa1f63f0b32f595399bbc/cilium/accesslog.cc#L194).
+  Keep the independent JSON log pipeline and verify an upstream sanitization fix
+  before changing versions. Do not suppress the warning or strip application headers.
 - [x] Provision a Kubernetes-managed node overview with stacked per-app CPU and memory,
   host totals, disk utilization, ZFS state and network traffic using existing scrapes.
 - [x] Label warning-prefixed messages conservatively while preserving their text.
 - [x] Add inspected, guarded ZFS bootstrap-clone maintenance tasks. Refuse active
   recovery images and data-bearing origins.
-- [ ] Complete Cilium Gateway production cutover after dual-stack staging and backend
+- [x] Complete Cilium Gateway production cutover after dual-stack staging and backend
   isolation checks. Keep native Cilium Services for Minecraft TCP/UDP.
-- [ ] Verify the RKE2 1.35.8 upgrade live, including fresh dual-stack management access,
+- [x] Verify the RKE2 1.35.8 upgrade live, including fresh dual-stack management access,
   BGP, application data and off-cluster recovery points.
 - [x] Count compressed RKE2 S3 snapshots correctly. The collector now reports 24
   scheduled snapshots and the stale-backup alert has cleared.
