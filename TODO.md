@@ -249,3 +249,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   Grafana’s native alert list filters labels on active instances, so inactive generic
   rules cannot currently be scoped this way. Keep the app view scoped and avoid
   duplicating alert definitions or changing alert evaluation for the dashboard.
+
+- [x] Replace OpenEBS host-path Endpoints leader election with the upstream Lease-based
+  provisioner. Disable incompatible XFS quotas on the Ubuntu ext4 root filesystem.
+  Existing application data uses quota-enforced ZFS PVCs.

@@ -38,8 +38,9 @@ spec:
         name: openebs-hostpath
         isDefaultClass: false
         basePath: /var/openebs/local
+        # Ubuntu's root filesystem is ext4. Use openebs-zfs for enforced capacity limits.
         xfsQuota:
-          enabled: true
+          enabled: false
 
     zfs-localpv:
       zfsNode:
