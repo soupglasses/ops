@@ -9,7 +9,8 @@ SPDX-License-Identifier: 0BSD
 Open **Application overview** in Grafana and select a namespace and one or more apps.
 Select **All** to combine every labelled app in that namespace. The time
 picker controls usage history, peak usage, restart counts, and logs. Status panels
-show current pod readiness, backups, and firing or pending alerts.
+show current pod readiness, backups, and firing or pending alerts. Sections group
+overview totals, resource history and pod status, backups, alerts, and logs.
 
 Apps use the pod's `app.kubernetes.io/name` label, falling back to `app`, `k8s-app`,
 then `component`. Original log fields remain intact. Workloads sharing an app label
@@ -21,8 +22,13 @@ reservations, so usage can exceed them. With no request configured, gauges use t
 allocatable capacity of the nodes hosting the selected apps. Peak stats show the highest combined usage, sampled
 at one-minute resolution and including the current value. Request and limit lines show the configured totals.
 
-Resource usage and requests are added together across the selection. Shared pods
-and PVCs are counted once. Logs include entries from any selected app.
+Top gauges add resource usage and requests across the selection. The CPU and
+memory history panels show a separate series and legend row for each app. Shared pods
+and PVCs are counted once. Logs include entries from any selected app. A separate ingress access view follows
+HTTP requests routed to those apps’ current pod IPs, using
+[upstream metadata](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/log-format/).
+It includes backend service and ingress fields. Traffic to previous pods or rejected before backend selection
+remains searchable on the ingress controller’s own app view.
 
 Backups are matched through the PVCs mounted by the selected apps and each ReplicationSource's
 `sourcePVC`. The dashboard shows the last successful sync, native VolSync status,

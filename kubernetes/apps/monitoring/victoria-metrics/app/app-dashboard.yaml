@@ -77,6 +77,30 @@ data:
                 "minecraft"
               ]
             }
+          },
+          {
+            "name": "backend_pod_ip",
+            "label": "Backend pod IP",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "query_result(kube_pod_info{namespace=\"$namespace\",pod_ip!=\"\",host_network!=\"true\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+            "query": {
+              "query": "query_result(kube_pod_info{namespace=\"$namespace\",pod_ip!=\"\",host_network!=\"true\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "refId": "backend_pod_ip"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "multi": true,
+            "includeAll": true,
+            "hide": 2,
+            "regex": "/pod_ip=\"([^\"]+)\"/",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            }
           }
         ]
       },
@@ -85,12 +109,25 @@ data:
       },
       "panels": [
         {
+          "id": 18,
+          "title": "Overview",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
           "id": 1,
           "title": "CPU used",
           "type": "gauge",
           "gridPos": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "w": 6,
             "h": 5
           },
@@ -168,7 +205,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 6,
-            "y": 0,
+            "y": 1,
             "w": 6,
             "h": 5
           },
@@ -225,7 +262,7 @@ data:
           "type": "gauge",
           "gridPos": {
             "x": 12,
-            "y": 0,
+            "y": 1,
             "w": 6,
             "h": 5
           },
@@ -302,7 +339,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 18,
-            "y": 0,
+            "y": 1,
             "w": 6,
             "h": 5
           },
@@ -358,7 +395,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 0,
-            "y": 5,
+            "y": 6,
             "w": 6,
             "h": 3
           },
@@ -413,7 +450,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 6,
-            "y": 5,
+            "y": 6,
             "w": 6,
             "h": 3
           },
@@ -469,7 +506,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 12,
-            "y": 5,
+            "y": 6,
             "w": 6,
             "h": 3
           },
@@ -524,7 +561,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 18,
-            "y": 5,
+            "y": 6,
             "w": 6,
             "h": 3
           },
@@ -574,12 +611,25 @@ data:
           }
         },
         {
+          "id": 19,
+          "title": "Resource usage",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 9,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
           "id": 9,
           "title": "CPU usage, requests and limits",
           "type": "timeseries",
           "gridPos": {
             "x": 0,
-            "y": 8,
+            "y": 10,
             "w": 12,
             "h": 8
           },
@@ -590,22 +640,22 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "Used",
+              "expr": "100 * (sum by (app) ((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "{{app}} · Used",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "100 * (sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "Requested",
+              "expr": "100 * (sum by (app) ((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "{{app}} · Requested",
               "instant": false,
               "range": true
             },
             {
               "refId": "C",
-              "expr": "100 * (sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "Limits (configured containers)",
+              "expr": "100 * (sum by (app) ((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "{{app}} · Limits (configured containers)",
               "instant": false,
               "range": true
             }
@@ -650,7 +700,7 @@ data:
               "sort": "desc"
             }
           },
-          "description": "100% equals one CPU core. Requested and limit lines use the same scale."
+          "description": "Usage, requests and configured limits for each selected app. 100% CPU equals one core."
         },
         {
           "id": 10,
@@ -658,7 +708,7 @@ data:
           "type": "timeseries",
           "gridPos": {
             "x": 12,
-            "y": 8,
+            "y": 10,
             "w": 12,
             "h": 8
           },
@@ -669,22 +719,22 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "Used",
+              "expr": "sum by (app) ((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "{{app}} · Used",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "Requested",
+              "expr": "sum by (app) ((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "{{app}} · Requested",
               "instant": false,
               "range": true
             },
             {
               "refId": "C",
-              "expr": "sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "Limits (configured containers)",
+              "expr": "sum by (app) ((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "{{app}} · Limits (configured containers)",
               "instant": false,
               "range": true
             }
@@ -728,7 +778,74 @@ data:
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "description": "Working set, requests and configured limits for each selected app."
+        },
+        {
+          "id": 23,
+          "title": "Pod status",
+          "type": "table",
+          "gridPos": {
+            "x": 0,
+            "y": 18,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (app,pod,phase) ((kube_pod_status_phase{namespace=\"$namespace\"} == 1) * on (namespace,pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "app",
+                    "pod",
+                    "phase"
+                  ]
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "sortBy": [
+              {
+                "displayName": "app",
+                "desc": false
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "description": "Current Kubernetes phase for each selected pod. Ready pods and restart counts are shown in Overview."
+        },
+        {
+          "id": 20,
+          "title": "Backups",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 24,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
         },
         {
           "id": 11,
@@ -736,7 +853,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 0,
-            "y": 16,
+            "y": 25,
             "w": 8,
             "h": 5
           },
@@ -793,7 +910,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 8,
-            "y": 16,
+            "y": 25,
             "w": 8,
             "h": 5
           },
@@ -865,7 +982,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 16,
-            "y": 16,
+            "y": 25,
             "w": 8,
             "h": 5
           },
@@ -917,12 +1034,25 @@ data:
           "description": "VolSync’s median synchronization duration over its rolling 24-hour summary window."
         },
         {
+          "id": 21,
+          "title": "Alerts",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 30,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
           "id": 14,
           "title": "Active alerts · firing and pending",
           "type": "table",
           "gridPos": {
             "x": 0,
-            "y": 21,
+            "y": 31,
             "w": 24,
             "h": 6
           },
@@ -989,12 +1119,25 @@ data:
           ]
         },
         {
+          "id": 22,
+          "title": "Logs",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 37,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
           "id": 16,
           "title": "Application logs",
           "type": "logs",
           "gridPos": {
             "x": 0,
-            "y": 27,
+            "y": 38,
             "w": 24,
             "h": 14
           },
@@ -1045,6 +1188,64 @@ data:
             "dedupStrategy": "none"
           },
           "description": "Newest 500 matching entries in the selected time range. Expand an entry to inspect its original Kubernetes labels."
+        },
+        {
+          "id": 17,
+          "title": "Ingress access logs",
+          "type": "logs",
+          "gridPos": {
+            "x": 0,
+            "y": 52,
+            "w": 24,
+            "h": 12
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "source:=\"kubernetes\" (log.backend_namespace:=$${namespace:json} OR log.gateway_namespace:*) log.upstream_addr:~`(^|[, ])\\[?$${backend_pod_ip:regex}\\]?:[0-9]+([, ]|$)`",
+              "queryType": "instant",
+              "maxLines": 500,
+              "editorMode": "code",
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": true,
+            "enableLogDetails": true,
+            "sortOrder": "Descending",
+            "dedupStrategy": "none"
+          },
+          "description": "HTTP requests routed to the selected apps’ current pod IPs. Includes upstream namespace, service and ingress details. Earlier pods and requests rejected before backend selection are outside this view."
         }
       ]
     }
