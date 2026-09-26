@@ -59,21 +59,11 @@ profile, delete only its ServiceAccount in `hermes-system`, reconcile the
 ServiceAccount UID invalidates its earlier tokens. See Kubernetes’
 [ServiceAccount token revocation guidance](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#deleteinvalidate-a-short-lived-serviceaccount-token).
 
-For an existing gateway that has not loaded these path settings yet, request its
-native graceful restart after deployment. It stops accepting new turns and drains
-current work before restarting under the service supervisor:
+After first-time setup, restart the systemd-managed container when active work has
+finished so its gateway loads the new settings:
 
 ```bash
-ssh satellite 'sudo -n podman exec -i --user hermes -w /opt/hermes hermes /opt/hermes/.venv/bin/python -' <<'PY'
-import os
-import signal
-from gateway.status import read_runtime_status, runtime_status_pid_is_live
-
-status = read_runtime_status()
-assert runtime_status_pid_is_live(status)
-os.kill(status["pid"], signal.SIGUSR1)
-PY
+ssh satellite 'sudo -n systemctl restart hermes.service'
 ```
 
-Use the same SSH destination as `--host`. Verify that the gateway returns to its
-running state before assigning new work.
+Routine key replacement uses the existing paths and needs no restart.

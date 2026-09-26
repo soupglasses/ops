@@ -229,6 +229,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Tooling
 
+- [x] Provide `task hermes:deploy-keys HOST=<ssh-host>` for scoped Kubernetes
+  credentials in the existing Hermes container. Verify profile identities, native
+  terminal configuration and operational permissions without exposing credentials.
+
 - [ ] Guard the completions in `.mise.toml` with a tool-exists check so a fresh
   `mise trust` does not spew errors for tools not yet installed.
 - [ ] Find a first-party Flux way to visualize the Kustomization dependsOn order
