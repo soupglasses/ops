@@ -277,17 +277,18 @@ preserve the original pre-upgrade snapshot, and complete the restart and checks
 before uncordoning. Use the matching release and snapshot for recovery if needed.
 
 Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
-The pinned release is [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
-one Kubernetes minor above the recovered cluster. It retains Cilium 1.19.6, etcd
+The 2026-09-26 upgrade validated [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
+one Kubernetes minor above the recovered cluster. That release retains Cilium 1.19.6, etcd
 3.6.14, containerd 2.2.7 and the snapshot-controller chart, keeping the networking
 and storage rollout separate from the control-plane upgrade. Cilium 1.19.6
 [tests Kubernetes 1.35](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/network/kubernetes/compatibility.rst).
 Keep Cilium managed by RKE2 and advance it with a compatible bundled release.
 
 The inventory checksum matches the release's `sha256sum-amd64.txt` and GitHub
-artifact digest. Renovate proposes version updates, but the checksum must be
-updated and reviewed with each proposal. A changed inventory pin does not upgrade
-an installed node through the normal convergence playbook.
+artifact digest. Renovate updates the version and checksum together in a reviewed
+platform proposal. The validation schema follows bundled Cilium automatically. Check Cilium/Gateway
+API compatibility before merging. See [dependency updates](dependency-updates.md).
+A changed inventory pin does not upgrade an installed node through normal convergence.
 
 Etcd snapshots run every six hours, retaining 28 locally and in S3. Independent S3
 history must preserve deleted/noncurrent objects for at least 30 days and prevent the

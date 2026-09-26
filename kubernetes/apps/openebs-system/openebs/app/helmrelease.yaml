@@ -27,7 +27,8 @@ spec:
     localpv-provisioner:
       localpv:
         image:
-          registry: quay.io/
+          registry: quay.io
+          repository: openebs/provisioner-localpv
           # v4.5 uses Lease leader election instead of deprecated Endpoints.
           tag: 4.5.1@sha256:a1b4659ea4bba01235593ab796424d1503cf25e1b31fe278fef2a4829385fc61
       helperPod:

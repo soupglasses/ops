@@ -210,6 +210,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Renovate / PR hygiene
 
+- [x] Audit migration dependencies with Renovate extraction and update fixtures.
+  Couple RKE2 checksums, Gateway CRDs and runtime/restore image pins. Derive the
+  Cilium validation schema from the selected RKE2 release.
+- [x] Replace Flux Local with Flate validation and rendered PR diffs, including
+  complete text and HTML artifacts for large changes.
+
 - [ ] **Rotate GitHub automation tokens annually.** The `soupbot` Flux source token
   (`public_repo`) and commit-status token (`repo:status`) have no provider expiry.
   Rotate both by 2027-08-27, keeping the credentials separate and least-privileged.

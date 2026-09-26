@@ -9,7 +9,6 @@
     "config:recommended",
     "docker:enableMajor",
     "helpers:pinGitHubActionDigests",
-    ":automergeBranch",
     ":dependencyDashboard",
     ":disableRateLimiting",
     ":semanticCommits",
@@ -37,26 +36,53 @@
   },
   packageRules: [
     {
-      "matchPackageNames": ["/pre-commit/"],
-      "matchManagers": ["mise"],
-      "enabled": false,
-    },
-    {
       description: "Auto-merge GitHub Actions",
       matchManagers: ["github-actions"],
       automerge: true,
-      automergeType: "branch",
+      automergeType: "pr",
       matchUpdateTypes: ["minor", "patch", "digest"],
       minimumReleaseAge: "3 days",
-      ignoreTests: true,
     },
     {
       description: "Auto-merge Mise Tools",
       matchManagers: ["mise"],
       automerge: true,
-      automergeType: "branch",
+      automergeType: "pr",
       matchUpdateTypes: ["minor", "patch"],
-      ignoreTests: true,
+    },
+    {
+      description: "Review hook compatibility after the earlier pre-commit rollback",
+      matchPackageNames: ["pre-commit/pre-commit"],
+      matchManagers: ["mise"],
+      automerge: false,
+    },
+    {
+      description: "Review the bundled network stack before scheduling node maintenance",
+      matchPackageNames: ["rancher/rke2", "kubernetes-sigs/gateway-api"],
+      groupName: "RKE2 and Gateway API",
+      dependencyDashboardApproval: true,
+      automerge: false,
+    },
+    {
+      description: "Update application charts and their explicitly pinned images together",
+      matchFileNames: ["kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"],
+      groupName: "VictoriaMetrics stack",
+    },
+    {
+      matchFileNames: ["kubernetes/apps/monitoring/victoria-logs/app/helmrelease.yaml"],
+      groupName: "VictoriaLogs",
+    },
+    {
+      matchFileNames: ["kubernetes/apps/default/minecraft/app/helmrelease.yaml"],
+      groupName: "Minecraft",
+    },
+    {
+      matchFileNames: ["kubernetes/apps/openebs-system/openebs/app/helmrelease.yaml"],
+      groupName: "OpenEBS",
+    },
+    {
+      matchFileNames: ["kubernetes/apps/monitoring/log-collector/app/helmrelease.yaml"],
+      groupName: "Vector",
     },
     {
       matchUpdateTypes: ["major"],
@@ -135,6 +161,54 @@
     },
   ],
   customManagers: [
+    {
+      description: "RKE2 release and Linux amd64 archive checksum",
+      customType: "regex",
+      managerFilePatterns: [
+        "/ansible/inventories/home/group_vars/all/main\\.yml$/"
+      ],
+      matchStrings: [
+        "rke2_version: (?<currentValue>\\S+)\\nrke2_tarball_sha256: (?<currentDigest>[a-f0-9]{64})"
+      ],
+      depNameTemplate: "rancher/rke2",
+      datasourceTemplate: "github-release-attachments",
+      versioningTemplate: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+rke2r(?<build>\\d+)$"
+    },
+    {
+      description: "Gateway API CRD release tags and immutable commit references",
+      customType: "regex",
+      managerFilePatterns: [
+        "/kubernetes/apps/network/cilium-gateway/crds/kustomization\\.yaml$/"
+      ],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/kubernetes-sigs/gateway-api/(?<currentDigest>[a-f0-9]{40})/[^\\s]+ # (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      depNameTemplate: "kubernetes-sigs/gateway-api",
+      datasourceTemplate: "github-tags"
+    },
+    {
+      description: "VictoriaLogs Grafana plugin",
+      customType: "regex",
+      managerFilePatterns: [
+        "/kubernetes/apps/monitoring/victoria-metrics/app/helmrelease\\.yaml$/"
+      ],
+      matchStrings: [
+        "victoriametrics-logs-datasource@(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      depNameTemplate: "VictoriaMetrics/victorialogs-datasource",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.*)$"
+    },
+    {
+      description: "Annotated Mise backends without native Renovate support",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)\\.mise\\.toml$/"
+      ],
+      matchStrings: [
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\"krew:[^\"]+\" = \"(?<currentValue>[^\"]+)\""
+      ]
+    },
     {
       description: "Process annotated dependencies",
       customType: "regex",
