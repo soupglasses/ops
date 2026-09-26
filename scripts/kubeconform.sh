@@ -31,11 +31,24 @@ export SECRET_AWS_SECRET_ACCESS_KEY=placeholder
 KUBECONFORM_ARGS=(
     -kubernetes-version=1.33.2
     -schema-location=default
-    -schema-location="$REPO_ROOT/schemas/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
     -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
     -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json'
     -summary
 )
+
+# This CRD is missing from the catalog. Extract its schema from the versioned
+# upstream definition instead of maintaining a copy in this repository.
+if grep -q '^kind: CiliumGatewayClassConfig$' "$@"; then
+    # renovate: datasource=github-releases depName=cilium/cilium
+    CILIUM_SCHEMA_VERSION=v1.19.6
+    schema_dir="$(mktemp -d)"
+    trap 'rm -rf "$schema_dir"' EXIT
+    curl --fail --silent --show-error --max-time 30 \
+        "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml" \
+        | yq -e -o=json '.spec.versions[] | select(.name == "v2alpha1") | .schema.openAPIV3Schema' \
+        >"$schema_dir/ciliumgatewayclassconfig_v2alpha1.json"
+    KUBECONFORM_ARGS+=("-schema-location=$schema_dir/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json")
+fi
 
 fail=0
 for f in "$@"; do
