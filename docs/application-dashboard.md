@@ -14,7 +14,7 @@ Apps use the pod's `app.kubernetes.io/name` label, falling back to `app`, `k8s-a
 then `component`. Original log fields remain intact. Workloads sharing an app label
 within a namespace appear together.
 
-CPU is measured in cores and memory as the container working set. Gauges use the
+CPU displays 100% per core and memory as the container working set. Gauges use the
 app's configured resource requests as their baseline. Requests are scheduling
 reservations, so usage can exceed them. With no request configured, gauges use the
 allocatable capacity of the nodes hosting the app. Peaks are sampled at one-minute

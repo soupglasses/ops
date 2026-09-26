@@ -97,14 +97,14 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
@@ -112,7 +112,7 @@ data:
           ],
           "fieldConfig": {
             "defaults": {
-              "unit": "suffix: cores",
+              "unit": "percent",
               "min": 0,
               "color": {
                 "mode": "palette-classic"
@@ -125,7 +125,8 @@ data:
                     "value": null
                   }
                 ]
-              }
+              },
+              "decimals": 2
             },
             "overrides": []
           },
@@ -140,7 +141,7 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes. CPU: 100% equals one core.",
           "transformations": [
             {
               "id": "configFromData",
@@ -174,14 +175,14 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "max_over_time((sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m])",
+              "expr": "100 * (clamp_min(max_over_time((sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))))",
               "legendFormat": "",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
@@ -189,7 +190,7 @@ data:
           ],
           "fieldConfig": {
             "defaults": {
-              "unit": "suffix: cores",
+              "unit": "percent",
               "min": 0,
               "color": {
                 "mode": "palette-classic"
@@ -202,7 +203,8 @@ data:
                     "value": null
                   }
                 ]
-              }
+              },
+              "decimals": 2
             },
             "overrides": []
           },
@@ -217,7 +219,7 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes. CPU: 100% equals one core.",
           "transformations": [
             {
               "id": "configFromData",
@@ -328,7 +330,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "max_over_time((sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m])",
+              "expr": "clamp_min(max_over_time((sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))))",
               "legendFormat": "",
               "instant": false,
               "range": true
@@ -626,21 +628,21 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "Used",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * (sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "Requested",
               "instant": false,
               "range": true
             },
             {
               "refId": "C",
-              "expr": "sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "100 * (sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
               "legendFormat": "Limits (configured containers)",
               "instant": false,
               "range": true
@@ -648,7 +650,7 @@ data:
           ],
           "fieldConfig": {
             "defaults": {
-              "unit": "suffix: cores",
+              "unit": "percent",
               "min": 0,
               "color": {
                 "mode": "palette-classic"
@@ -685,7 +687,8 @@ data:
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "description": "100% equals one CPU core. Requested and limit lines use the same scale."
         },
         {
           "id": 10,

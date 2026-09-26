@@ -64,6 +64,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Platform
 
+- [x] **Per-app observability dashboard.** Grafana's Application overview selects
+  namespace and app, with usage and peak gauges, resource requests, logs, alerts,
+  and PVC-linked VolSync backup status. Scoped kube-state-metrics and kubelet
+  scrapes are live. [Usage guide](docs/application-dashboard.md).
+
 - [ ] **Finish the simplified RKE2 recovery.** Ubuntu/RKE2 and ZFS verified live on
   2026-09-26; the unchanged Flux controllers are installed and both bootstrap Secrets
   have been imported by the operator. Router management is moving to native RouterOS;
@@ -151,6 +156,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   namespace is misleading; align it.
 
 ## Networking / future
+
+- [x] **Restore Minecraft public access after RKE2 migration.** Shared VIP Services
+  now use compatible `Cluster` policy, Minecraft's chart receives its dual-stack
+  settings, and a port-specific ingress rule permits game traffic through RKE2's
+  default namespace isolation. Minecraft status handshakes passed via the VIP,
+  public IPv4 and public IPv6 on 2026-09-26. HTTPS remained available on both families.
 
 - [ ] **Reassess shared VIP policy with Cilium 1.21.** Minecraft and public ingress
   use `externalTrafficPolicy: Cluster` because Cilium 1.19 rejects shared `Local`
