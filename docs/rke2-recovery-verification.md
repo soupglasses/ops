@@ -122,6 +122,34 @@ After future restores, inspect dependencies before retiring the source image.
 Sources containing application data require a fresh recovery assessment before
 promotion or cleanup.
 
+Use the maintenance task to inspect a PVC without changing storage:
+
+```bash
+task volsync:zfs-inspect -- victoria-metrics --namespace monitoring
+```
+
+It reports the dataset GUID, origin, dependencies and promotion blockers through
+the existing verified SSH connection to `nas`. A dataset with no origin needs no
+promotion. For a reviewed, empty retired bootstrap source, copy the exact GUID
+and origin from inspection:
+
+```bash
+task volsync:zfs-promote -- victoria-metrics --namespace monitoring \
+  --expect-guid GUID --expect-origin POOL/DATASET@SNAPSHOT --verified-recovery
+```
+
+`--verified-recovery` records that the operator has checked the off-cluster
+application restore evidence. The task also requires a successful idle backup
+within 24 hours, checks both source and snapshot metadata for emptiness, rejects
+active snapshot references and revalidates the mapping before promotion. It
+retains the transferred snapshot and never deletes datasets or removes
+finalizers. Verify historical queries and fresh writes afterward, then confirm
+OpenEBS has completed its existing deletion requests.
+
+The automated promotion deliberately refuses data-bearing origins and unfamiliar
+ZFS metadata layouts. Such restores need the reviewed procedure above rather
+than bypassing the checks.
+
 ## Artifact recovery
 
 Collector and recovery-init image digests are pinned in the workload manifests.
