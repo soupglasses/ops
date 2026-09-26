@@ -10,7 +10,5 @@ resources:
   - ./grafana-datasource.yaml
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
-  - ./service.yaml
-  - ./servicemonitor.yaml
 components:
   - ../../../../components/volsync

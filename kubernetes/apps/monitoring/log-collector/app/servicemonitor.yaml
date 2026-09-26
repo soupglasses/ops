@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 OpenAI
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: log-collector
+  namespace: log-collection
+  labels:
+    monitoring.finnes.dev/enabled: 'true'
+spec:
+  endpoints:
+    - interval: 1m
+      port: metrics
+      scrapeTimeout: 10s
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: log-collector
+      app.kubernetes.io/name: vector

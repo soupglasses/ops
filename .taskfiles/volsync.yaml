@@ -8,6 +8,16 @@ set: [pipefail]
 
 # All tasks accept NS=<namespace> (default: default).
 tasks:
+  restore-logs:
+    desc: Restore VictoriaLogs from encrypted S3 backup [AT=optional RFC3339 timestamp]
+    env:
+      NS: monitoring
+      WORKLOAD: statefulset/victoria-logs-victoria-logs-single-server
+    cmd: scripts/volsync-restore.sh victoria-logs {{.AT | default ""}}
+    interactive: true
+    preconditions:
+      - test -f "$KUBECONFIG"
+      - test -x scripts/volsync-restore.sh
   restore:
     desc: Restore an app's PVC from the newest restic snapshot [APP=required NS=default]
     cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}}

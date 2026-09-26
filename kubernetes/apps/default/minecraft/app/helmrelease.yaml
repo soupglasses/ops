@@ -25,6 +25,26 @@ spec:
       strategy: rollback
       retries: 3
   values:
+    initContainers:
+      - name: require-restored-world
+        image: itzg/minecraft-server@sha256:8d0500eb1df76328fb2c2cd0350d5d456c1be45c7a92d6363ad35b680bdbcecf
+        command: [/bin/sh, -ec]
+        args:
+          - test -s /data/world/level.dat || { echo 'Minecraft world missing; restore a verified backup.'
+            >&2; exit 1; }
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+          - name: datadir
+            mountPath: /data
+            readOnly: true
     resources:
       requests:
         memory: 1024M

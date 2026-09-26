@@ -34,8 +34,11 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 ## Restore before first start
 
 The populator blocks PVC binding until the ReplicationDestination has a `latestImage`.
-That is intentional: a missing or inaccessible repository must not become an empty
-application. This component does not initialize restic repositories or seed snapshots.
+VolSync 0.15 can initialize a missing repository and publish an **empty** image when no
+snapshot matches. A Bound PVC or successful mover therefore does not prove recovery.
+This component has no empty-seed Job. OpenLDAP and Minecraft additionally check for
+their database/world files before starting; their backup hooks withhold the snapshot
+trigger when the application is unavailable or backup preparation fails.
 
 For existing applications, confirm a known-good off-cluster backup before reconciliation.
 For a genuinely new application, explicitly initialize and validate its data, take the

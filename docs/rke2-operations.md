@@ -92,8 +92,10 @@ these gates in Git as each stage completes; a live `flux resume` is overwritten 
 1. Verify Flux infrastructure, OpenEBS and VolSync, then validate dual-stack BGP and VIP
    routing with [the router checks](routeros-bgp-config.md).
 2. Inventory each application's off-cluster snapshots and select a known-good point.
-   A missing backup, listing error or wrong repository must stop recovery. The shared
-   VolSync component never creates empty backups.
+   A missing backup, listing error or wrong repository must stop recovery. VolSync can
+   report success with an empty restore; inspect snapshot history and application
+   contents, not just mover status. LDAP and Minecraft refuse to start without their
+   database/world files.
 3. For each application, commit its writer stopped and its ReplicationSource paused
    before removing the Kustomization suspension. Use Deployment replicas `0` for
    OpenLDAP and HelmRelease `spec.suspend: true` for Minecraft/VictoriaLogs. Set
@@ -114,6 +116,33 @@ these gates in Git as each stage completes; a live `flux resume` is overwritten 
 For a genuinely new application, create and validate its initial dataset explicitly,
 back it up to its new restic repository, then enable the normal restore-on-create
 component. Do not bypass recovery by initializing an application with missing history.
+
+### Log recovery
+
+Vector collects Kubernetes container logs, including VictoriaMetrics and VictoriaLogs,
+and the host journal into VictoriaLogs. The collector runs in `log-collection`, with
+read-only access to host logs; the database and dashboards remain in `monitoring`.
+
+VictoriaLogs keeps seven days of searchable logs on its ZFS PVC. VolSync sends encrypted
+restic backups to the existing S3 bucket at 00:17, 06:17, 12:17 and 18:17 UTC, retaining
+seven daily and four weekly recovery points. Successful backups bound the recovery
+point; events collected since the last successful backup can be lost with the node.
+[VictoriaLogs supports filesystem snapshots](https://docs.victoriametrics.com/victorialogs/#backup-and-restore),
+which lets this use the same ZFS/VolSync recovery path as other applications.
+
+A clean rebuild restores the newest backup through the PVC's VolSync data source.
+To replace an existing PVC with the newest or a selected recovery point:
+
+```bash
+task volsync:restore-logs
+task volsync:restore-logs AT=2026-09-26T18:30:00Z
+```
+
+The task preserves a local rollback snapshot before replacement. Validate recovered
+records in Grafana before removing that snapshot. Before restoring history older than
+seven days, increase `server.retentionPeriod` in the VictoriaLogs HelmRelease in Git;
+otherwise the server discards that history at startup. Restore checks should query
+known records from both monitoring services, not merely check pod readiness.
 
 ## Host firewall handoff
 

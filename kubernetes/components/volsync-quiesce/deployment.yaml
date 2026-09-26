@@ -47,6 +47,7 @@ spec:
               }
               target_pod() {
                 kubectl get -n "$NS" pod -l "$TARGET_SELECTOR" \
+                  --field-selector=status.phase=Running \
                   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
               }
               c_flag() { [ -n "$TARGET_CONTAINER" ] && printf -- '-c\n%s' "$TARGET_CONTAINER"; }
@@ -56,12 +57,20 @@ spec:
                 until [ "$(status)" = "WaitingForTrigger" ]; do sleep 5; done
 
                 pod=$(target_pod)
-                if [ -z "$pod" ]; then
-                  echo "ERROR: no pod matched selector '$TARGET_SELECTOR'; releasing trigger un-quiesced"
-                else
-                  echo "Quiescing in pod/$pod"
-                  kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$QUIESCE_CMD" \
-                    || echo "WARN: quiesce returned non-zero; releasing trigger anyway"
+                if [ -z "$pod" ] || ! kubectl wait -n "$NS" --for=condition=Ready \
+                  "pod/$pod" --timeout=10s >/dev/null 2>&1; then
+                  echo "ERROR: application unavailable; withholding backup trigger"
+                  sleep 30
+                  continue
+                fi
+                echo "Preparing backup in pod/$pod"
+                if ! kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$QUIESCE_CMD"; then
+                  echo "ERROR: backup preparation failed; withholding backup trigger"
+                  # A failed flush can leave Minecraft's automatic saving disabled.
+                  kubectl exec -n "$NS" "$pod" $(c_flag) -- bash -c "$RESUME_CMD" \
+                    || echo "ERROR: resume failed; operator intervention required"
+                  sleep 30
+                  continue
                 fi
 
                 tr="trigger-$(date +%s)"

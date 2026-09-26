@@ -90,6 +90,8 @@ spec:
 
     alertmanager:
       enabled: true
+      # Leave room for the operator's prefix and StatefulSet revision suffix.
+      name: victoria-metrics
       # Raw configuration allows sensitive global SMTP authentication values to
       # arrive through Helm valuesFrom without putting them in a rendered CR.
       useManagedConfig: false

@@ -10,11 +10,17 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Backups / disaster recovery
 
-- [ ] **OpenLDAP data is not backed up.** IN PROGRESS. `openldap-data` is 1Gi on
-  `openebs-hostpath`: node-local, on the EPHEMERAL partition, not snapshottable, no
-  volsync. `talos:rebootstrap` destroys every human account and password; only system
-  users are reconstructable via tofu. Wiring is committed; live migration steps are in
-  `docs/openldap-volsync-migration.md`.
+- [x] **Recover OpenLDAP from off-cluster backups.** On 2026-09-26, restored the
+  September 9 and September 8 restic snapshots into separate ZFS PVCs. Both contained
+  the database and an 88-entry portable LDIF dump; the running LDAP server contains six
+  person entries. Legacy datasets remain untouched. Fresh backup and login acceptance
+  checks remain part of the migration below.
+- [ ] **Complete recovery safety checks.** VolSync 0.15 can initialize a missing
+  repository and publish an empty successful restore. LDAP/Minecraft now require their
+  data files before startup and withhold backup triggers on preparation failure.
+  Validate the new hooks live and prove VictoriaLogs' first S3 backup restores queryable
+  records before enabling scheduled backups. VictoriaLogs initialization was explicitly
+  approved on 2026-09-26; its repository had no snapshots.
 - [ ] **Single age key is a single point of total backup loss.**
   `cluster-secrets.sops.yaml` (holding `SECRET_PASSWORD`, the restic repo password) is
   encrypted to one recipient (`.sops.yaml`). Losing `.secure/age.agekey` makes the
@@ -78,11 +84,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   dual-stack pod, Service, DNS, ingress, and egress traffic; then run the two-pass S3
   application restore drill. Do not enable host-firewall enforcement or remove Talos
   data/configuration before those checks pass.
-- [ ] **Prove an independent human recovery login.** The managed `ansible` account and
-  passwordless sudo work. The `sofie` account still has its two pre-existing
-  GitHub-imported authorized keys and correct file permissions, but the locally selected
-  recovery key did not match either entry. Test with the matching key or explicitly add
-  a designated recovery public key before enforcing the Cilium host firewall.
+- [x] **Prove an independent human recovery login.** The operator confirmed
+  `ssh sofie@nas` and physical console access on 2026-09-26. Independent RouterOS
+  administrator SSH also passed; its off-device encrypted backup is still pending.
 - [ ] **Complete the new observability acceptance tests.** After Flux bootstrap, verify
   VictoriaMetrics Operator/CRDs, VMAgent, VMAlert, VMAlertmanager, Grafana, VictoriaLogs,
   Vector journald/Kubernetes ingestion, and the host exporters. Prove a firing and
