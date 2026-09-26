@@ -3,5 +3,5 @@
 # SPDX-License-Identifier: 0BSD
 
 ansible-core==2.21.3
-ansible-lint==26.8.0
+ansible-lint==26.9.0
 netaddr==1.3.0
