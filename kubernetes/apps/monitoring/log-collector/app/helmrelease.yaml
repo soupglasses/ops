@@ -84,7 +84,7 @@ spec:
         cpu: 25m
         memory: 128Mi
       limits:
-        memory: 512Mi
+        memory: 1Gi
     customConfig:
       data_dir: /vector-data-dir
       api:
@@ -133,7 +133,8 @@ spec:
           batch:
             max_bytes: 1048576
           healthcheck:
-            enabled: true
+            # VictoriaLogs supports bulk ingestion, not Elasticsearch cluster health.
+            enabled: false
           buffer:
             type: disk
             max_size: 536870912
