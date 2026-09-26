@@ -21,8 +21,7 @@ spec:
             severity: warning
           annotations:
             summary: Observability storage has less than 20% free space
-            description: Expand the HDD ZFS PVC and verify pool capacity. Do not shorten the one-year
-              retention to free space.
+            description: Check pool capacity and expand the affected ZFS PVC.
         - alert: ObservabilityStorageReadOnly
           expr: vm_storage_is_read_only == 1 or vl_storage_is_read_only == 1
           for: 5m
@@ -30,4 +29,4 @@ spec:
             severity: critical
           annotations:
             summary: Observability ingestion stopped because storage is read-only
-            description: Inspect free space and expand the affected ZFS volume. Existing history is preserved.
+            description: Inspect free space and storage errors on the affected ZFS volume.
