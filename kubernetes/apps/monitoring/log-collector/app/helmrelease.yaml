@@ -144,9 +144,12 @@ spec:
               message = string(.log.msg) ?? string(.log.message) ?? string(.log._msg) ?? ""
               if strip_whitespace(message) == "" {
                 # Access logs carry request fields rather than a message.
-                if .kubernetes.pod_labels."app.kubernetes.io/name" == "ingress-nginx" && is_string(.log.method) && is_string(.log.path) && exists(.log.status) {
+                nginx = .kubernetes.pod_labels."app.kubernetes.io/name" == "ingress-nginx"
+                gateway_status = to_int(.log.status) ?? -1
+                gateway = .kubernetes.pod_labels."k8s-app" == "cilium-envoy" && is_string(.log.gateway_namespace) && .log.gateway_namespace != "" && is_string(.log.gateway) && .log.gateway != "" && gateway_status >= 100 && gateway_status < 600
+                if (nginx || gateway) && is_string(.log.method) && is_string(.log.path) && exists(.log.status) {
                   .message = string!(.log.method) + " " + (string(.log.vhost) ?? "") + string!(.log.path) + " " + to_string!(.log.status)
-                  if !exists(.log.level) && !exists(.log."log.level") && !exists(.log.log.level) {
+                  if !exists(.log.level) && !exists(.log."log.level") && !exists(.log.log.level) && !exists(.log.severity) {
                     .log.level = "info"
                     status = to_int(.log.status) ?? 0
                     if status >= 500 { .log.level = "error" } else if status >= 400 { .log.level = "warning" }
@@ -357,6 +360,73 @@ spec:
                     assert_eq!(.message, "GET example.test/health 503")
                     assert_eq!(.level, "error")
                     assert_eq!(.log.status, "503")
+        - name: gateway successful access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"GET","path":"/api/health","vhost":"grafana.finnes.dev","status":200,"upstream_addr":"10.42.0.36:3000","duration_ms":4}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "GET grafana.finnes.dev/api/health 200")
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.upstream_addr, "10.42.0.36:3000")
+                    assert_eq!(.log.duration_ms, 4)
+        - name: gateway failed access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"POST","path":"/login","vhost":"auth.finnes.dev","status":503,"response_flags":"UH"}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "POST auth.finnes.dev/login 503")
+                    assert_eq!(.level, "error")
+                    assert_eq!(.log.response_flags, "UH")
+        - name: gateway explicit severity takes precedence
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"GET","path":"/","status":503,"severity":"debug"}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "debug")
+                    assert_eq!(.log.severity, "debug")
+        - name: envoy structured event without gateway remains unclassified
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"method":"GET","path":"/","status":503}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.message, "{\"method\":\"GET\",\"path\":\"/\",\"status\":503}")
         - name: structured message fallback
           inputs:
             - insert_at: parser
