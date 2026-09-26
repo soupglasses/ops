@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: cilium.io/v2alpha1
+kind: CiliumGatewayClassConfig
+metadata:
+  name: public
+  namespace: network
+spec:
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Cluster
+    loadBalancerClass: io.cilium/bgp-control-plane
+    ipFamilies: [IPv4, IPv6]
+    ipFamilyPolicy: RequireDualStack
+    allocateLoadBalancerNodePorts: false
+  telemetry:
+    accessLogs:
+      - format: JSON
+        targets: [HTTP]
+        json:
+          time: "%START_TIME%"
+          gateway: "%CILIUM_GATEWAY_NAME%"
+          gateway_namespace: "%CILIUM_GATEWAY_NAMESPACE%"
+          remote_addr: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+          x_forwarded_for: "%REQUEST_HEADER(X-FORWARDED-FOR)%"
+          request_id: "%REQUEST_HEADER(X-REQUEST-ID)%"
+          method: "%REQUEST_HEADER(:METHOD)%"
+          vhost: "%REQUEST_HEADER(:AUTHORITY)%"
+          path: "%REQUEST_HEADER(:PATH)%"
+          status: "%RESPONSE_CODE%"
+          response_flags: "%RESPONSE_FLAGS%"
+          duration_ms: "%DURATION%"
+          bytes_sent: "%BYTES_SENT%"
+          upstream_addr: "%UPSTREAM_HOST%"
+          upstream_cluster: "%UPSTREAM_CLUSTER%"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: cilium-public
+spec:
+  controllerName: io.cilium/gateway-controller
+  parametersRef:
+    group: cilium.io
+    kind: CiliumGatewayClassConfig
+    name: public
+    namespace: network
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: public-gateway-tls
+  namespace: network
+spec:
+  secretName: public-gateway-tls
+  issuerRef:
+    name: cloudflare-dns01-production
+    kind: ClusterIssuer
+  dnsNames:
+    - auth.${DOMAIN}
+    - grafana.${DOMAIN}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public
+  namespace: network
+  annotations:
+    external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
+spec:
+  gatewayClassName: cilium-public
+  infrastructure:
+    labels:
+      bgp: "enabled"
+    annotations:
+      lbipam.cilium.io/ips: 172.21.68.10,2a13:e745:1ee8:68::10
+      lbipam.cilium.io/sharing-key: public-services
+      lbipam.cilium.io/sharing-cross-namespace: default
+  listeners:
+    # Staging ports keep nginx serving 80/443 until the gateway is verified.
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 8443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: public-gateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [identity, monitoring]

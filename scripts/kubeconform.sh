@@ -31,6 +31,7 @@ export SECRET_AWS_SECRET_ACCESS_KEY=placeholder
 KUBECONFORM_ARGS=(
     -kubernetes-version=1.33.2
     -schema-location=default
+    -schema-location="$REPO_ROOT/schemas/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
     -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
     -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json'
     -summary

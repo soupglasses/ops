@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: public-gateway-backends
+spec:
+  description: Restrict the ingress proxy to the published HTTP backends.
+  endpointSelector:
+    matchExpressions:
+      - key: reserved:ingress
+        operator: Exists
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: identity
+            k8s:app.kubernetes.io/name: canaille
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+            k8s:app.kubernetes.io/name: grafana
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: canaille-http
+  namespace: identity
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: canaille
+  ingress:
+    - fromEntities: [ingress, host]
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    # Keep the serving ingress path available throughout the migration.
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: network
+            k8s:app.kubernetes.io/name: ingress-nginx
+            k8s:app.kubernetes.io/instance: ingress-nginx-public
+            k8s:app.kubernetes.io/component: controller
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+            k8s:app.kubernetes.io/name: vmagent
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: grafana-http
+  namespace: monitoring
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  ingress:
+    - fromEntities: [ingress, host]
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    # Keep the serving ingress path available throughout the migration.
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: network
+            k8s:app.kubernetes.io/name: ingress-nginx
+            k8s:app.kubernetes.io/instance: ingress-nginx-public
+            k8s:app.kubernetes.io/component: controller
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+            k8s:app.kubernetes.io/name: vmagent
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP

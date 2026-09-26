@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Gateway API v1.4.1, supported by Cilium 1.19.
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
