@@ -37,8 +37,7 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 50Gi
-      # Existing cache PVC is 50Gi; PVCs cannot shrink in place.
-      VOLSYNC_CACHE_CAPACITY: 50Gi
+      VOLSYNC_CACHE_CAPACITY: 5Gi
       VOLSYNC_STORAGECLASS: openebs-zfs
       VOLSYNC_SNAPSHOTCLASS: openebs-zfs-snapshot
       VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-zfs

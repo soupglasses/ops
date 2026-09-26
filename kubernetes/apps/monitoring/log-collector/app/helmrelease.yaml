@@ -1,0 +1,591 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: log-collector
+  namespace: monitoring
+spec:
+  interval: 30m
+  targetNamespace: log-collection
+  dependsOn:
+    - name: victoria-logs
+  chart:
+    spec:
+      chart: vector
+      version: 0.52.0
+      sourceRef:
+        kind: HelmRepository
+        name: vector
+        namespace: flux-system
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    role: Agent
+    image:
+      repository: docker.io/timberio/vector
+      tag: 0.55.0-debian
+      digest: sha256:a4be1111b40303524aae2ffb02cd59cef2a4e9753bd13d265bf0233e921828d9
+    serviceAccount:
+      create: true
+      automountToken: true
+    rbac:
+      create: true
+    podLabels:
+      vector.dev/exclude: 'true'
+    tolerations:
+      - operator: Exists
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
+      runAsUser: 0
+      runAsGroup: 0
+      seccompProfile:
+        type: RuntimeDefault
+    defaultVolumes:
+      - name: var-log
+        hostPath:
+          path: /var/log
+          type: Directory
+      - name: run-log-journal
+        hostPath:
+          path: /run/log/journal
+          type: Directory
+      - name: machine-id
+        hostPath:
+          path: /etc/machine-id
+          type: File
+    defaultVolumeMounts:
+      - name: var-log
+        mountPath: /var/log
+        readOnly: true
+      - name: run-log-journal
+        mountPath: /run/log/journal
+        readOnly: true
+      - name: machine-id
+        mountPath: /etc/machine-id
+        readOnly: true
+    persistence:
+      hostPath:
+        enabled: true
+        path: /var/lib/vector-victoria-logs
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        memory: 1Gi
+    customConfig:
+      data_dir: /vector-data-dir
+      api:
+        enabled: false
+      sources:
+        k8s:
+          type: kubernetes_logs
+          self_node_name: $${VECTOR_SELF_NODE_NAME}
+        journald:
+          type: journald
+          # The collector's systemd 257 cannot read all boots through Vector.
+          current_boot_only: true
+          since_now: false
+        internal_metrics:
+          type: internal_metrics
+      transforms:
+        parser:
+          type: remap
+          drop_on_abort: true
+          inputs:
+            - k8s
+          source: |
+            raw = string!(.message)
+            if strip_whitespace(raw) == "" { abort }
+            parsed, json_error = parse_json(raw)
+            if json_error == null && is_object(parsed) {
+              .log = parsed
+            } else {
+              parsed, err = parse_klog(raw)
+              if err != null && match(raw, r'^[A-Za-z_][A-Za-z0-9_.]*=') {
+                parsed, err = parse_logfmt(raw)
+              }
+              if err != null {
+                parsed, err = parse_regex(raw, r'^(?P<timestamp>\d{4}-\d{2}-\d{2}T\S+)\s+(?P<level>(?i:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|PANIC))\s+(?P<logger>\S+)\s+(?P<message>.*)$')
+              }
+              if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "minecraft" {
+                parsed, err = parse_regex(raw, r'^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[(?P<thread>.+)/(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\]: (?P<message>.*)$')
+              }
+              if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "openldap" {
+                parsed, err = parse_regex(raw, r'^(?P<timestamp_hex>[0-9a-f]+\.[0-9a-f]+) (?P<thread>0x[0-9a-f]+) (?P<message>conn=\d+ .*)$')
+                if err == null {
+                  # slapd connection statistics have no severity token.
+                  parsed.level = "info"
+                  fields = parse_logfmt(string!(parsed.message)) ?? {}
+                  parsed.fields = filter(fields) -> |_key, value| { !is_boolean(value) }
+                }
+              }
+              if err == null {
+                .log = parsed
+              } else {
+                .log = raw
+              }
+            }
+            del(.message)
+            if is_object(.log) {
+              message = string(.log.msg) ?? string(.log.message) ?? string(.log._msg) ?? ""
+              if strip_whitespace(message) == "" {
+                # Access logs carry request fields rather than a message.
+                nginx = .kubernetes.pod_labels."app.kubernetes.io/name" == "ingress-nginx"
+                gateway_status = to_int(.log.status) ?? -1
+                gateway = .kubernetes.pod_labels."k8s-app" == "cilium-envoy" && is_string(.log.gateway_namespace) && .log.gateway_namespace != "" && is_string(.log.gateway) && .log.gateway != "" && gateway_status >= 100 && gateway_status < 600
+                if (nginx || gateway) && is_string(.log.method) && is_string(.log.path) && exists(.log.status) {
+                  .message = string!(.log.method) + " " + (string(.log.vhost) ?? "") + string!(.log.path) + " " + to_string!(.log.status)
+                  if !exists(.log.level) && !exists(.log."log.level") && !exists(.log.log.level) && !exists(.log.severity) {
+                    .log.level = "info"
+                    status = to_int(.log.status) ?? 0
+                    if status >= 500 { .log.level = "error" } else if status >= 400 { .log.level = "warning" }
+                  }
+                } else {
+                  .message = raw
+                }
+              }
+            }
+            .source = "kubernetes"
+        journald_normalize:
+          type: remap
+          inputs:
+            - journald
+          source: |
+            .node_name = get_env_var!("VECTOR_SELF_NODE_NAME")
+            .source = "journald"
+        severity:
+          type: remap
+          inputs:
+            - parser
+            - journald_normalize
+          source: |
+            # Keep source fields intact and give every format the same searchable severity.
+            severity = downcase(string(.log.log.level) ?? string(.log."log.level") ?? string(.log.level) ?? string(.log.severity) ?? "")
+            if .source == "journald" {
+              severity = to_string(.PRIORITY) ?? ""
+            }
+            .level = "unknown"
+            if includes(["fatal", "panic", "critical", "emerg", "alert", "0", "1", "2"], severity) {
+              .level = "critical"
+            } else if includes(["error", "err", "3"], severity) {
+              .level = "error"
+            } else if includes(["warn", "warning", "4"], severity) {
+              .level = "warning"
+            } else if includes(["info", "notice", "5", "6"], severity) {
+              .level = "info"
+            } else if includes(["debug", "7"], severity) {
+              .level = "debug"
+            } else if severity == "trace" {
+              .level = "trace"
+            }
+            if .level == "unknown" {
+              message = string(.message) ?? string(.log.msg) ?? string(.log.message) ?? string(.log) ?? ""
+              if match(message, r'(?i)^\s*warn(?:ing)?(?:\s|:|$)') {
+                .level = "warning"
+              }
+            }
+      tests:
+        - name: klog error
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: E0926 18:39:45.769756       1 volume.go:259] "Unhandled Error" err="failure"
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "error") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: klog warning
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: W0926 18:40:06.999472       1 warnings.go:70] deprecated
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: console debug
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T18:37:18.984Z\tDEBUG\tcontroller.ReplicationSource\tjob completed"
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "debug") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: console lowercase info
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tinfo\t/workspace/cmd/config-reloader/main.go:103\tstarting
+                  config reloader"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.level, "info")
+                    assert_eq!(.log.message, "starting config reloader")
+                    assert_eq!(.log.logger, "/workspace/cmd/config-reloader/main.go:103")
+        - name: console mixed case warning
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tWarning\tcontroller.example\trequest delayed"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "warning")
+                    assert_eq!(.log.level, "Warning")
+                    assert_eq!(.log.message, "request delayed")
+        - name: console severity must occupy bounded field
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tinformation\tcontroller.example\twarning in ordinary
+                  text"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.log, "2026-09-26T20:34:29.205Z\tinformation\tcontroller.example\twarning in ordinary text")
+        - name: logfmt
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: time=2026-09-26T18:39:10Z level=info msg="Fallback node addresses updated" module=agent
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: minecraft
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[16:53:00] [Server thread/INFO]: [Rcon: Automatic saving is now enabled]'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: structured precedence
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"log.level":"WARN","level":"info","msg":"test"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: nested severity
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"log":{"level":"ERROR"},"level":"info","msg":"test"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "error") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: unstructured
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: ordinary message with error word
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: journal priority
+          inputs:
+            - insert_at: severity
+              type: log
+              log_fields:
+                source: journald
+                PRIORITY: '4'
+                message: warning
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: assert_eq!(.level, "warning")
+        - name: openldap search result
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '6ab8114b.14cabca1 0x7916f366bb38 conn=1107 op=14 SEARCH RESULT tag=101 err=0
+                  qtime=0.000015 etime=0.000258 nentries=1 text='
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: openldap
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.fields.conn, "1107")
+                    assert_eq!(.log.fields.err, "0")
+                    assert_eq!(.log.fields.nentries, "1")
+        - name: ingress access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"method":"GET","path":"/health","vhost":"example.test","status":"503"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: ingress-nginx
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "GET example.test/health 503")
+                    assert_eq!(.level, "error")
+                    assert_eq!(.log.status, "503")
+        - name: gateway successful access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"GET","path":"/api/health","vhost":"grafana.finnes.dev","status":200,"upstream_addr":"10.42.0.36:3000","duration_ms":4}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "GET grafana.finnes.dev/api/health 200")
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.upstream_addr, "10.42.0.36:3000")
+                    assert_eq!(.log.duration_ms, 4)
+        - name: gateway failed access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"POST","path":"/login","vhost":"auth.finnes.dev","status":503,"response_flags":"UH"}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "POST auth.finnes.dev/login 503")
+                    assert_eq!(.level, "error")
+                    assert_eq!(.log.response_flags, "UH")
+        - name: gateway explicit severity takes precedence
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"gateway":"public","gateway_namespace":"network","method":"GET","path":"/","status":503,"severity":"debug"}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "debug")
+                    assert_eq!(.log.severity, "debug")
+        - name: envoy structured event without gateway remains unclassified
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"method":"GET","path":"/","status":503}'
+                kubernetes:
+                  pod_labels:
+                    k8s-app: cilium-envoy
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.message, "{\"method\":\"GET\",\"path\":\"/\",\"status\":503}")
+        - name: structured message fallback
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"event":"started","count":3}'
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "{\"event\":\"started\",\"count\":3}")
+                    assert_eq!(.log.count, 3)
+        - name: blank line
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: " \t "
+          no_outputs_from:
+            - severity
+        - name: mixed case warning prefix
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "wArNiNg: connection slow"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning")'
+        - name: short warning prefix
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "Warn operation delayed"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning")'
+        - name: warning word boundary
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "Warned about an earlier issue"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown")'
+        - name: embedded warning word
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "There was a WARNING earlier"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown")'
+        - name: explicit severity wins
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "{\"level\":\"info\",\"message\":\"WARNING: quoted application text\"}"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info")'
+      sinks:
+        exporter:
+          type: prometheus_exporter
+          address: 0.0.0.0:9090
+          inputs:
+            - internal_metrics
+        vlogs:
+          type: elasticsearch
+          inputs:
+            - severity
+          mode: bulk
+          api_version: v8
+          compression: gzip
+          batch:
+            max_bytes: 1048576
+          healthcheck:
+            # VictoriaLogs supports bulk ingestion, not Elasticsearch cluster health.
+            enabled: false
+          buffer:
+            type: disk
+            max_size: 536870912
+            when_full: block
+          request:
+            concurrency: 2
+            headers:
+              VL-Time-Field: timestamp
+              VL-Stream-Fields: source,node_name,kubernetes.pod_namespace,kubernetes.container_name,_SYSTEMD_UNIT
+              VL-Msg-Field: message,msg,_msg,log.msg,log.message,log._msg,log
+              AccountID: '0'
+              ProjectID: '0'
+          endpoints:
+            - http://victoria-logs-victoria-logs-single-server.monitoring.svc.cluster.local.:9428/insert/elasticsearch/
+    fullnameOverride: log-collector
+    service:
+      enabled: true
+      ports:
+        - name: metrics
+          port: 9090
+          targetPort: 9090
+          protocol: TCP
+  releaseName: log-collector

@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+version: "3"
+
+set: [pipefail]
+
+vars:
+  CLUSTER_PATH: kubernetes/clusters/home
+  KUBE_VERSION:
+    sh: awk '/^rke2_version:/ {split($2, version, "+"); print version[1]}' ansible/inventories/home/group_vars/all/main.yml
+  BASE: '{{default "HEAD" .BASE}}'
+  OUTPUT: '{{default "human" .OUTPUT}}'
+
+# Keep every command on the same render settings as CI.
+env:
+  FLATE_PATH: '{{.CLUSTER_PATH}}'
+  FLATE_KUBE_VERSION: '{{.KUBE_VERSION}}'
+  FLATE_SKIP_CRDS: "false"
+  FLATE_SKIP_SECRETS: "true"
+  FLATE_RESTRICT_EGRESS: "true"
+  FLATE_NO_PROGRESS: "true"
+
+tasks:
+  test:
+    desc: Validate all Flux resources and render their manifests
+    cmds:
+      - flate test all
+
+  diff:
+    desc: Review rendered changes against HEAD (override BASE and OUTPUT as needed)
+    cmds:
+      - flate diff all --base {{.BASE | shellQuote}} --output {{.OUTPUT | shellQuote}}
+
+  build:
+    desc: Render all Flux-managed manifests, excluding Secrets
+    cmds:
+      - flate build all
+
+  get-ks:
+    desc: List Flux Kustomizations
+    cmds:
+      - flate get ks
+
+  get-hr:
+    desc: List Flux HelmReleases
+    cmds:
+      - flate get hr

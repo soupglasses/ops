@@ -1,0 +1,1436 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: application-overview-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  application-overview.json: |-
+    {
+      "uid": "application-overview",
+      "title": "Application overview",
+      "description": "Combined resource usage, logs, alerts and VolSync backups for selected Kubernetes applications.",
+      "editable": false,
+      "schemaVersion": 41,
+      "version": 1,
+      "tags": [
+        "kubernetes",
+        "apps"
+      ],
+      "timezone": "browser",
+      "refresh": "1m",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "graphTooltip": 1,
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "label_values(namespace_pod:app:info, namespace)",
+            "query": {
+              "query": "label_values(namespace_pod:app:info, namespace)",
+              "refId": "namespace"
+            },
+            "refresh": 1,
+            "sort": 1,
+            "multi": false,
+            "includeAll": false,
+            "current": {
+              "text": "default",
+              "value": "default"
+            }
+          },
+          {
+            "name": "app",
+            "label": "App",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "label_values(namespace_pod:app:info{namespace=\"$namespace\"}, app)",
+            "query": {
+              "query": "label_values(namespace_pod:app:info{namespace=\"$namespace\"}, app)",
+              "refId": "app"
+            },
+            "refresh": 1,
+            "sort": 1,
+            "multi": true,
+            "includeAll": true,
+            "current": {
+              "text": [
+                "minecraft"
+              ],
+              "value": [
+                "minecraft"
+              ]
+            }
+          },
+          {
+            "name": "backend_pod_ip",
+            "label": "Backend pod IP",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "query_result(kube_pod_info{namespace=\"$namespace\",pod_ip!=\"\",host_network!=\"true\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+            "query": {
+              "query": "query_result(kube_pod_info{namespace=\"$namespace\",pod_ip!=\"\",host_network!=\"true\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "refId": "backend_pod_ip"
+            },
+            "refresh": 1,
+            "sort": 1,
+            "multi": true,
+            "includeAll": true,
+            "hide": 2,
+            "regex": "/pod_ip=\"([^\"]+)\"/",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "list": []
+      },
+      "panels": [
+        {
+          "id": 18,
+          "title": "Overview",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 1,
+          "title": "CPU used",
+          "type": "gauge",
+          "gridPos": {
+            "x": 0,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "Gauge maximum",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": false
+          },
+          "description": "Combined usage of the selected apps. Scale uses their total configured resource requests, which usage may exceed. Without requests, the scale uses allocatable capacity of the hosting nodes. 100% equals one CPU core.",
+          "transformations": [
+            {
+              "id": "configFromData",
+              "options": {
+                "configRefId": "B",
+                "mappings": [
+                  {
+                    "fieldName": "Gauge maximum",
+                    "handlerKey": "max",
+                    "reducerId": "lastNotNull"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Peak CPU",
+          "type": "stat",
+          "gridPos": {
+            "x": 6,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (clamp_min(max_over_time((sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Highest combined usage of the selected apps over the selected time range, sampled each minute and including the current value. 100% equals one CPU core."
+        },
+        {
+          "id": 3,
+          "title": "Memory used",
+          "type": "gauge",
+          "gridPos": {
+            "x": 12,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "Gauge maximum",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": false
+          },
+          "description": "Combined usage of the selected apps. Scale uses their total configured resource requests, which usage may exceed. Without requests, the scale uses allocatable capacity of the hosting nodes.",
+          "transformations": [
+            {
+              "id": "configFromData",
+              "options": {
+                "configRefId": "B",
+                "mappings": [
+                  {
+                    "fieldName": "Gauge maximum",
+                    "handlerKey": "max",
+                    "reducerId": "lastNotNull"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Peak memory",
+          "type": "stat",
+          "gridPos": {
+            "x": 18,
+            "y": 1,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "clamp_min(max_over_time((sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Highest combined usage of the selected apps over the selected time range, sampled each minute and including the current value."
+        },
+        {
+          "id": 5,
+          "title": "Ready pods",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 6,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum((kube_pod_status_ready{condition=\"true\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 6,
+          "title": "Container restarts",
+          "type": "stat",
+          "gridPos": {
+            "x": 6,
+            "y": 6,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum((increase(kube_pod_container_status_restarts_total[$__range]) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Restarts observed during the selected time range."
+        },
+        {
+          "id": 7,
+          "title": "Configured backups",
+          "type": "stat",
+          "gridPos": {
+            "x": 12,
+            "y": 6,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or vector(0)",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 8,
+          "title": "Active alerts",
+          "type": "stat",
+          "gridPos": {
+            "x": 18,
+            "y": 6,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(ALERTS{namespace=\"$namespace\",app=~\"$${app:regex}\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))) or vector(0)",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 19,
+          "title": "Resource usage",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 9,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 9,
+          "title": "CPU usage by app",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (sum by (app) ((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "legendFormat": "{{app}}",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "App CPU usage stacked at each timestamp. 100% equals one core. The stack can exceed 100%."
+        },
+        {
+          "id": 10,
+          "title": "Memory working set by app",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (app) ((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
+              "legendFormat": "{{app}}",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "Container working sets stacked by app at each timestamp."
+        },
+        {
+          "id": 24,
+          "title": "Resource budgets by app",
+          "type": "table",
+          "gridPos": {
+            "x": 0,
+            "y": 18,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "B",
+              "expr": "100 * (sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or on (app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "C",
+              "expr": "(100 * ((sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) and on (app) (count by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) == on (app) (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))))) or on(app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) - 1)",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "D",
+              "expr": "sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or on (app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "E",
+              "expr": "((sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) and on (app) (count by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) == on (app) (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))) or on(app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) - 1)",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "description": "Requests are summed across the app’s containers. A total limit appears only when every container has a positive limit. Otherwise the app is not fully limited. CPU: 100% equals one core.",
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "—"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU requested"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU limit"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  },
+                  {
+                    "id": "noValue",
+                    "value": "—"
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "-1": {
+                            "text": "—"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory requested"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory limit"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  },
+                  {
+                    "id": "noValue",
+                    "value": "—"
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "-1": {
+                            "text": "—"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "sortBy": [
+              {
+                "displayName": "App",
+                "desc": false
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "joinByField",
+              "options": {
+                "byField": "app",
+                "mode": "outerTabular"
+              }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "app",
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "app": "App",
+                  "Value #A": "Containers",
+                  "Value #B": "CPU requested",
+                  "Value #C": "CPU limit",
+                  "Value #D": "Memory requested",
+                  "Value #E": "Memory limit"
+                },
+                "indexByName": {
+                  "app": 0,
+                  "Value #A": 1,
+                  "Value #B": 2,
+                  "Value #C": 3,
+                  "Value #D": 4,
+                  "Value #E": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "title": "Pod status",
+          "type": "table",
+          "gridPos": {
+            "x": 0,
+            "y": 24,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (app,pod,phase) ((kube_pod_status_phase{namespace=\"$namespace\"} == 1) * on (namespace,pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "app",
+                    "pod",
+                    "phase"
+                  ]
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "sortBy": [
+              {
+                "displayName": "app",
+                "desc": false
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "description": "Current Kubernetes phase for each selected pod. Ready pods and restart counts are shown in Overview."
+        },
+        {
+          "id": 20,
+          "title": "Backups",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 30,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 11,
+          "title": "Backups · last successful sync",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(time() - volsync_source_last_sync_time_seconds{namespace=\"$namespace\"}) and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}",
+              "legendFormat": "{{source}}",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "noValue": "No successful backup recorded"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "none",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Age of the last successful VolSync backup for each PVC used by the selected apps. No data means no successful sync has been observed. Restore checks are recorded in the recovery runbook."
+        },
+        {
+          "id": 12,
+          "title": "Backups · synchronization",
+          "type": "stat",
+          "gridPos": {
+            "x": 8,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(volsync_volume_out_of_sync{role=\"source\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
+              "legendFormat": "{{obj_name}}",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "In sync",
+                      "color": "green"
+                    },
+                    "1": {
+                      "text": "Out of sync",
+                      "color": "red"
+                    }
+                  }
+                }
+              ],
+              "noValue": "No backup status"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Native VolSync status. Backup age above remains relevant for sources triggered by quiesce controllers."
+        },
+        {
+          "id": 13,
+          "title": "Backups · median duration",
+          "type": "stat",
+          "gridPos": {
+            "x": 16,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(volsync_sync_duration_seconds{role=\"source\",quantile=\"0.5\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
+              "legendFormat": "{{obj_name}}",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "noValue": "No backup runs observed"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "none",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "VolSync’s median synchronization duration over its rolling 24-hour summary window."
+        },
+        {
+          "id": 21,
+          "title": "Alerts",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 36,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 14,
+          "title": "Active alerts · firing and pending",
+          "type": "table",
+          "gridPos": {
+            "x": 0,
+            "y": 37,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "ALERTS{namespace=\"$namespace\",app=~\"$${app:regex}\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "sortBy": [
+              {
+                "displayName": "severity",
+                "desc": false
+              }
+            ]
+          },
+          "description": "Matches alerts labelled with the selected apps, their pods, PVCs, or VolSync sources. Cluster-wide alerts are available in the cluster alert view.",
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "alertname",
+                    "alertstate",
+                    "severity",
+                    "namespace",
+                    "pod",
+                    "persistentvolumeclaim",
+                    "obj_name",
+                    "app"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "title": "Logs",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 43,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 16,
+          "title": "Application logs",
+          "type": "logs",
+          "gridPos": {
+            "x": 0,
+            "y": 44,
+            "w": 24,
+            "h": 14
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "source:=\"kubernetes\" kubernetes.pod_namespace:=$${namespace:json} ((\"kubernetes.pod_labels.app.kubernetes.io/name\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":=\"\" \"kubernetes.pod_labels.component\":in($${app:doublequote})))",
+              "queryType": "instant",
+              "maxLines": 500,
+              "editorMode": "code",
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": true,
+            "enableLogDetails": true,
+            "sortOrder": "Descending",
+            "dedupStrategy": "none"
+          },
+          "description": "Newest 500 matching entries in the selected time range. Expand an entry to inspect its original Kubernetes labels."
+        },
+        {
+          "id": 17,
+          "title": "HTTP access logs",
+          "type": "logs",
+          "gridPos": {
+            "x": 0,
+            "y": 58,
+            "w": 24,
+            "h": 12
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "source:=\"kubernetes\" (log.backend_namespace:=$${namespace:json} OR log.gateway_namespace:*) log.upstream_addr:~`(^|[, ])\\[?$${backend_pod_ip:regex}\\]?:[0-9]+([, ]|$)`",
+              "queryType": "instant",
+              "maxLines": 500,
+              "editorMode": "code",
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": true,
+            "enableLogDetails": true,
+            "sortOrder": "Descending",
+            "dedupStrategy": "none"
+          },
+          "description": "HTTP requests routed to the selected apps’ current pod IPs. Includes upstream namespace, service and ingress details. Earlier pods and requests rejected before backend selection are outside this view."
+        }
+      ]
+    }

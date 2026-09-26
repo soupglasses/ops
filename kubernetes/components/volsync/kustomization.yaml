@@ -10,4 +10,3 @@ resources:
   - ./replicationdestination.yaml
   - ./replicationsource.yaml
   - ./secret.yaml
-  - ./bootstrap.yaml

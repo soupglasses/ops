@@ -15,8 +15,11 @@ includes:
   flux:
     taskfile: .taskfiles/flux.yaml
     dir: .
+  flate:
+    taskfile: .taskfiles/flate.yaml
+    dir: .
   flux-local:
-    taskfile: .taskfiles/flux-local.yaml
+    taskfile: .taskfiles/flate.yaml
     dir: .
   kube:
     taskfile: .taskfiles/kubernetes.yaml
@@ -27,3 +30,11 @@ includes:
   volsync:
     taskfile: .taskfiles/volsync.yaml
     dir: .
+
+tasks:
+  hermes:deploy-keys:
+    desc: Install or renew Kubernetes credentials in an existing Hermes container
+    silent: true
+    requires:
+      vars: [HOST]
+    cmd: python3 scripts/hermes-kubeconfig.py --host {{.HOST | shellQuote}} {{.CLI_ARGS}}

@@ -177,10 +177,11 @@ Cilium advertises `172.21.68.10/32` and `2a13:e745:1ee8:68::10/128` with their m
 node-address next hops. RouterOS does not need either pod CIDR for ingress forwarding,
 so the filters deliberately reject every other route.
 
-The Ansible role also configures distinct TCP-MD5 passwords on both sessions. They come only from
-`ansible/inventories/home/group_vars/all/secrets.sops.yaml` and are intentionally absent from the
-command examples above. Cilium reads the identical values from the `password` keys in
-`cilium-bgp-ipv4-auth` and `cilium-bgp-ipv6-auth` through each peer's `authSecretRef`.
+Both sessions require distinct TCP-MD5 passwords matching the existing encrypted
+Ansible inventory and the `password` keys in `cilium-bgp-ipv4-auth` and
+`cilium-bgp-ipv6-auth` in `kube-system`. An operator supplies those values through the
+router administrator interface; they are intentionally absent from these examples.
+Preserve configured passwords when adopting the router into native management.
 
 ## Firewall policy
 
@@ -275,12 +276,53 @@ From outside the home network, verify HTTPS, Minecraft TCP, voice-chat UDP, and
 UDP/51821. NAT and filter counters can confirm UDP packets where the application does
 not provide a probe response.
 
-## Ansible management boundary
+## Native management and recovery
 
-The RouterOS bootstrap role assigns the stable controller `/32` to the automation user's `address`
-property before enabling it. Confirm the address is reserved or static before bootstrap. Firewall
-rules cannot match RouterOS usernames, so the role preserves global SSH policy and the independent
-admin/WireGuard recovery path instead of adding a router-wide drop. The automation group has only
-`ssh,read,write,test`; broad `write` is a RouterOS limitation and is constrained operationally by
-exact selectors and `ansible:cilium:*` comments. Key custody, immediate revocation, staged key
-rotation, BGP password rotation, rollback, and smoke tests are documented in `ansible/README.md`.
+Use WinBox or the RouterOS CLI through the independent administrator account.
+For an existing router, inspect named objects first and update them in place; the
+`add` examples above describe a clean installation and must not be pasted over an
+existing setup. Preserve rule order, exact prefix filters and WireGuard access.
+The existing `ansible:cilium:*` comments are useful identifiers and need not be renamed.
+
+Before changing networking or firewall rules, save a password-encrypted binary backup
+and copy it off the router using the human credential workflow. Also keep a sanitized
+text export and the RouterOS version. A text export omits secrets and does not replace
+independent custody of BGP passwords, WireGuard keys, SSH keys and backup passwords.
+Use Safe Mode for small changes and verify a new administrator connection before
+committing them. Never reset the whole router to apply a Kubernetes configuration.
+
+For recovery onto the same compatible device, restore the encrypted native backup
+through console or independent management access. For replacement hardware, restore
+from the sanitized recipe and independently held secrets, adapting only physical port
+mapping. Restore management and WireGuard first, then VLAN/DNS/NTP, firewall/NAT, BGP,
+and finally public application traffic. Verify both address families and exact VIP
+routes with the checks above.
+
+After the independent administrator path and off-device backup are verified, retire
+the old router automation identity:
+
+```routeros
+/user disable [find where name="ansible"]
+/user/ssh-keys remove [find where user="ansible"]
+```
+
+Leave the controller's DHCP reservation intact; it may still be used for host SSH
+source restrictions. Removing Ansible code never requires deleting working router
+rules, BGP connections, VLANs or DHCP leases.
+
+### BGP password rotation
+
+Rotate one family per maintenance window. Preserve the previous encrypted inventory
+revision and router backup. A human updates the existing encrypted inventory and sets
+the matching RouterOS connection's TCP-MD5 password through the administrator interface.
+Run the operator-owned `task ansible:apply` to update the Cilium Secret, then verify the
+session, exact VIP route and external application traffic before rotating the other
+family. There is a brief route withdrawal; no password-generation counter is needed.
+If peering fails, restore the previous value on both sides and repeat the checks.
+
+For emergency revocation, disable the affected named BGP connection first and verify
+route withdrawal. Replace its credentials on both sides before reenabling it. Never
+remove a live route's authentication merely to recover connectivity.
+
+References: [configuration and Safe Mode](https://help.mikrotik.com/docs/spaces/ROS/pages/328155/Configuration+Management),
+[encrypted backups](https://help.mikrotik.com/docs/spaces/ROS/pages/40992852/Backup).

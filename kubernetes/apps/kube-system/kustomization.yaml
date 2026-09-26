@@ -8,6 +8,3 @@ kind: Kustomization
 namespace: kube-system
 components:
   - ../../components/common
-resources:
-  - ./coredns/ks.yaml
-  - ./snapshot-controller/ks.yaml

@@ -102,7 +102,7 @@ New non-draft pull requests route to `opslead` on `opened` or `reopened`; drafts
 once on `ready_for_review`. New commits (`synchronize`) do not wake Soup Bot by
 themselves. Opslead first waits, without model-turn polling or workflow-log streaming,
 for required CI to finish. It then re-fetches the current head, final check conclusions,
-all comments, and the completed Flux Local rendered diff before doing any review,
+all comments, and the completed Flate rendered diff before doing any review,
 research, checkout, cluster inspection, or specialist routing. Failed or timed-out CI
 stops review until a later invocation.
 

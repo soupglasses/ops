@@ -32,11 +32,13 @@ if /usr/bin/timeout 4m /usr/local/bin/rke2 etcd-snapshot list \
       latest_timestamp=${created_epoch}
     fi
   done < <(
-    # Scheduled snapshot names end in their Unix creation timestamp. This is
-    # stable across timestamp display formats and avoids parsing S3 object data.
+    # Compression adds .zip after the Unix timestamp. Ignore local copies and
+    # on-demand snapshots so these metrics describe scheduled S3 recovery points.
     /usr/bin/awk '
       $1 ~ /^etcd-snapshot-/ && $2 ~ /^s3:\/\// {
-        count = split($1, name_parts, "-")
+        name = $1
+        sub(/\.zip$/, "", name)
+        count = split(name, name_parts, "-")
         if (name_parts[count] ~ /^[0-9]+$/) print name_parts[count]
       }
     ' "${snapshot_list}"

@@ -9,7 +9,6 @@ namespace: identity
 resources:
   - ./deployment.yaml
   - ./service.yaml
-  - ./ingress.yaml
   - ./secret.sops.yaml
 configMapGenerator:
   - name: canaille-config

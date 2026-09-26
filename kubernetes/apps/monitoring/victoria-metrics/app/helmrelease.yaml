@@ -30,19 +30,49 @@ spec:
       retries: 3
   values:
     victoria-metrics-operator:
+      podSecurityContext:
+        seccompProfile:
+          type: RuntimeDefault
       crds:
         cleanup:
           # Never let removing this release delete unrelated VM custom resources.
           enabled: false
 
-    # Metric history is operational cache, not application data. Keeping it
-    # ephemeral avoids an unbacked stateful recovery dependency: current
-    # signals, alerts, and dashboards rebuild entirely from Git after loss.
     vmsingle:
       enabled: true
       spec:
-        retentionPeriod: 2d
+        image:
+          repository: victoriametrics/victoria-metrics
+          tag: v1.149.0@sha256:13b8951e35bb3589626816538483127785a9d8b53f9f5123769db0fcab1d961f
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
+        retentionPeriod: 1y
+        # The shared VolSync component owns the PVC and restores it before binding.
         storage: null
+        volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: victoria-metrics
+        initContainers:
+          - name: require-restored-metrics
+            image: victoriametrics/victoria-metrics:v1.149.0@sha256:13b8951e35bb3589626816538483127785a9d8b53f9f5123769db0fcab1d961f
+            command: [/bin/sh, -ec]
+            args:
+              - test -d /data/data && test -d /data/metadata
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+              - name: data
+                mountPath: /data
+                readOnly: true
         extraArgs:
           storage.minFreeDiskSpaceBytes: 5GB
         useStrictSecurity: true
@@ -56,8 +86,15 @@ spec:
     vmagent:
       enabled: true
       spec:
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
         selectAllByDefault: false
+        serviceScrapeNamespaceSelector: {}
         serviceScrapeSelector:
+          matchLabels:
+            monitoring.finnes.dev/enabled: "true"
+        nodeScrapeSelector:
           matchLabels:
             monitoring.finnes.dev/enabled: "true"
         scrapeInterval: 1m
@@ -72,7 +109,11 @@ spec:
     vmalert:
       enabled: true
       spec:
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
         selectAllByDefault: false
+        ruleNamespaceSelector: {}
         evaluationInterval: 1m
         ruleSelector:
           matchLabels:
@@ -87,6 +128,8 @@ spec:
 
     alertmanager:
       enabled: true
+      # Leave room for the operator's prefix and StatefulSet revision suffix.
+      name: victoria-metrics
       # Raw configuration allows sensitive global SMTP authentication values to
       # arrive through Helm valuesFrom without putting them in a rendered CR.
       useManagedConfig: false
@@ -119,8 +162,7 @@ spec:
       monzoTemplate:
         enabled: false
 
-    # Avoid duplicate exporters and broad cluster scraping. VMAgent only selects
-    # explicitly labelled repository-owned ServiceMonitors.
+    # Keep scrape selection explicit as exporters are added.
     defaultDashboards:
       enabled: false
     syncJob:
@@ -141,20 +183,9 @@ spec:
         passwordKey: admin-password
       defaultDashboardsTimezone: browser
       plugins:
-        - victoriametrics-logs-datasource 0.32.0
+        - victoriametrics-logs-datasource@0.32.0
       ingress:
-        enabled: true
-        ingressClassName: nginx-public
-        annotations:
-          cert-manager.io/cluster-issuer: cloudflare-dns01-production
-          external-dns.alpha.kubernetes.io/hostname: grafana.${DOMAIN}
-          external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
-        hosts:
-          - grafana.${DOMAIN}
-        tls:
-          - secretName: grafana-tls
-            hosts:
-              - grafana.${DOMAIN}
+        enabled: false
       persistence:
         # Dashboards and datasources are provisioned from Git. Keeping Grafana
         # stateless makes clean recovery deterministic and avoids backing up an
@@ -205,14 +236,77 @@ spec:
             type: prometheus
             access: proxy
             uid: VictoriaMetrics
+            jsonData:
+              manageAlerts: true
             isDefault: true
             editable: false
     prometheus-node-exporter:
       enabled: false
     kube-state-metrics:
-      enabled: false
+      enabled: true
+      collectors:
+        - nodes
+        - pods
+        - persistentvolumeclaims
+      metricLabelsAllowlist:
+        - pods=[app.kubernetes.io/name,app,k8s-app,component]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+      vmScrape:
+        labels:
+          monitoring.finnes.dev/enabled: "true"
+      rbac:
+        extraRules:
+          - apiGroups: [volsync.backube]
+            resources: [replicationsources]
+            verbs: [list, watch]
+      customResourceState:
+        enabled: true
+        config:
+          kind: CustomResourceStateMetrics
+          spec:
+            resources:
+              - groupVersionKind:
+                  group: volsync.backube
+                  version: v1alpha1
+                  kind: ReplicationSource
+                metricNamePrefix: volsync
+                labelsFromPath:
+                  namespace: [metadata, namespace]
+                  source: [metadata, name]
+                  persistentvolumeclaim: [spec, sourcePVC]
+                metrics:
+                  - name: source_info
+                    help: Configured VolSync backup source and its PVC.
+                    each:
+                      type: Info
+                      info:
+                        path: [metadata]
+                        labelsFromPath:
+                          source: [name]
+                  - name: source_last_sync_time_seconds
+                    help: Timestamp of the last successful VolSync synchronization.
+                    each:
+                      type: Gauge
+                      gauge:
+                        path: [status, lastSyncTime]
     kubelet:
-      enabled: false
+      enabled: true
+      vmScrape:
+        labels:
+          monitoring.finnes.dev/enabled: "true"
+        spec:
+          tlsConfig:
+            insecureSkipVerify: false
+      vmScrapes:
+        probes:
+          enabled: false
+        resources:
+          enabled: false
     kubeApiServer:
       enabled: false
     kubeControllerManager:

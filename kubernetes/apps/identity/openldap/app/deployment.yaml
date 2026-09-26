@@ -18,9 +18,36 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: openldap
+        app.kubernetes.io/component: server
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: require-restored-database
+          image: ghcr.io/soupglasses/openldap:2.6.10@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
+          command: [/bin/sh, -ec]
+          args:
+            - test -s /data/data.mdb || { echo 'LDAP database missing; restore a verified backup.' >&2;
+              exit 1; }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
       containers:
         - name: openldap
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           image: ghcr.io/soupglasses/openldap:2.6.10@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
           ports:
             - containerPort: 636

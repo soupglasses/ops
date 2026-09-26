@@ -20,8 +20,6 @@ spec:
       name: *app
       namespace: *namespace
   dependsOn:
-    - name: snapshot-controller
-      namespace: kube-system
     - name: prometheus-operator-crds
       namespace: monitoring
   sourceRef:

@@ -8,6 +8,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: volsync
+  labels:
+    monitoring.finnes.dev/enabled: "true"
 spec:
   groups:
     - name: volsync.rules

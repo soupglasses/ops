@@ -1,0 +1,110 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+name: Flate Validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flate:
+    name: Flate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install validation tools
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.12
+          install_args: github:home-operations/flate aqua:go-task/task
+
+      - name: Test
+        run: task flate:test
+
+      - name: Diff
+        id: render-diff
+        if: always() && github.event_name == 'pull_request'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE_SHA="$(git merge-base HEAD "$PR_BASE_SHA")"
+          task flate:diff BASE="$BASE_SHA" OUTPUT=github > diff.txt
+          task flate:diff BASE="$BASE_SHA" OUTPUT=html > diff.html
+
+      - name: Upload rendered diff
+        if: always() && github.event_name == 'pull_request'
+        id: diff-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flate-diff
+          path: |
+            diff.txt
+            diff.html
+          if-no-files-found: ignore
+
+      - name: Prepare diff summary
+        if: always() && github.event_name == 'pull_request'
+        env:
+          DIFF_ARTIFACT_URL: ${{ steps.diff-artifact.outputs.artifact-url }}
+          DIFF_OUTCOME: ${{ steps.render-diff.outcome }}
+        run: |
+          if [ "$DIFF_OUTCOME" != success ]; then
+            echo "Rendered diff failed. Check the Diff step before reviewing this pull request." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ ! -s diff.txt ]; then
+            echo "No rendered Flux diff." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          test -n "$DIFF_ARTIFACT_URL"
+
+          {
+            echo "## Rendered Flux Diff"
+            echo
+            echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
+            echo
+            echo '```diff'
+            cat diff.txt
+            echo '```'
+          } > body.md
+
+          # Keep the comment and summary below GitHub's comment size limit.
+          if [ "$(wc -c < body.md)" -gt 60000 ]; then
+            {
+              echo "## Rendered Flux Diff"
+              echo
+              echo "The rendered diff exceeds the inline size limit."
+              echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
+            } > body.md
+          fi
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on pull request
+        if: >-
+          always() && steps.render-diff.outcome == 'success' && github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -s diff.txt ]; then
+            exit 0
+          fi
+
+          gh pr comment "$PR_NUMBER" --body-file body.md

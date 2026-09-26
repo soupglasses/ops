@@ -39,7 +39,7 @@ set -euo pipefail
 
 SCALED_DOWN=0
 original_replicas=1
-WORKLOAD=""
+WORKLOAD="${WORKLOAD:-}"
 
 on_exit() {
     local code=$?
@@ -162,14 +162,13 @@ if ! kubectl -n "$NS" get replicationdestination "$RD" >/dev/null 2>&1; then
 fi
 
 echo "==> Patching RD/${RD} to refresh latestImage"
-patch_spec="\"trigger\":{\"manual\":\"refresh-$(date +%s)\"}"
-if [[ -n "$RESTORE_AS_OF" ]]; then
-    patch_spec+=",\"restic\":{\"restoreAsOf\":\"${RESTORE_AS_OF}\"}"
-fi
+patch=$(jq -nc --arg trigger "refresh-$(date +%s)" --arg before "$RESTORE_AS_OF" \
+    '{spec: {trigger: {manual: $trigger}, restic: {
+        restoreAsOf: (if $before == "" then null else $before end)}}}')
 prev=$(kubectl -n "$NS" get replicationdestination "$RD" \
     -o jsonpath='{.status.latestImage.name}' 2>/dev/null || true)
 kubectl -n "$NS" patch replicationdestination "$RD" --type=merge \
-    -p "{\"spec\":{${patch_spec}}}"
+    -p "$patch"
 
 echo "==> Waiting for new latestImage (was: ${prev:-<none>})"
 # We can't `kubectl wait --for=jsonpath=...=<value>` here because we don't

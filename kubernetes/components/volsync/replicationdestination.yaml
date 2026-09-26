@@ -25,11 +25,14 @@ spec:
     cleanupTempPVC: true
     enableFileDeletion: true
     moverSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
       runAsUser: ${VOLSYNC_PUID:=1000}
       runAsGroup: ${VOLSYNC_PGID:=1000}
       fsGroup: ${VOLSYNC_PGID:=1000}
     cacheCapacity: ${VOLSYNC_CACHE_CAPACITY:=5Gi}
-    cacheStorageClassName: ${VOLSYNC_CACHE_SNAPSHOTCLASS:=openebs-hostpath}
+    cacheStorageClassName: ${VOLSYNC_CACHE_SNAPSHOTCLASS:=openebs-zfs}
     capacity: ${VOLSYNC_CAPACITY:=5Gi}
     storageClassName: ${VOLSYNC_STORAGECLASS:=openebs-zfs}
     volumeSnapshotClassName: ${VOLSYNC_SNAPSHOTCLASS:=openebs-zfs-snapshot}

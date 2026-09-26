@@ -8,6 +8,16 @@ set: [pipefail]
 shopt: [globstar]
 
 tasks:
+  kubeconfig:
+    desc: Fetch and verify the RKE2 administrator kubeconfig
+    silent: true
+    preconditions:
+      - command -v ssh
+      - command -v kubectl
+      - command -v yq
+      - command -v bash
+    cmd: bash scripts/kubeconfig.sh {{.CLI_ARGS}}
+
   clean-pods:
     desc: Delete all pods with a Failed/Pending/Succeeded status
     cmds:

@@ -25,11 +25,35 @@ spec:
       strategy: rollback
       retries: 3
   values:
+    image:
+      repository: itzg/minecraft-server
+      tag: latest@sha256:8d0500eb1df76328fb2c2cd0350d5d456c1be45c7a92d6363ad35b680bdbcecf
+    initContainers:
+      - name: require-restored-world
+        image: itzg/minecraft-server:latest@sha256:8d0500eb1df76328fb2c2cd0350d5d456c1be45c7a92d6363ad35b680bdbcecf
+        command: [/bin/sh, -ec]
+        args:
+          - test -s /data/world/level.dat || { echo 'Minecraft world missing; restore a verified backup.'
+            >&2; exit 1; }
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+          - name: datadir
+            mountPath: /data
+            readOnly: true
     resources:
       requests:
         memory: 1024M
         cpu: 1000m
     extraEnv:
+      INIT_MEMORY: 1024M
       USER_API_PROVIDER: mojang
       EXISTING_WHITELIST_FILE: SYNCHRONIZE
       EXISTING_OPS_FILE: SYNCHRONIZE
@@ -47,6 +71,8 @@ spec:
       rcon:
         enabled: true
       memory: 4096M
+      # Permit unused heap to return to the OS while the empty server is paused.
+      jvmXXOpts: "-XX:G1PeriodicGCInterval=300000"
       pvp: true
       eula: true
       type: FABRIC
@@ -83,6 +109,11 @@ spec:
       overrideServerProperties: true
       serviceType: LoadBalancer
       loadBalancerClass: io.cilium/bgp-control-plane
+      externalTrafficPolicy: Cluster
+      ipFamilies:
+        - IPv4
+        - IPv6
+      ipFamilyPolicy: RequireDualStack
       extraPorts:
         - name: voice-chat
           containerPort: 24454
@@ -99,10 +130,6 @@ spec:
       lbipam.cilium.io/sharing-cross-namespace: network
     serviceLabels:
       bgp: "enabled"
-    ipFamilies:
-      - IPv4
-      - IPv6
-    ipFamilyPolicy: RequireDualStack
     persistence:
       dataDir:
         enabled: true

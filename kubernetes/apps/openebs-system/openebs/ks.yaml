@@ -11,9 +11,6 @@ metadata:
 spec:
   path: ./kubernetes/apps/openebs-system/openebs/app
   targetNamespace: *namespace
-  dependsOn:
-    - name: snapshot-controller
-      namespace: kube-system
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease

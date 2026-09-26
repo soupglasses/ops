@@ -8,6 +8,13 @@ set: [pipefail]
 
 # All tasks accept NS=<namespace> (default: default).
 tasks:
+  zfs-inspect:
+    desc: Inspect a restored PVC's ZFS origin [-- PVC --namespace NS]
+    cmd: python3 scripts/zfs-clone.py inspect {{.CLI_ARGS}}
+  zfs-promote:
+    desc: Promote a reviewed clone of an empty retired ZFS source [-- PVC --namespace NS --expect-guid
+      GUID --expect-origin ORIGIN --verified-recovery]
+    cmd: python3 scripts/zfs-clone.py promote {{.CLI_ARGS}}
   restore:
     desc: Restore an app's PVC from the newest restic snapshot [APP=required NS=default]
     cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}}
