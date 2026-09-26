@@ -7,68 +7,51 @@
   become: true
   gather_facts: false
   vars:
+    firewall_addresses:
+      - family: 4
+        address: "{{ network_ipv4_address.split('/')[0] }}"
+      - family: 6
+        address: "{{ network_ipv6_address.split('/')[0] }}"
     kubectl_argv:
       - /var/lib/rancher/rke2/bin/kubectl
       - --kubeconfig
       - /etc/rancher/rke2/rke2.yaml
   tasks:
-    - name: Open a fresh IPv4 SSH session from the controller
+    - name: Open a fresh SSH session from the controller
       ansible.builtin.command:
         argv:
           - ssh
-          - -4
+          - "-{{ item.family }}"
           - -F
           - /dev/null
           - -o
           - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
           - -i
           - "{{ ansible_ssh_private_key_file }}"
           - -o
           - ConnectTimeout=10
           - -o
           - HostKeyAlias=nas.home.finnes.dev
-          - "{{ automation_user }}@{{ network_ipv4_address.split('/')[0] }}"
+          - "{{ automation_user }}@{{ item.address }}"
           - /bin/true
+      loop: "{{ firewall_addresses }}"
+      loop_control:
+        label: "IPv{{ item.family }}: {{ item.address }}"
       delegate_to: localhost
       become: false
       changed_when: false
 
-    - name: Open a fresh IPv6 SSH session from the controller
-      ansible.builtin.command:
-        argv:
-          - ssh
-          - -6
-          - -F
-          - /dev/null
-          - -o
-          - BatchMode=yes
-          - -i
-          - "{{ ansible_ssh_private_key_file }}"
-          - -o
-          - ConnectTimeout=10
-          - -o
-          - HostKeyAlias=nas.home.finnes.dev
-          - "{{ automation_user }}@{{ network_ipv6_address.split('/')[0] }}"
-          - /bin/true
-      delegate_to: localhost
-      become: false
-      changed_when: false
-
-    - name: Open a new IPv4 Kubernetes API connection from the controller
+    - name: Open a TCP connection to the Kubernetes API from the controller
       ansible.builtin.wait_for:
-        host: "{{ network_ipv4_address.split('/')[0] }}"
+        host: "{{ item.address }}"
         port: 6443
         connect_timeout: 5
         timeout: 15
-      delegate_to: localhost
-      become: false
-
-    - name: Open a new IPv6 Kubernetes API connection from the controller
-      ansible.builtin.wait_for:
-        host: "{{ network_ipv6_address.split('/')[0] }}"
-        port: 6443
-        connect_timeout: 5
-        timeout: 15
+      loop: "{{ firewall_addresses }}"
+      loop_control:
+        label: "IPv{{ item.family }}: {{ item.address }}"
       delegate_to: localhost
       become: false
 
@@ -100,7 +83,7 @@
         that:
           - firewall_cilium_audit_mode.stdout == 'Disabled'
 
-    - name: Require the Flux-owned host policy
+    - name: Require the host ingress policy
       ansible.builtin.command:
         argv: "{{ kubectl_argv + ['get', 'ciliumclusterwidenetworkpolicy/rke2-host-ingress'] }}"
       changed_when: false
