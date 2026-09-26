@@ -91,7 +91,7 @@ finally:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', choices=PROFILES, help='rotate one profile instead of all six')
-    parser.add_argument('--duration-seconds', type=int, default=30 * 24 * 60 * 60)
+    parser.add_argument('--duration-seconds', type=int, default=365 * 24 * 60 * 60)
     parser.add_argument('--host', required=True,
                         help='verified SSH host with the existing Hermes container')
     args = parser.parse_args()

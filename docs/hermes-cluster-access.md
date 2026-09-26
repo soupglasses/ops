@@ -21,7 +21,7 @@ host must allow `sudo -n podman`, with a running container named `hermes`, its
 `hermes` user, and all six existing `/opt/data/profiles/<profile>` directories.
 This task configures access in that container. It does not provision a host or container.
 
-The task requests 30-day credentials, fetches the current public cluster CA, and sends
+The task requests 365-day credentials, fetches the current public cluster CA, and sends
 them over SSH to the `hermes` container. It validates each credential's identity and
 pod-read permission before atomically replacing that profile's kubeconfig. Credentials
 travel through process input, never command arguments or terminal output. Existing
