@@ -8,6 +8,7 @@ kind: Kustomization
 namespace: default
 resources:
   - ./helmrelease.yaml
+  - ./networkpolicy.yaml
   - ./secret.sops.yaml
 components:
   - ../../../../components/volsync
