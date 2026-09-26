@@ -37,15 +37,13 @@ jobs:
       - name: Test
         run: task flate:test
 
-      - name: Fetch base branch
-        if: always() && github.event_name == 'pull_request'
-        run: git fetch --no-tags origin "$GITHUB_BASE_REF"
-
       - name: Diff
         id: render-diff
         if: always() && github.event_name == 'pull_request'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          BASE_SHA="$(git merge-base HEAD "origin/$GITHUB_BASE_REF")"
+          BASE_SHA="$(git merge-base HEAD "$PR_BASE_SHA")"
           task flate:diff BASE="$BASE_SHA" OUTPUT=github > diff.txt
           task flate:diff BASE="$BASE_SHA" OUTPUT=html > diff.html
 
