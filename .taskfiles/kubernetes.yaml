@@ -9,7 +9,7 @@ shopt: [globstar]
 
 tasks:
   kubeconfig:
-    desc: Fetch and verify the RKE2 administrator kubeconfig (human operator only)
+    desc: Fetch and verify the RKE2 administrator kubeconfig
     silent: true
     preconditions:
       - command -v ssh
@@ -19,7 +19,6 @@ tasks:
     cmds:
       - |
         bash -eu <<'BASH'
-        set -eu
         umask 077
         mkdir -p .secure
         temporary=$(mktemp .secure/kubeconfig.XXXXXX)

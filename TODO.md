@@ -23,11 +23,16 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   the database and an 88-entry portable LDIF dump; the running LDAP server contains six
   person entries. Legacy datasets remain untouched. Fresh backup and login acceptance
   checks remain part of the migration below.
+- [x] **Complete application backup restore drills.** Fresh LDAP, Minecraft, metrics
+  and logs backups restored into separate PVCs; native Victoria queries verified
+  historical samples and both services' own logs. Evidence and remaining acceptance
+  limits are in [the recovery record](docs/rke2-recovery-verification.md).
 - [ ] **Complete recovery safety checks.** VolSync 0.15 can initialize a missing
   repository and publish an empty successful restore. LDAP/Minecraft now require their
   data files before startup and withhold backup triggers on preparation failure.
-  Validate the new hooks live and prove VictoriaLogs' first S3 backup restores queryable
-  records before enabling scheduled backups. VictoriaLogs initialization was explicitly
+  The new hooks and fresh S3 restores passed live checks. Review the existing manual
+  PVC-replacement helper's interaction with Helm/operator reconciliation before using
+  it for in-place monitoring recovery. VictoriaLogs initialization was explicitly
   approved on 2026-09-26; its repository had no snapshots.
 - [ ] **Single age key is a single point of total backup loss.**
   `cluster-secrets.sops.yaml` (holding `SECRET_PASSWORD`, the restic repo password) is

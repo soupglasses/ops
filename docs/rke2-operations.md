@@ -47,65 +47,46 @@ The API endpoint is `https://k8s.home.finnes.dev:6443`. Upstream DNS resolves it
 `172.21.71.10`; access requires the home network or VPN. The name must appear in
 `rke2_tls_sans` before clients use it.
 
-From the repository root, the human operator runs:
+From the repository root:
 
 ```bash
 mise exec -- task kube:kubeconfig
 mise exec -- kubectl get pods -A
 ```
 
-This replaces the former `task talos:kubeconfig` workflow. The task retrieves the
-RKE2 administrator configuration over verified SSH, selects the DNS endpoint, and
-verifies TLS and API access before installing `.secure/kubeconfig` with private
-permissions. An existing file is backed up alongside it. Mise selects this file
-unless `HERMES_KUBECONFIG` overrides it. Do not share this administrator credential.
+The task fetches the RKE2 administrator configuration over verified SSH and checks
+API access before replacing `.secure/kubeconfig`. It keeps a backup of the existing
+file. Mise selects this configuration unless `HERMES_KUBECONFIG` overrides it.
+Repeat the task after a clean rebuild to refresh the CA and client certificate.
 
-After a clean cluster rebuild, repeat the task to obtain the new CA and client
-certificate. An old kubeconfig can report `certificate signed by unknown authority`;
-do not disable TLS verification. Bootstrap SSH connects directly to the node IP and verifies the independently
-recorded `nas.home.finnes.dev` host key; this remains usable during DNS outages.
+Bootstrap SSH connects to the node IP using the verified `nas.home.finnes.dev`
+host-key alias, so it remains available during DNS outages.
 
 ## Flux bootstrap
 
-For a clean GitOps rebuild, use the operator's kubeconfig and run:
+With the recovery age identity available to SOPS, run:
 
 ```bash
 task ansible:verify
 task flux:install
-```
-
-The human operator then installs the existing `flux-system` Git authentication Secret
-and `sops-age` Secret in namespace `flux-system` using the independently held recovery
-credentials. Their encrypted sources are `kubernetes/clusters/home/secret.sops.yaml`
-and `kubernetes/components/common/sops/secret.sops.yaml`. This step requires the human
-credential workflow; automation agents must not decrypt those files or read `.secure`.
-No secret rotation or new secret format is required.
-
-From the repository root, the human operator imports both existing Secrets with:
-
-```bash
 task flux:bootstrap:import-secrets
-```
-
-The task uses the age identity configured by mise and the dedicated SSH account;
-it needs no local kubeconfig. It streams decrypted data directly to the API and
-verifies the two Secret names afterward. Repeating it updates the existing Secrets.
-It neither reads credentials back from Kubernetes nor starts reconciliation.
-Do not enable shell tracing or redirect decrypted output to a file.
-
-Both imports must succeed and report `secret/flux-system` and `secret/sops-age`
-created, configured or unchanged. Stop on a decryption or SSH error; never bypass host
-key checking. These are human recovery commands, not automation-agent instructions.
-
-```bash
-kubectl -n flux-system get secret flux-system sops-age
 task flux:bootstrap
 ```
 
-Bootstrap applies the committed controllers and synchronization configuration without
-uninstalling Flux. It refuses to continue without the two Secrets and a ready bundled
-snapshot controller. It does not bootstrap over a restored etcd database; use
-[etcd recovery](rke2-s3-etcd-restore.md) for that separate path.
+The import task streams these encrypted sources through SSH into namespace
+`flux-system`:
+
+| Secret | Source |
+| --- | --- |
+| `flux-system` | `kubernetes/clusters/home/secret.sops.yaml` |
+| `sops-age` | `kubernetes/components/common/sops/secret.sops.yaml` |
+
+Both imports must report created, configured or unchanged before bootstrap.
+Keep shell tracing disabled while importing credentials. Bootstrap requires both
+Secrets and the bundled snapshot controller, then applies the committed Flux
+synchronization configuration.
+
+For recovery from an etcd snapshot, follow [etcd recovery](rke2-s3-etcd-restore.md).
 
 ## Application recovery
 
@@ -150,13 +131,12 @@ read-only access to host logs; the database and dashboards remain in `monitoring
 VictoriaMetrics and VictoriaLogs retain one year of data on HDD-backed `openebs-zfs`
 volumes beneath `zfspool/k8s`. Start with 100 GiB for metrics and 200 GiB for logs;
 both volumes can expand. Low-space alerts fire below 20% free, and no disk-pressure
-policy deletes old history. Restic deduplicates backup content across recovery points;
-there is no second raw-log S3 archive.
+policy deletes old history. Restic deduplicates backup content across recovery points.
 
 VolSync sends encrypted restic backups to the existing S3 bucket every six hours:
 logs at minute 17 and metrics at minute 37. It retains seven daily and four weekly
-recovery points, each containing the retained application history. Successful backups bound the recovery
-point; events collected since the last successful backup can be lost with the node.
+recovery points, each containing the retained application history. Node loss can lose
+data collected since the last successful backup.
 [VictoriaLogs supports filesystem snapshots](https://docs.victoriametrics.com/victorialogs/#backup-and-restore),
 which lets this use the same ZFS/VolSync recovery path as other applications.
 
@@ -164,22 +144,33 @@ A clean rebuild restores the newest backup through the PVC's VolSync data source
 On a replacement cluster, install Flux, VolSync and a CSI driver with snapshot support,
 import the existing recovery credentials, and set the `VOLSYNC_STORAGECLASS`,
 `VOLSYNC_SNAPSHOTCLASS` and `VOLSYNC_CACHE_SNAPSHOTCLASS` substitutions for that cluster.
-Restic restores files from S3; it does not require the original ZFS pool or node.
+Restic restores the files from S3 onto the replacement storage.
 Retain the application namespaces and repository names so the existing credentials
 and backups resolve correctly. The database startup checks reject empty restores.
 
-To replace an existing PVC with the newest or a selected recovery point:
+For corruption recovery on a replacement cluster, select a known-good point before
+the ReplicationDestination is first created. Add this patch to the application's
+`app/kustomization.yaml`, using the desired UTC recovery timestamp:
 
-```bash
-task volsync:restore-logs
-task volsync:restore-logs AT=2026-09-26T18:30:00Z
+```yaml
+patches:
+  - target:
+      kind: ReplicationDestination
+    patch: |-
+      - op: add
+        path: /spec/restic/restoreAsOf
+        value: "2026-09-26T16:47:00Z"
 ```
 
-The task preserves a local rollback snapshot before replacement. Validate recovered
-records in Grafana before removing that snapshot. Before restoring history older than
-one year, increase `server.retentionPeriod` in the VictoriaLogs HelmRelease in Git;
-otherwise the server discards that history at startup. Restore checks should query
-known records from both monitoring services, not merely check pod readiness.
+Keep the ReplicationSource paused during validation. VolSync selects the most recent
+backup at or before that timestamp. Existing destinations use `IfNotPresent` ownership
+and do not pick up this patch retroactively; use a fresh recovery destination and PVC.
+Preserve the original cluster or volume until native queries confirm usable recovered
+history. Remove the timestamp patch and resume backups after accepting the recovery.
+
+Before restoring history older than one year, increase the database retention in Git;
+otherwise startup can discard that history. Restore checks should query known records
+from both monitoring services before accepting the recovery.
 
 ## Host firewall handoff
 

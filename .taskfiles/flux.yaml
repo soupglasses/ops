@@ -17,7 +17,7 @@ tasks:
       - kubectl -n flux-system rollout status deployment/helm-controller --timeout=180s
 
   bootstrap:import-secrets:
-    desc: Import existing Flux credentials over SSH (human operator only)
+    desc: Import existing Flux credentials over SSH
     preconditions:
       - command -v sops
       - command -v ssh
