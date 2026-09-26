@@ -13,7 +13,7 @@ data:
     {
       "uid": "application-overview",
       "title": "Application overview",
-      "description": "Resource usage, logs, alerts and VolSync backups for a Kubernetes application.",
+      "description": "Combined resource usage, logs, alerts and VolSync backups for selected Kubernetes applications.",
       "editable": false,
       "schemaVersion": 41,
       "version": 1,
@@ -67,11 +67,15 @@ data:
             },
             "refresh": 2,
             "sort": 1,
-            "multi": false,
-            "includeAll": false,
+            "multi": true,
+            "includeAll": true,
             "current": {
-              "text": "minecraft",
-              "value": "minecraft"
+              "text": [
+                "minecraft"
+              ],
+              "value": [
+                "minecraft"
+              ]
             }
           }
         ]
@@ -97,14 +101,14 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
+              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
               "legendFormat": "",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
+              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
               "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
@@ -141,7 +145,7 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes. CPU: 100% equals one core.",
+          "description": "Combined usage of the selected apps. Scale uses their total configured resource requests, which usage may exceed. Without requests, the scale uses allocatable capacity of the hosting nodes. 100% equals one CPU core.",
           "transformations": [
             {
               "id": "configFromData",
@@ -161,7 +165,7 @@ data:
         {
           "id": 2,
           "title": "Peak CPU",
-          "type": "gauge",
+          "type": "stat",
           "gridPos": {
             "x": 6,
             "y": 0,
@@ -175,15 +179,8 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "100 * (clamp_min(max_over_time((sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))))",
+              "expr": "100 * (clamp_min(max_over_time((sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))))",
               "legendFormat": "",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "B",
-              "expr": "100 * ((sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
-              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -216,25 +213,11 @@ data:
               "fields": "",
               "values": false
             },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": false
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes. CPU: 100% equals one core.",
-          "transformations": [
-            {
-              "id": "configFromData",
-              "options": {
-                "configRefId": "B",
-                "mappings": [
-                  {
-                    "fieldName": "Gauge maximum",
-                    "handlerKey": "max",
-                    "reducerId": "lastNotNull"
-                  }
-                ]
-              }
-            }
-          ]
+          "description": "Highest combined usage of the selected apps over the selected time range, sampled each minute and including the current value. 100% equals one CPU core."
         },
         {
           "id": 3,
@@ -253,14 +236,14 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
@@ -296,7 +279,7 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
+          "description": "Combined usage of the selected apps. Scale uses their total configured resource requests, which usage may exceed. Without requests, the scale uses allocatable capacity of the hosting nodes.",
           "transformations": [
             {
               "id": "configFromData",
@@ -316,7 +299,7 @@ data:
         {
           "id": 4,
           "title": "Peak memory",
-          "type": "gauge",
+          "type": "stat",
           "gridPos": {
             "x": 18,
             "y": 0,
@@ -330,15 +313,8 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "clamp_min(max_over_time((sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))))",
+              "expr": "clamp_min(max_over_time((sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))[$__range:1m]), scalar(sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))",
               "legendFormat": "",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
-              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -370,25 +346,11 @@ data:
               "fields": "",
               "values": false
             },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": false
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
           },
-          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
-          "transformations": [
-            {
-              "id": "configFromData",
-              "options": {
-                "configRefId": "B",
-                "mappings": [
-                  {
-                    "fieldName": "Gauge maximum",
-                    "handlerKey": "max",
-                    "reducerId": "lastNotNull"
-                  }
-                ]
-              }
-            }
-          ]
+          "description": "Highest combined usage of the selected apps over the selected time range, sampled each minute and including the current value."
         },
         {
           "id": 5,
@@ -407,7 +369,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((kube_pod_status_ready{condition=\"true\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((kube_pod_status_ready{condition=\"true\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "",
               "instant": true,
               "range": false
@@ -462,7 +424,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((increase(kube_pod_container_status_restarts_total[$__range]) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((increase(kube_pod_container_status_restarts_total[$__range]) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "",
               "instant": true,
               "range": false
@@ -518,7 +480,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "count((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"})) or vector(0)",
+              "expr": "count((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or vector(0)",
               "legendFormat": "",
               "instant": true,
               "range": false
@@ -573,7 +535,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "count(ALERTS{namespace=\"$namespace\",app=\"$app\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))) or vector(0)",
+              "expr": "count(ALERTS{namespace=\"$namespace\",app=~\"$${app:regex}\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))) or vector(0)",
               "legendFormat": "",
               "instant": true,
               "range": false
@@ -628,21 +590,21 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
+              "expr": "100 * (sum((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
               "legendFormat": "Used",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "100 * (sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
+              "expr": "100 * (sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
               "legendFormat": "Requested",
               "instant": false,
               "range": true
             },
             {
               "refId": "C",
-              "expr": "100 * (sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))",
+              "expr": "100 * (sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
               "legendFormat": "Limits (configured containers)",
               "instant": false,
               "range": true
@@ -707,21 +669,21 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "Used",
               "instant": false,
               "range": true
             },
             {
               "refId": "B",
-              "expr": "sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "Requested",
               "instant": false,
               "range": true
             },
             {
               "refId": "C",
-              "expr": "sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "expr": "sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
               "legendFormat": "Limits (configured containers)",
               "instant": false,
               "range": true
@@ -785,7 +747,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "(time() - volsync_source_last_sync_time_seconds{namespace=\"$namespace\"}) and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}",
+              "expr": "(time() - volsync_source_last_sync_time_seconds{namespace=\"$namespace\"}) and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}",
               "legendFormat": "{{source}}",
               "instant": true,
               "range": false
@@ -823,7 +785,7 @@ data:
             "graphMode": "none",
             "textMode": "auto"
           },
-          "description": "Age of the last successful VolSync backup for each PVC used by this app. No data means no successful sync has been observed. Restore checks are recorded in the recovery runbook."
+          "description": "Age of the last successful VolSync backup for each PVC used by the selected apps. No data means no successful sync has been observed. Restore checks are recorded in the recovery runbook."
         },
         {
           "id": 12,
@@ -842,7 +804,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "(volsync_volume_out_of_sync{role=\"source\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
+              "expr": "(volsync_volume_out_of_sync{role=\"source\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
               "legendFormat": "{{obj_name}}",
               "instant": true,
               "range": false
@@ -914,7 +876,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "(volsync_sync_duration_seconds{role=\"source\",quantile=\"0.5\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
+              "expr": "(volsync_sync_duration_seconds{role=\"source\",quantile=\"0.5\",obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\"))",
               "legendFormat": "{{obj_name}}",
               "instant": true,
               "range": false
@@ -971,7 +933,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "ALERTS{namespace=\"$namespace\",app=\"$app\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=\"$app\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))",
+              "expr": "ALERTS{namespace=\"$namespace\",app=~\"$${app:regex}\"} or (ALERTS{namespace=\"$namespace\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or (ALERTS{namespace=\"$namespace\"} and on (namespace,persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}) or ((ALERTS{obj_namespace=\"$namespace\"} and on (obj_namespace, obj_name) label_replace(label_replace((volsync_source_info{namespace=\"$namespace\"} and on (namespace, persistentvolumeclaim) namespace_app_persistentvolumeclaim:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}), \"obj_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"obj_name\", \"$1\", \"source\", \"(.+)\")))",
               "legendFormat": "",
               "instant": true,
               "range": false,
@@ -1005,7 +967,7 @@ data:
               }
             ]
           },
-          "description": "Matches alerts labelled with this app, its pods, PVCs, or VolSync sources. Cluster-wide alerts are available in the cluster alert view.",
+          "description": "Matches alerts labelled with the selected apps, their pods, PVCs, or VolSync sources. Cluster-wide alerts are available in the cluster alert view.",
           "transformations": [
             {
               "id": "filterFieldsByName",
@@ -1028,11 +990,67 @@ data:
         },
         {
           "id": 15,
+          "title": "Configured alert rules · cluster-wide",
+          "type": "alertlist",
+          "gridPos": {
+            "x": 0,
+            "y": 27,
+            "w": 24,
+            "h": 7
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "maxItems": 100,
+            "sortOrder": 1,
+            "dashboardAlerts": false,
+            "groupMode": "default",
+            "groupBy": [],
+            "alertName": "",
+            "showInstances": false,
+            "folder": {
+              "uid": "",
+              "title": ""
+            },
+            "stateFilter": {
+              "firing": true,
+              "pending": true,
+              "normal": true,
+              "recovering": true,
+              "noData": true,
+              "error": true
+            },
+            "alertInstanceLabelFilter": "",
+            "datasource": "VictoriaMetrics",
+            "viewMode": "list",
+            "showInactiveAlerts": true
+          },
+          "description": "All loaded alert rules, including healthy rules with no active instances. The app selection filters the active-alert panel above. Generic configured rules have no app identity until they produce an alert instance."
+        },
+        {
+          "id": 16,
           "title": "Application logs",
           "type": "logs",
           "gridPos": {
             "x": 0,
-            "y": 27,
+            "y": 34,
             "w": 24,
             "h": 14
           },
@@ -1043,7 +1061,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "source:=\"kubernetes\" kubernetes.pod_namespace:=$${namespace:json} ((\"kubernetes.pod_labels.app.kubernetes.io/name\":=$${app:json}) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=$${app:json}) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":=$${app:json}) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":=\"\" \"kubernetes.pod_labels.component\":=$${app:json}))",
+              "expr": "source:=\"kubernetes\" kubernetes.pod_namespace:=$${namespace:json} ((\"kubernetes.pod_labels.app.kubernetes.io/name\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":in($${app:doublequote})) OR (\"kubernetes.pod_labels.app.kubernetes.io/name\":=\"\" \"kubernetes.pod_labels.app\":=\"\" \"kubernetes.pod_labels.k8s-app\":=\"\" \"kubernetes.pod_labels.component\":in($${app:doublequote})))",
               "queryType": "instant",
               "maxLines": 500,
               "editorMode": "code",

@@ -235,6 +235,8 @@ spec:
             type: prometheus
             access: proxy
             uid: VictoriaMetrics
+            jsonData:
+              manageAlerts: true
             isDefault: true
             editable: false
     prometheus-node-exporter:

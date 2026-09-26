@@ -65,7 +65,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 ## Platform
 
 - [x] **Per-app observability dashboard.** Grafana's Application overview selects
-  namespace and app, with usage and peak gauges, resource requests, logs, alerts,
+  namespace and multiple apps, with usage gauges, peak statistics, resource requests, logs, alerts,
   and PVC-linked VolSync backup status. Scoped kube-state-metrics and kubelet
   scrapes are live. [Usage guide](docs/application-dashboard.md).
 

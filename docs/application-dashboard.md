@@ -6,7 +6,8 @@ SPDX-License-Identifier: 0BSD
 
 # Application overview
 
-Open **Application overview** in Grafana and select a namespace and app. The time
+Open **Application overview** in Grafana and select a namespace and one or more apps.
+Select **All** to combine every labelled app in that namespace. The time
 picker controls usage history, peak usage, restart counts, and logs. Status panels
 show current pod readiness, backups, and firing or pending alerts.
 
@@ -15,19 +16,23 @@ then `component`. Original log fields remain intact. Workloads sharing an app la
 within a namespace appear together.
 
 CPU displays 100% per core and memory as the container working set. Gauges use the
-app's configured resource requests as their baseline. Requests are scheduling
+selected apps’ total configured resource requests as their baseline. Requests are scheduling
 reservations, so usage can exceed them. With no request configured, gauges use the
-allocatable capacity of the nodes hosting the app. Peaks are sampled at one-minute
-resolution. Request and limit lines show the configured totals.
+allocatable capacity of the nodes hosting the selected apps. Peak stats show the highest combined usage, sampled
+at one-minute resolution and including the current value. Request and limit lines show the configured totals.
 
-Backups are matched through the PVCs mounted by the app and each ReplicationSource's
+Resource usage and requests are added together across the selection. Shared pods
+and PVCs are counted once. Logs include entries from any selected app.
+
+Backups are matched through the PVCs mounted by the selected apps and each ReplicationSource's
 `sourcePVC`. The dashboard shows the last successful sync, native VolSync status,
 and median duration. A successful sync does not establish restorability. Restore
 evidence is in [the recovery record](rke2-recovery-verification.md).
 
-Alerts match the app, its pods, PVCs, and backup sources. Alerts without those labels
-remain in the cluster alert view. No matching alerts does not imply that every
-possible application failure has an alert rule.
+Active alerts match the selected apps, their pods, PVCs, and backup sources. The
+**Configured alert rules · cluster-wide** panel lists all loaded rules, including
+healthy rules. Generic rules acquire app or pod labels when an alert instance is
+evaluated, so the configured rule catalog covers the whole cluster.
 
 ## Searching logs
 
@@ -46,8 +51,9 @@ Add a word or phrase to search the message:
 Quoted field names preserve Kubernetes labels containing dots or slashes. See the
 [LogsQL reference](https://docs.victoriametrics.com/victorialogs/logsql/).
 
-Grafana detects severity from `log.level` and journal `PRIORITY`. Messages without
-severity metadata remain unknown.
+Vector normalizes severity into searchable `level` fields before ingestion. Use
+`level:="warning"` or `level:="error"` to filter. See [log formats and application
+fields](../kubernetes/apps/monitoring/victoria-logs/README.md#searchable-fields).
 
 The dashboard, app identity rules, and exporter configuration are provisioned from
 Git under `kubernetes/apps/monitoring/victoria-metrics/app`. kube-state-metrics exports
