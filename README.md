@@ -59,17 +59,23 @@ See `ansible/README.md` for the initial `.254` to `.10` network handoff and
 | `flux:reconcile` | Trigger manual reconcile for Flux |
 | `flux:reconcile-ks` | Reconcile all Flux Kustomizations |
 
-### Flux Local Validation
+### Flux validation
 
-Validate Flux configurations locally before committing:
+Validate Flux configurations locally with [Flate](https://github.com/home-operations/flate)
+before committing. Mise and CI use the same pinned release and render settings.
 
 | Task | Description |
 |---|---|
-| `flux-local:test` | Validate all Kustomizations and HelmReleases |
-| `flux-local:diff` | Show diff of rendered manifests against HEAD |
-| `flux-local:build` | Build all Kustomizations and count resources |
-| `flux-local:get-ks` | List all Kustomizations |
-| `flux-local:get-hr` | List all HelmReleases |
+| `flate:test` | Validate all Kustomizations and HelmReleases |
+| `flate:diff` | Show diff of rendered manifests against HEAD |
+| `flate:build` | Render all managed manifests, excluding Secrets |
+| `flate:get-ks` | List all Kustomizations |
+| `flate:get-hr` | List all HelmReleases |
+
+Use `task flate:diff BASE=origin/main` to compare against another revision, or add
+`OUTPUT=html` to save a browsable diff. CI attaches both text and HTML diffs to each
+pull request. Rendering includes CRDs, excludes Secret objects and uses the pinned
+RKE2 Kubernetes version. Existing `flux-local:*` task names remain aliases.
 
 ### Kubernetes
 

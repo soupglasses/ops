@@ -23,8 +23,8 @@ End state is **always** flux-managed. Never leave `kubectl apply`'d resources be
 
 ```
 edit YAML
-task flux-local:test     # validate kustomizations + helmreleases
-task flux-local:diff     # see rendered diff vs HEAD
+task flate:test     # validate kustomizations + helmreleases
+task flate:diff     # see rendered diff vs HEAD
 git add …                        # explicit paths only
 mise exec -- git commit …        # pre-commit hooks need mise's PATH (ec, kubeconform, …)
 git push                         # → GitHub → flux GitRepository polls
@@ -40,8 +40,8 @@ Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `
 
 ## Useful task targets
 
-- `flux-local:test` — full local validation (use before every commit that touches manifests)
-- `flux-local:diff` — rendered diff vs HEAD
+- `flate:test` — full local validation (use before every commit that touches manifests)
+- `flate:diff` — rendered diff vs HEAD
 - `flux:reconcile` — kick the flux-system Kustomization
 - `flux:reconcile-ks` — reconcile every Kustomization
 - `flux:unstuck` — same, plus retry stuck ones
