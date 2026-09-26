@@ -30,3 +30,12 @@ spec:
       runAsGroup: 1000
       seccompProfile:
         type: RuntimeDefault
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: ServiceMonitor
+            patch: |
+              - op: add
+                path: /metadata/labels/monitoring.finnes.dev~1enabled
+                value: "true"

@@ -85,6 +85,9 @@ spec:
         serviceScrapeSelector:
           matchLabels:
             monitoring.finnes.dev/enabled: "true"
+        nodeScrapeSelector:
+          matchLabels:
+            monitoring.finnes.dev/enabled: "true"
         scrapeInterval: 1m
         useStrictSecurity: true
         resources:
@@ -147,8 +150,7 @@ spec:
       monzoTemplate:
         enabled: false
 
-    # Avoid duplicate exporters and broad cluster scraping. VMAgent only selects
-    # explicitly labelled repository-owned ServiceMonitors.
+    # Keep scrape selection explicit as exporters are added.
     defaultDashboards:
       enabled: false
     syncJob:
@@ -238,9 +240,68 @@ spec:
     prometheus-node-exporter:
       enabled: false
     kube-state-metrics:
-      enabled: false
+      enabled: true
+      collectors:
+        - nodes
+        - pods
+        - persistentvolumeclaims
+      metricLabelsAllowlist:
+        - pods=[app.kubernetes.io/name,app,k8s-app,component]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+      vmScrape:
+        labels:
+          monitoring.finnes.dev/enabled: "true"
+      rbac:
+        extraRules:
+          - apiGroups: [volsync.backube]
+            resources: [replicationsources]
+            verbs: [list, watch]
+      customResourceState:
+        enabled: true
+        config:
+          kind: CustomResourceStateMetrics
+          spec:
+            resources:
+              - groupVersionKind:
+                  group: volsync.backube
+                  version: v1alpha1
+                  kind: ReplicationSource
+                metricNamePrefix: volsync_source
+                labelsFromPath:
+                  namespace: [metadata, namespace]
+                  source: [metadata, name]
+                  persistentvolumeclaim: [spec, sourcePVC]
+                metrics:
+                  - name: info
+                    help: Configured VolSync backup source and its PVC.
+                    each:
+                      type: Info
+                      info:
+                        path: [metadata]
+                  - name: last_sync_time_seconds
+                    help: Timestamp of the last successful VolSync synchronization.
+                    each:
+                      type: Gauge
+                      gauge:
+                        path: [status, lastSyncTime]
     kubelet:
-      enabled: false
+      enabled: true
+      vmScrape:
+        labels:
+          monitoring.finnes.dev/enabled: "true"
+        spec:
+          tlsConfig:
+            insecureSkipVerify: false
+      vmScrapes:
+        probes:
+          enabled: false
+        resources:
+          enabled: false
     kubeApiServer:
       enabled: false
     kubeControllerManager:
