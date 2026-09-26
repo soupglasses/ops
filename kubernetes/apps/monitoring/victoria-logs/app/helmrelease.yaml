@@ -12,7 +12,7 @@ spec:
   chart:
     spec:
       chart: victoria-logs-single
-      version: 0.12.3
+      version: 0.13.9
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -44,11 +44,11 @@ spec:
     server:
       image:
         repository: victoriametrics/victoria-logs
-        tag: v1.50.0@sha256:ae9bea8d8a3b0fc47c7f0058bcca410e79c84b4a0acd12d4dac71b9302526590
+        tag: v1.52.0@sha256:47b820890d64c4575a2a0a46415dcd8a4fd59a0f1fcd6a377693d7aea639442e
       retentionPeriod: 1y
       initContainers:
         - name: require-restored-logs
-          image: victoriametrics/victoria-logs:v1.50.0@sha256:ae9bea8d8a3b0fc47c7f0058bcca410e79c84b4a0acd12d4dac71b9302526590
+          image: victoriametrics/victoria-logs:v1.52.0@sha256:47b820890d64c4575a2a0a46415dcd8a4fd59a0f1fcd6a377693d7aea639442e
           command: [/bin/sh, -ec]
           args:
             - test -d /storage/partitions && test -n "$(ls -A /storage/partitions)"
