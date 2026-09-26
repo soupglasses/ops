@@ -231,6 +231,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Log ingestion follow-up
 
+- [ ] Simplify AIDE scheduling to Ubuntu's working `dailyaidecheck.timer`. The
+  redundant `ansible-aidecheck` fails without a configuration path. Review runtime
+  filesystem exclusions and the changed-file report before accepting a new baseline.
+- [ ] Remove unused OpenIPMI startup on hosts without an IPMI interface. The current
+  driver reports no compatible system interface.
+- [ ] Group Java stack-trace continuation lines with their originating event at
+  ingestion, preserving container boundaries and avoiding guessed severity.
+- [ ] Reduce the OpenEBS ZFS snapshot controller's `--v=5` verbosity after confirming
+  the chart setting. Routine watch lifecycle messages dominate its logs.
 - [ ] Track Cilium's internal access-log UTF-8 handling. A synthetic HTTP header
   containing byte `0xff` reproduces a rejected protobuf record in 1.19.6 while
   forwarding and native JSON access logs succeed. The agent and proxy schemas match.

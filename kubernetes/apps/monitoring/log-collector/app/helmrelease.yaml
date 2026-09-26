@@ -119,7 +119,7 @@ spec:
                 parsed, err = parse_logfmt(raw)
               }
               if err != null {
-                parsed, err = parse_regex(raw, r'^(?P<timestamp>\d{4}-\d{2}-\d{2}T\S+)\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)\s+(?P<logger>\S+)\s+(?P<message>.*)$')
+                parsed, err = parse_regex(raw, r'^(?P<timestamp>\d{4}-\d{2}-\d{2}T\S+)\s+(?P<level>(?i:TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|PANIC))\s+(?P<logger>\S+)\s+(?P<message>.*)$')
               }
               if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "minecraft" {
                 parsed, err = parse_regex(raw, r'^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[(?P<thread>.+)/(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\]: (?P<message>.*)$')
@@ -241,6 +241,50 @@ spec:
               conditions:
                 - type: vrl
                   source: 'assert_eq!(.level, "debug") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: console lowercase info
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tinfo\t/workspace/cmd/config-reloader/main.go:103\tstarting
+                  config reloader"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.level, "info")
+                    assert_eq!(.log.message, "starting config reloader")
+                    assert_eq!(.log.logger, "/workspace/cmd/config-reloader/main.go:103")
+        - name: console mixed case warning
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tWarning\tcontroller.example\trequest delayed"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "warning")
+                    assert_eq!(.log.level, "Warning")
+                    assert_eq!(.log.message, "request delayed")
+        - name: console severity must occupy bounded field
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T20:34:29.205Z\tinformation\tcontroller.example\twarning in ordinary
+                  text"
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.log, "2026-09-26T20:34:29.205Z\tinformation\tcontroller.example\twarning in ordinary text")
         - name: logfmt
           inputs:
             - insert_at: parser
