@@ -59,6 +59,63 @@ through its own metrics and health checks.
 
 Alertmanager email delivery was confirmed by the operator on 2026-09-26.
 
+The etcd freshness collector initially ignored compressed snapshot names because
+their timestamp ends in `.zip`. Correcting that parser found 24 scheduled S3
+snapshots, including September 26 at 18:00 UTC. Retention remains 28 snapshots.
+The next alert evaluation cleared the stale-snapshot alert. No alerts were firing
+at 19:24 UTC. Retention was pending at 24/28 during the initial seven-day fill.
+
+## ZFS clone cleanup
+
+The initial VictoriaMetrics and VictoriaLogs PVCs are clones of empty bootstrap
+snapshots. Refreshing their restore destinations retired those source datasets,
+but ZFS correctly refused their deletion while the application clones depended on
+them. OpenEBS consequently retried deletion every 30 seconds. This is a dependency
+error, not evidence of pool corruption.
+
+Read-only `zdb` inspection confirmed both retired sources contain only six metadata
+objects and an empty root directory, using 153 KiB each. The latest successful S3
+backup IDs were `3931eb22` for metrics at 18:37 UTC and `10f20693` for logs at
+18:17 UTC. The current restore destinations reference separate newer images.
+
+The repair completed on September 26 after independent review using [ZFS clone promotion](https://openzfs.github.io/openzfs-docs/man/master/8/zfs-promote.8.html).
+Promotion reverses the dependency without moving the live dataset or replacing its
+contents. The existing OpenEBS deletion requests can then finish normally.
+
+Both promotions preserved dataset GUIDs, mounted paths, PVC bindings and 100/200 GiB
+quotas. Closed-window queries for 18:00–18:10 UTC returned the same 40 metric samples
+and 2,226 log records before and after each operation. Fresh ingestion continued,
+neither application restarted, and OpenEBS removed both retired sources normally.
+The transferred bootstrap snapshots remain on the live datasets.
+
+Before promoting, verify the current PVC-to-dataset mapping, recent off-cluster
+backups and the application restore evidence above. On the owning node, inspect
+the exact origin and its snapshots with `zfs list -r -t filesystem,snapshot
+-o name,origin,used,refer,clones zfspool/k8s`. Proceed only when the retired dataset
+has no PVC, its ZFSVolume is already deleting, its origin snapshot has exactly the
+intended application clone, and that clone has no conflicting snapshot names.
+Review any additional clones or snapshots before changing the dependency.
+
+For the verified September 26 mapping, the individual operations are:
+
+```bash
+# VictoriaMetrics
+sudo zfs promote zfspool/k8s/pvc-132e142d-30d5-4eb3-80d2-086410fb8148
+# VictoriaLogs
+sudo zfs promote zfspool/k8s/pvc-6cc620f0-8099-40e0-b1bb-4334dbcb89d3
+```
+
+After each operation, require the promoted dataset's `origin` to be `-`, unchanged
+PVC binding and successful historical application queries. Let OpenEBS remove the
+already-deleting source and snapshot objects. Keep the transferred bootstrap
+snapshot on the promoted dataset. Do not use recursive dependent-clone destruction
+(`zfs destroy -R`) or remove finalizers to bypass the dependency. OpenEBS 2.9.0
+[treats an absent snapshot at its old path as completed deletion](https://github.com/openebs/zfs-localpv/blob/v2.9.0/pkg/zfs/zfs_util.go#L697).
+
+This procedure applies to retired restore sources, not to the current
+ReplicationDestination image used for future PVC recovery. Do not promote or
+delete the active OpenLDAP or Minecraft restore sources as part of this repair.
+
 ## Artifact recovery
 
 Collector and recovery-init image digests are pinned in the workload manifests.

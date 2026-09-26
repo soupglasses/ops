@@ -236,12 +236,14 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Log ingestion follow-up
 
+- [x] Count compressed RKE2 S3 snapshots correctly. The collector now reports 24
+  scheduled snapshots and the stale-backup alert has cleared.
 - [x] Normalize severity and parse structured application fields at ingestion, including
   klog, logfmt, Minecraft and OpenLDAP connection statistics. Test representative lines
   with Vector before rollout.
-- [ ] Resolve OpenEBS cleanup of the old Victoria restore source datasets through a
-  reviewed clone lifecycle procedure. Their snapshots are parents of the live metrics
-  and logs volumes. Do not recursively destroy dependent clones.
+- [x] Resolve OpenEBS cleanup of retired Victoria restore sources through independently
+  reviewed clone promotion. Historical queries and fresh ingestion passed, volume
+  identity and quotas were preserved, and ordinary controller cleanup completed.
 - [ ] Reduce idle CPU in the Minecraft and LDAP quiesce watchers. Their five-second
   kubectl polling currently consumes about 3% of one core each between backups.
 
