@@ -39,7 +39,7 @@ krew="https://github.com/soupglasses/mise-krew"
 # renovate: datasource=github-releases depName=utkuozdemir/pv-migrate
 "krew:pv-migrate" = "v3.0.0"
 # renovate: datasource=github-releases depName=fenio/pv-mounter
-"krew:pv-mounter" = "v26.10.0"
+"krew:pv-mounter" = "v26.37.0"
 # renovate: datasource=github-releases depName=backube/volsync
 "krew:volsync" = "v0.15.0"
 "github:flux-iac/tofu-controller" = "v0.16.5"
