@@ -26,18 +26,19 @@ Top gauges add resource usage and requests across the selection. The CPU and
 memory histories stack app usage at each timestamp, with a legend row for each app.
 CPU stacks can exceed 100%, since 100% is one core. Requests and limits are shown
 in a separate resource-budget table. A total limit is shown only when every
-container has that limit configured. Missing or partial limits remain unconfigured.
-Shared pods
-and PVCs are counted once. Logs include entries from any selected app. A separate ingress access view follows
-HTTP requests routed to those apps’ current pod IPs, using
-[upstream metadata](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/log-format/).
-It includes backend service and ingress fields. Traffic to previous pods or rejected before backend selection
-remains searchable on the ingress controller’s own app view. Reload the dashboard
-to discover newly created apps or replacement ingress backend addresses.
+container has that limit configured. A dash indicates missing or partially configured limits.
+Shared pods and PVCs are counted once. Logs include entries from any selected app.
+The HTTP access view matches requests to those apps' current pod IPs using the
+Gateway's upstream address. It preserves method, host, status, latency and gateway
+fields. Requests to previous pods or rejected before backend selection remain
+searchable under the `cilium-envoy` app in `kube-system`. Reload the dashboard to
+discover newly created apps or replacement backend addresses.
 
 Backups are matched through the PVCs mounted by the selected apps and each ReplicationSource's
 `sourcePVC`. The dashboard shows the last successful sync, native VolSync status,
-and median duration. A successful sync does not establish restorability. Restore
+and median duration. Age and duration use neutral colors, while synchronization
+status shows whether VolSync reports a problem. Backup cadences vary by app.
+A successful sync does not establish restorability. Restore
 evidence is in [the recovery record](rke2-recovery-verification.md).
 
 Active alerts match the selected apps, their pods, PVCs, and backup sources. The

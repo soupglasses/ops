@@ -850,7 +850,7 @@ data:
                   },
                   {
                     "id": "noValue",
-                    "value": "Unconfigured / partial"
+                    "value": "—"
                   },
                   {
                     "id": "mappings",
@@ -859,7 +859,7 @@ data:
                         "type": "value",
                         "options": {
                           "-1": {
-                            "text": "Unconfigured / partial"
+                            "text": "—"
                           }
                         }
                       }
@@ -891,7 +891,7 @@ data:
                   },
                   {
                     "id": "noValue",
-                    "value": "Unconfigured / partial"
+                    "value": "—"
                   },
                   {
                     "id": "mappings",
@@ -900,7 +900,7 @@ data:
                         "type": "value",
                         "options": {
                           "-1": {
-                            "text": "Unconfigured / partial"
+                            "text": "—"
                           }
                         }
                       }
@@ -1083,7 +1083,7 @@ data:
               "fields": "",
               "values": false
             },
-            "colorMode": "value",
+            "colorMode": "none",
             "graphMode": "none",
             "textMode": "auto"
           },
@@ -1212,7 +1212,7 @@ data:
               "fields": "",
               "values": false
             },
-            "colorMode": "value",
+            "colorMode": "none",
             "graphMode": "none",
             "textMode": "auto"
           },
