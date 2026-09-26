@@ -244,3 +244,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   and logs volumes. Do not recursively destroy dependent clones.
 - [ ] Reduce idle CPU in the Minecraft and LDAP quiesce watchers. Their five-second
   kubectl polling currently consumes about 3% of one core each between backups.
+
+- [ ] Show healthy configured alert rules scoped to the selected namespace and apps.
+  Grafana’s native alert list filters labels on active instances, so inactive generic
+  rules cannot currently be scoped this way. Keep the app view scoped and avoid
+  duplicating alert definitions or changing alert evaluation for the dashboard.

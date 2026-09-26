@@ -25,6 +25,16 @@ spec:
     remediation:
       strategy: rollback
       retries: 3
+  postRenderers:
+    - kustomize:
+        patches:
+          # The repository dashboard displays event rates as e/s.
+          - target:
+              kind: ConfigMap
+              name: victoria-logs-victoria-logs-single-vector-k8s-monitoring
+            patch: |-
+              - op: remove
+                path: /metadata/labels/grafana_dashboard
   values:
     printNotes: false
     serviceAccount:

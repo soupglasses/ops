@@ -30,9 +30,7 @@ and median duration. A successful sync does not establish restorability. Restore
 evidence is in [the recovery record](rke2-recovery-verification.md).
 
 Active alerts match the selected apps, their pods, PVCs, and backup sources. The
-**Configured alert rules · cluster-wide** panel lists all loaded rules, including
-healthy rules. Generic rules acquire app or pod labels when an alert instance is
-evaluated, so the configured rule catalog covers the whole cluster.
+table shows pending and firing instances.
 
 ## Searching logs
 

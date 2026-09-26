@@ -989,68 +989,12 @@ data:
           ]
         },
         {
-          "id": 15,
-          "title": "Configured alert rules · cluster-wide",
-          "type": "alertlist",
-          "gridPos": {
-            "x": 0,
-            "y": 27,
-            "w": 24,
-            "h": 7
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "short",
-              "min": 0,
-              "color": {
-                "mode": "palette-classic"
-              },
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "blue",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "maxItems": 100,
-            "sortOrder": 1,
-            "dashboardAlerts": false,
-            "groupMode": "default",
-            "groupBy": [],
-            "alertName": "",
-            "showInstances": false,
-            "folder": {
-              "uid": "",
-              "title": ""
-            },
-            "stateFilter": {
-              "firing": true,
-              "pending": true,
-              "normal": true,
-              "recovering": true,
-              "noData": true,
-              "error": true
-            },
-            "alertInstanceLabelFilter": "",
-            "datasource": "VictoriaMetrics",
-            "viewMode": "list",
-            "showInactiveAlerts": true
-          },
-          "description": "All loaded alert rules, including healthy rules with no active instances. The app selection filters the active-alert panel above. Generic configured rules have no app identity until they produce an alert instance."
-        },
-        {
           "id": 16,
           "title": "Application logs",
           "type": "logs",
           "gridPos": {
             "x": 0,
-            "y": 34,
+            "y": 27,
             "w": 24,
             "h": 14
           },

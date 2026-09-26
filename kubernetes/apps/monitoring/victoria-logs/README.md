@@ -22,6 +22,11 @@ and log-collection namespaces because VictoriaLogs does not implement authorizat
 Grafana discovers the provisioned `VictoriaLogs` datasource and bundled dashboards by label. The
 Grafana deployment must install the signed `victoriametrics-logs-datasource` plugin before startup.
 
+The Vector K8S Monitoring dashboard is kept in `app/vector-k8s-monitoring.json`,
+rendered from the [upstream chart 0.12.3](https://github.com/VictoriaMetrics/helm-charts/tree/victoria-logs-single-0.12.3/charts/victoria-logs-single).
+Its three event-rate panels use `e/s`. When upgrading the chart, refresh this copy
+and retain that unit change. The chart copy is excluded from Grafana discovery.
+
 ## Recovery contract
 
 VolSync snapshots the PVC to the existing off-cluster restic repository every six hours. A clean
@@ -50,7 +55,11 @@ The container timestamp remains the event time, including for formats without a 
 `unknown`. Explicit `log.level` wins over a top-level JSON `level` or `severity`.
 Journal entries use `PRIORITY`. OpenLDAP connection statistics are informational,
 and their LDAP result code remains separately searchable as `log.fields.err`.
-Other slapd messages without severity remain unknown.
+Other slapd messages without severity remain unknown. Ingress access logs use HTTP
+status: 5xx is error, 4xx is warning, and other responses are info unless an explicit
+severity is supplied. Their display message combines method, host, path, and status.
+Structured events without a message retain their original text as a fallback. Blank
+container log lines are discarded.
 
 ```logsql
 level:="error"
