@@ -33,6 +33,25 @@ spec:
 
     server:
       retentionPeriod: 1y
+      initContainers:
+        - name: require-restored-logs
+          image: victoriametrics/victoria-logs:v1.50.0
+          command: [/bin/sh, -ec]
+          args:
+            - test -d /storage/partitions && test -n "$(ls -A /storage/partitions)"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: server-volume
+              mountPath: /storage
+              readOnly: true
       # Alert and expand the ZFS volume rather than delete history under pressure.
       retentionDiskSpaceUsage: ""
       extraArgs:

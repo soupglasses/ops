@@ -42,7 +42,31 @@ spec:
       enabled: true
       spec:
         retentionPeriod: 1y
+        # The shared VolSync component owns the PVC and restores it before binding.
         storage: null
+        volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: victoria-metrics
+        initContainers:
+          - name: require-restored-metrics
+            image: victoriametrics/victoria-metrics:v1.149.0
+            command: [/bin/sh, -ec]
+            args:
+              - test -d /data/data && test -d /data/metadata
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+              - name: data
+                mountPath: /data
+                readOnly: true
         extraArgs:
           storage.minFreeDiskSpaceBytes: 5GB
         useStrictSecurity: true
@@ -57,6 +81,7 @@ spec:
       enabled: true
       spec:
         selectAllByDefault: false
+        serviceScrapeNamespaceSelector: {}
         serviceScrapeSelector:
           matchLabels:
             monitoring.finnes.dev/enabled: "true"
@@ -73,6 +98,7 @@ spec:
       enabled: true
       spec:
         selectAllByDefault: false
+        ruleNamespaceSelector: {}
         evaluationInterval: 1m
         ruleSelector:
           matchLabels:
