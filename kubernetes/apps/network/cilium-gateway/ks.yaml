@@ -8,8 +8,6 @@ metadata:
   name: cilium-gateway
   namespace: network
 spec:
-  # Resume after the CRDs and Cilium Gateway controller are ready.
-  suspend: true
   dependsOn:
     - name: cilium-gateway-api-crds
       namespace: network
