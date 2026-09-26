@@ -59,6 +59,23 @@ through its own metrics and health checks.
 
 Alertmanager email delivery was confirmed by the operator on 2026-09-26.
 
+## Artifact recovery
+
+Collector and recovery-init image digests are pinned in the workload manifests.
+The registry manifests were fetched and their SHA-256 digests verified on 2026-09-26.
+
+| Image | Source and build path |
+| --- | --- |
+| Vector 0.55.0 Debian | [Source commit](https://github.com/vectordotdev/vector/tree/cf8de830c6060629092397fd2334fc0f0219363a), including `distribution/docker/debian/Dockerfile`. |
+| VictoriaMetrics 1.149.0 | [Source commit](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/c525ea4b2817a5f3c24ca4b04f6bef283d874d53) and [container build instructions](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#building-docker-images). |
+| VictoriaLogs 1.50.0 | [Source commit](https://github.com/VictoriaMetrics/VictoriaLogs/tree/804086be444d5bae008ee538c02a6c45f9da1011) and [build instructions](https://docs.victoriametrics.com/victorialogs/#building-from-sources). |
+| OpenLDAP 2.6.10 | [Source and container build files](https://github.com/soupglasses/home-ops-containers/tree/9e717ce9681d9ad48638e3e4a5eced88f311b893/apps/openldap). |
+
+Keep copies of these sources with the recovery material. If an image becomes
+unavailable, rebuild from its recorded source and publish it to a reachable registry.
+Validate the replacement against an isolated restored volume before updating the
+deployment digest. A rebuild can produce a different digest from the original release.
+
 ## Remaining acceptance work
 
 Final specialist review, Flux host-policy adoption, controlled host reboot and

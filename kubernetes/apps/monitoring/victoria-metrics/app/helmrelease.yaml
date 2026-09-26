@@ -50,7 +50,7 @@ spec:
               claimName: victoria-metrics
         initContainers:
           - name: require-restored-metrics
-            image: victoriametrics/victoria-metrics:v1.149.0
+            image: victoriametrics/victoria-metrics:v1.149.0@sha256:13b8951e35bb3589626816538483127785a9d8b53f9f5123769db0fcab1d961f
             command: [/bin/sh, -ec]
             args:
               - test -d /data/data && test -d /data/metadata
