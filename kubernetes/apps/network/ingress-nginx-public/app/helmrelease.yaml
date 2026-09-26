@@ -30,6 +30,9 @@ spec:
       enableAnnotationValidations: true
       service:
         enabled: true
+        ports:
+          http: 18080
+          https: 18443
         annotations:
           lbipam.cilium.io/ips: 172.21.68.10,2a13:e745:1ee8:68::10
           lbipam.cilium.io/sharing-key: public-services
