@@ -104,10 +104,12 @@ spec:
       transforms:
         parser:
           type: remap
+          drop_on_abort: true
           inputs:
             - k8s
           source: |
             raw = string!(.message)
+            if strip_whitespace(raw) == "" { abort }
             parsed, json_error = parse_json(raw)
             if json_error == null && is_object(parsed) {
               .log = parsed
@@ -138,6 +140,22 @@ spec:
               }
             }
             del(.message)
+            if is_object(.log) {
+              message = string(.log.msg) ?? string(.log.message) ?? string(.log._msg) ?? ""
+              if strip_whitespace(message) == "" {
+                # Access logs carry request fields rather than a message.
+                if .kubernetes.pod_labels."app.kubernetes.io/name" == "ingress-nginx" && is_string(.log.method) && is_string(.log.path) && exists(.log.status) {
+                  .message = string!(.log.method) + " " + (string(.log.vhost) ?? "") + string!(.log.path) + " " + to_string!(.log.status)
+                  if !exists(.log.level) && !exists(.log."log.level") && !exists(.log.log.level) {
+                    .log.level = "info"
+                    status = to_int(.log.status) ?? 0
+                    if status >= 500 { .log.level = "error" } else if status >= 400 { .log.level = "warning" }
+                  }
+                } else {
+                  .message = raw
+                }
+              }
+            }
             .source = "kubernetes"
         journald_normalize:
           type: remap
@@ -316,6 +334,44 @@ spec:
                     assert_eq!(.log.fields.conn, "1107")
                     assert_eq!(.log.fields.err, "0")
                     assert_eq!(.log.fields.nentries, "1")
+        - name: ingress access log
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"method":"GET","path":"/health","vhost":"example.test","status":"503"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: ingress-nginx
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "GET example.test/health 503")
+                    assert_eq!(.level, "error")
+                    assert_eq!(.log.status, "503")
+        - name: structured message fallback
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"event":"started","count":3}'
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.message, "{\"event\":\"started\",\"count\":3}")
+                    assert_eq!(.log.count, 3)
+        - name: blank line
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: " \t "
+          no_outputs_from:
+            - severity
       sinks:
         exporter:
           type: prometheus_exporter
@@ -343,7 +399,7 @@ spec:
             headers:
               VL-Time-Field: timestamp
               VL-Stream-Fields: source,node_name,kubernetes.pod_namespace,kubernetes.container_name,_SYSTEMD_UNIT
-              VL-Msg-Field: message,msg,_msg,log.msg,log.message,log
+              VL-Msg-Field: message,msg,_msg,log.msg,log.message,log._msg,log
               AccountID: '0'
               ProjectID: '0'
           endpoints:
