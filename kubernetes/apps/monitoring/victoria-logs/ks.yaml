@@ -46,7 +46,7 @@ spec:
       VOLSYNC_CACHE_CAPACITY: 5Gi
       VOLSYNC_STORAGECLASS: openebs-zfs
       VOLSYNC_SNAPSHOTCLASS: openebs-zfs-snapshot
-      VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-hostpath
+      VOLSYNC_CACHE_SNAPSHOTCLASS: openebs-zfs
       VOLSYNC_SCHEDULE: 17 */6 * * *
       # VictoriaLogs writes as 1000:2000; the mover needs matching IDs to read all data.
       VOLSYNC_PUID: "1000"

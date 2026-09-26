@@ -25,7 +25,8 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 |---|---|---|
 | `APP` | required | PVC name = `${APP}`; RD name = `${APP}-dst`. |
 | `VOLSYNC_CAPACITY` | `5Gi` | PVC size. |
-| `VOLSYNC_CACHE_CAPACITY` | `5Gi` | Restic cache PVC size; metadata only, keep small. |
+| `VOLSYNC_CACHE_CAPACITY` | `5Gi` | Disposable restic cache size. |
+| `VOLSYNC_CACHE_SNAPSHOTCLASS` | `openebs-zfs` | Cache StorageClass; ZFS enforces capacity independently of the root filesystem. |
 | `VOLSYNC_STORAGECLASS` | `openebs-zfs` | Must support CSI snapshots (RS `copyMethod: Snapshot`). |
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
 | `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
