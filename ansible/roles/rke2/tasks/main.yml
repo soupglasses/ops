@@ -5,7 +5,7 @@
 - name: Validate the pinned RKE2 configuration
   ansible.builtin.assert:
     that:
-      - rke2_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+rke2r[0-9]+$')
+      - rke2_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+rke2r[0-9]+$')
       - rke2_cluster_cidrs | length == 2
       - rke2_service_cidrs | length == 2
       - rke2_tarball_sha256 is match('^[0-9a-f]{64}$')
@@ -44,16 +44,6 @@
       inventory variables. Hexadecimal values are valid.
   no_log: true
 
-- name: Require explicit acknowledgement before enforcing the host firewall
-  ansible.builtin.assert:
-    that:
-      - >-
-        host_firewall_enforcement_acknowledgement == 'I_HAVE_VERIFIED_DUAL_STACK_HOST_ACCESS_AND_ACCEPT_LOCKOUT_RISK'
-    fail_msg: >-
-      Leave host_firewall_audit_mode=true until the promotion checks pass. Enforcement requires the documented
-      acknowledgement phrase and console access.
-  when: not host_firewall_audit_mode | bool
-
 - name: Create the etcd service identity required by the CIS profile
   ansible.builtin.user:
     name: etcd
@@ -86,11 +76,24 @@
   changed_when: false
   failed_when: false
 
+- name: Record the exact installed release
+  ansible.builtin.set_fact:
+    rke2_installed_release: "{{ rke2_installed_version.stdout.split()[2] if rke2_installed_version.rc
+      == 0 else '' }}"
+
+- name: Require the upgrade playbook for an installed RKE2 version change
+  ansible.builtin.assert:
+    that:
+      - >-
+        rke2_installed_version.rc != 0 or rke2_version == rke2_installed_release or (rke2_upgrade_allowed
+        | default(false) | bool)
+    fail_msg: Update the version and checksum together, then run task ansible:upgrade.
+
 - name: Select the immutable RKE2 release URL
   ansible.builtin.set_fact:
     rke2_release_url: >-
       https://github.com/rancher/rke2/releases/download/{{ rke2_version | replace('+', '%2B') }}
-  when: rke2_version not in rke2_installed_version.stdout
+  when: rke2_version != rke2_installed_release
 
 - name: Create the RKE2 artifact cache
   ansible.builtin.file:
@@ -99,18 +102,18 @@
     owner: root
     group: root
     mode: "0750"
-  when: rke2_version not in rke2_installed_version.stdout
+  when: rke2_version != rke2_installed_release
 
 - name: Explain the fresh-host RKE2 check-mode boundary
   ansible.builtin.debug:
     msg: >-
       RKE2 configuration, recovery, S3, and BGP inputs are valid. Check mode will not create the artifact
       cache or install RKE2, so installation-dependent checks continue after the first convergence.
-  when: ansible_check_mode and rke2_version not in rke2_installed_version.stdout
+  when: ansible_check_mode and rke2_version != rke2_installed_release
 
 - name: Stop installation-dependent RKE2 checks on a fresh host
   ansible.builtin.meta: end_role
-  when: ansible_check_mode and rke2_version not in rke2_installed_version.stdout
+  when: ansible_check_mode and rke2_version != rke2_installed_release
 
 - name: Download the immutable RKE2 release artifact
   ansible.builtin.get_url:
@@ -120,7 +123,7 @@
     group: root
     mode: "0640"
     checksum: "sha256:{{ rke2_tarball_sha256 }}"
-  when: rke2_version not in rke2_installed_version.stdout
+  when: rke2_version != rke2_installed_release
 
 - name: Install the verified pinned RKE2 release without starting it
   ansible.builtin.unarchive:
@@ -129,7 +132,7 @@
     remote_src: true
   changed_when: true
   notify: Restart RKE2
-  when: rke2_version not in rke2_installed_version.stdout
+  when: rke2_version != rke2_installed_release
 
 - name: Install the RKE2 server configuration
   ansible.builtin.template:
@@ -152,6 +155,14 @@
     - Restart RKE2
     - Wait for Cilium Helm values
     - Restart Cilium
+
+- name: Install the RKE2 CoreDNS configuration
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../kubernetes/bootstrap/rke2-coredns.yaml"
+    dest: /var/lib/rancher/rke2/server/manifests/rke2-coredns-config.yaml
+    owner: root
+    group: root
+    mode: "0640"
 
 - name: Enable and start RKE2
   ansible.builtin.systemd_service:
@@ -212,10 +223,7 @@
 
 - name: Report a BGP authentication Secret apply failure without credential content
   ansible.builtin.fail:
-    msg: >-
-      kubectl failed to apply the Cilium BGP authentication Secrets (rc={{ rke2_cilium_bgp_auth_secrets.rc
-      }}): {{ rke2_cilium_bgp_auth_secrets.stderr | replace(cilium_bgp_ipv4_password, '[redacted]') |
-      replace(cilium_bgp_ipv6_password, '[redacted]') }}
+    msg: kubectl failed to apply the BGP Secrets; inspect API readiness and permissions.
   when: rke2_cilium_bgp_auth_secrets.rc != 0
 
 - name: Wait for the Cilium agent
@@ -231,89 +239,6 @@
       - daemonset/cilium
       - --timeout=300s
   changed_when: false
-
-- name: Find the local Cilium pod
-  ansible.builtin.command:
-    argv:
-      - /var/lib/rancher/rke2/bin/kubectl
-      - --kubeconfig
-      - /etc/rancher/rke2/rke2.yaml
-      - -n
-      - kube-system
-      - get
-      - pods
-      - -l
-      - k8s-app=cilium
-      - --field-selector
-      - spec.nodeName=nas
-      - -o
-      - jsonpath={.items[0].metadata.name}
-  register: rke2_cilium_pod
-  changed_when: false
-
-- name: Find the Cilium host endpoint
-  ansible.builtin.command:
-    argv:
-      - /var/lib/rancher/rke2/bin/kubectl
-      - --kubeconfig
-      - /etc/rancher/rke2/rke2.yaml
-      - -n
-      - kube-system
-      - exec
-      - "{{ rke2_cilium_pod.stdout }}"
-      - --
-      - cilium-dbg
-      - endpoint
-      - get
-      - -l
-      - reserved:host
-      - -o
-      - jsonpath={$[0].id}
-  register: rke2_cilium_host_endpoint
-  changed_when: false
-
-- name: Run promotion probes before disabling host-firewall audit mode
-  ansible.builtin.include_tasks: host_firewall_promotion_preflight.yml
-  when: not host_firewall_audit_mode | bool
-
-- name: Set Cilium host-firewall audit mode before applying policy
-  ansible.builtin.command:
-    argv:
-      - /var/lib/rancher/rke2/bin/kubectl
-      - --kubeconfig
-      - /etc/rancher/rke2/rke2.yaml
-      - -n
-      - kube-system
-      - exec
-      - "{{ rke2_cilium_pod.stdout }}"
-      - --
-      - cilium-dbg
-      - endpoint
-      - config
-      - "{{ rke2_cilium_host_endpoint.stdout }}"
-      - "PolicyAuditMode={{ 'Enabled' if host_firewall_audit_mode | bool else 'Disabled' }}"
-  changed_when: true
-
-- name: Install the Cilium host policy definition
-  ansible.builtin.template:
-    src: host-firewall.yaml.j2
-    dest: /etc/rancher/rke2/host-firewall.yaml
-    owner: root
-    group: root
-    mode: "0640"
-
-- name: Apply the Cilium host policy
-  ansible.builtin.command:
-    argv:
-      - /var/lib/rancher/rke2/bin/kubectl
-      - --kubeconfig
-      - /etc/rancher/rke2/rke2.yaml
-      - apply
-      - -f
-      - /etc/rancher/rke2/host-firewall.yaml
-  register: rke2_cilium_host_policy
-  changed_when: >-
-    'configured' in rke2_cilium_host_policy.stdout or 'created' in rke2_cilium_host_policy.stdout
 
 - name: Install the Prometheus host metrics exporter
   ansible.builtin.apt:

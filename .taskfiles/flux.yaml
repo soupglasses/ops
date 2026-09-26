@@ -8,26 +8,45 @@ set: [pipefail]
 shopt: [globstar]
 
 tasks:
-  bootstrap:
-    desc: Bootstrap flux on the cluster, should only be run once.
-    preconditions:
-      - test -f ".secure/age.agekey"
-    prompt: Are you sure you want to (RE)INSTALL Flux?
+  install:
+    desc: Install the committed Flux controllers without removing existing resources
     cmds:
-      - flux uninstall --namespace=flux-system --silent || true
-      - kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
-      - sops -d kubernetes/clusters/home/secret.sops.yaml | kubectl apply -n flux-system -f -
-      - sops -d kubernetes/components/common/sops/secret.sops.yaml | kubectl apply -n flux-system -f -
+      - kubectl apply --server-side -f kubernetes/clusters/home/flux-system/gotk-components.yaml
+      - kubectl -n flux-system rollout status deployment/source-controller --timeout=180s
+      - kubectl -n flux-system rollout status deployment/kustomize-controller --timeout=180s
+      - kubectl -n flux-system rollout status deployment/helm-controller --timeout=180s
+
+  bootstrap:import-secrets:
+    desc: Import existing Flux credentials over SSH (human operator only)
+    preconditions:
+      - command -v sops
+      - command -v ssh
+    cmds:
       - |
-        export GIT_USERNAME=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.username)
-        export GIT_PASSWORD=$(sops -d kubernetes/clusters/home/secret.sops.yaml | yq .stringData.password)
-        flux bootstrap git \
-          --token-auth \
-          --url=https://github.com/soupglasses/ops.git \
-          --username="${GIT_USERNAME}" \
-          --branch=main \
-          --path=kubernetes/clusters/home \
-          --silent
+        for secret in \
+          kubernetes/clusters/home/secret.sops.yaml \
+          kubernetes/components/common/sops/secret.sops.yaml; do
+          sops --decrypt "$secret" |
+            ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/ansible" \
+              -o StrictHostKeyChecking=yes -o HostKeyAlias=nas.home.arpa \
+              ansible@172.21.71.10 \
+              'sudo -n /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml apply -n flux-system -f -' || exit
+        done
+      - >-
+        ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/ansible" -o StrictHostKeyChecking=yes -o HostKeyAlias=nas.home.arpa
+        ansible@172.21.71.10 'sudo -n /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
+        -n flux-system get secret flux-system sops-age'
+
+  bootstrap:
+    desc: Connect Flux to Git after operator credential installation
+    preconditions:
+      - sh: kubectl -n flux-system get secret flux-system sops-age >/dev/null
+        msg: Install the existing Git and SOPS credentials first; see docs/rke2-operations.md.
+      - kubectl -n kube-system rollout status deployment/rke2-snapshot-controller --timeout=120s
+    cmds:
+      - kubectl apply -k kubernetes/clusters/home/flux-system
+      - flux reconcile kustomization flux-system --with-source
+
   reconcile:
     desc: Trigger manual reconcile for Flux.
     preconditions:

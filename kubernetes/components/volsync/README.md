@@ -16,7 +16,6 @@ Per-app PVC backup + auto-restore-on-PVC-create against a restic S3 repo.
 | `replicationsource.yaml` | RS: scheduled backup of the source PVC into restic. |
 | `replicationdestination.yaml` | RD: restores from restic into an internal volume and exposes a `latestImage` snapshot for the populator. |
 | `secret.yaml` | Restic credentials (repo URL + password + S3 creds) templated from `cluster-secrets`. |
-| `bootstrap.yaml` | One-shot Job that seeds an empty snapshot into restic on first deploy, then re-triggers the RD. Idempotent; no-ops once real backups exist. |
 
 ## Consuming app contract
 
@@ -31,14 +30,16 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
 | `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
 
-## Bootstrap behaviour
+## Restore before first start
 
-Volsync's populator deliberately blocks PVC binding when the RD has no
-`latestImage`. There is no upstream fallback-to-empty option ([discussion](https://github.com/backube/volsync/discussions/1414)).
-`bootstrap.yaml` works around this: on first deploy it seeds the restic repo
-with one empty snapshot, then patches the RD's `trigger.manual` to make the
-mover restore the seed and produce a `latestImage`. The PVC then binds empty,
-the app starts, and real RS backups take over from there.
+The populator blocks PVC binding until the ReplicationDestination has a `latestImage`.
+That is intentional: a missing or inaccessible repository must not become an empty
+application. This component does not initialize restic repositories or seed snapshots.
+
+For existing applications, confirm a known-good off-cluster backup before reconciliation.
+For a genuinely new application, explicitly initialize and validate its data, take the
+first backup, then adopt this component. Never use that path to bypass missing history.
+See [the recovery sequence](../../../docs/rke2-operations.md#application-recovery).
 
 ## Gotcha: RD `latestImage` is frozen between full rebuilds
 

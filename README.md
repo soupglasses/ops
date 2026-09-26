@@ -43,7 +43,9 @@ task --list
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
 | `ansible:check` | Preview host changes |
-| `ansible:apply` | Converge Ubuntu and RKE2 |
+| `ansible:apply` | Maintain Ubuntu and the pinned RKE2 version |
+| `ansible:network` | Explicit network setup or maintenance |
+| `ansible:upgrade` | Back up and upgrade the pinned RKE2 release |
 | `ansible:verify` | Verify host, Kubernetes, Cilium, and ZFS health |
 
 See `ansible/README.md` for the initial `.254` to `.10` network handoff and
@@ -104,10 +106,9 @@ password, or S3 credentials.
 
 1. Install Ubuntu 26.04 LTS with OpenSSH and temporary passwordless sudo access.
 2. Bootstrap and converge the host using `ansible/README.md`.
-3. Install FluxCD with `task flux:bootstrap`. The recovery task uses generic Git
-   bootstrap over HTTPS so the `soupbot` collaborator does not need repository
-   administration access. It places the configuration in
-   `kubernetes/clusters/$CLUSTER_NAME`.
+3. Install the committed controllers with `task flux:install`, import existing Git
+   and SOPS credentials with `task flux:bootstrap:import-secrets` as the human operator, then run
+   `task flux:bootstrap`. See `docs/rke2-operations.md` for staged application recovery.
 4. Restore fresh PVCs from S3 and validate application contents as described in
    `docs/zfs-s3-recovery.md`.
 

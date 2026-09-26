@@ -26,30 +26,38 @@ spec:
             - {port: "4244", protocol: TCP}
             - {port: "9100", protocol: TCP}
     - fromCIDR:
-{% for cidr in host_firewall_ssh_ipv4 + host_firewall_ssh_ipv6 + automation_controller_sources %}
-        - {{ cidr }}
-{% endfor %}
+        - 172.21.69.0/24
+        - 172.21.70.0/24
+        - 2a13:e745:1ee8:69::/64
+        - 2a13:e745:1ee8:70::/64
       toPorts:
         - ports:
             - {port: "22", protocol: TCP}
     - fromCIDR:
-{% for cidr in host_firewall_management_ipv4 + host_firewall_management_ipv6 %}
-        - {{ cidr }}
-{% endfor %}
+        - 172.21.69.0/24
+        - 172.21.70.0/24
+        - 2a13:e745:1ee8:69::/64
+        - 2a13:e745:1ee8:70::/64
       toPorts:
         - ports:
             - {port: "6443", protocol: TCP}
             - {port: "9345", protocol: TCP}
             - {port: "10250", protocol: TCP}
     - fromCIDR:
-        - {{ network_ipv4_gateway }}/32
-        - {{ network_ipv6_gateway }}/128
+        - 172.21.71.1/32
+        - 2a13:e745:1ee8:71::1/128
       toPorts:
         - ports:
             - {port: "179", protocol: TCP}
     - icmps:
         - fields:
+            - {family: IPv4, type: DestinationUnreachable}
+            - {family: IPv4, type: TimeExceeded}
             - {family: IPv4, type: EchoRequest}
+            - {family: IPv6, type: DestinationUnreachable}
+            - {family: IPv6, type: PacketTooBig}
+            - {family: IPv6, type: TimeExceeded}
+            - {family: IPv6, type: ParameterProblem}
             - {family: IPv6, type: EchoRequest}
             - {family: IPv6, type: RouterAdvertisement}
             - {family: IPv6, type: NeighborSolicitation}

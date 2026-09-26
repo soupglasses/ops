@@ -2,22 +2,90 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-- name: Upgrade RKE2 after backup preflight
+- name: Upgrade the single RKE2 server during a maintenance window
   hosts: rke2_servers
   become: true
+  gather_facts: true
   serial: 1
-  tasks:
-    - name: Require an explicitly selected RKE2 version
+  vars:
+    kubectl_argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+  pre_tasks:
+    - name: Require independently recoverable application backups and server token
       ansible.builtin.assert:
         that:
-          - rke2_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+rke2r[0-9]+$')
+          - rke2_recovery_verified | default(false) | bool
+          - rke2_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+rke2r[0-9]+$')
+          - rke2_tarball_sha256 is match('^[0-9a-f]{64}$')
+        fail_msg: Verify application backups and off-node token custody, then set rke2_recovery_verified=true.
 
-    - name: Create an etcd snapshot before upgrading
-      ansible.builtin.command: rke2 etcd-snapshot save --name pre-upgrade
-      environment:
-        PATH: /var/lib/rancher/rke2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+    - name: Read the installed version
+      ansible.builtin.command: /usr/local/bin/rke2 --version
+      register: upgrade_installed
+      changed_when: false
+      check_mode: false
+
+    - name: Parse the installed and requested Kubernetes versions
+      ansible.builtin.set_fact:
+        upgrade_current: >-
+          {{ upgrade_installed.stdout | regex_search('v[0-9]+\.[0-9]+\.[0-9]+') }}
+        upgrade_target: "{{ rke2_version.split('+')[0] }}"
+
+    - name: Refuse downgrades and skipped Kubernetes minor versions
+      ansible.builtin.assert:
+        that:
+          - upgrade_current | length > 0
+          - upgrade_target[1:].split('.')[0] == upgrade_current[1:].split('.')[0]
+          - upgrade_target[1:].split('.')[1] | int >= upgrade_current[1:].split('.')[1] | int
+          - upgrade_target[1:].split('.')[1] | int <= (upgrade_current[1:].split('.')[1] | int) + 1
+          - upgrade_target[1:] is version(upgrade_current[1:], '>=')
+          - >-
+            upgrade_target != upgrade_current or (rke2_version.split('rke2r')[1] | int) >= (upgrade_installed.stdout
+            | regex_search('rke2r[0-9]+') | replace('rke2r', '') | int)
+        fail_msg: Upgrade one minor at a time. Rollback requires the documented datastore restore procedure.
+
+    - name: Name the pre-upgrade recovery point
+      ansible.builtin.set_fact:
+        upgrade_snapshot: "pre-upgrade-{{ ansible_date_time.epoch }}"
+
+    - name: Create an off-cluster etcd recovery point
+      ansible.builtin.command:
+        argv: [/usr/local/bin/rke2, etcd-snapshot, save, --s3, --name, "{{ upgrade_snapshot }}"]
       changed_when: true
+      no_log: true
 
-    - name: Apply the pinned RKE2 role
+    - name: Confirm the new snapshot is listed in S3
+      ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls --s3
+      register: upgrade_snapshots
+      changed_when: false
+      failed_when: upgrade_snapshots.rc != 0 or upgrade_snapshot not in upgrade_snapshots.stdout
+      no_log: true
+
+  tasks:
+    - name: Cordon the node before changing RKE2
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['cordon', 'nas'] }}"
+      register: upgrade_cordon
+      changed_when: "'already cordoned' not in upgrade_cordon.stdout"
+
+    - name: Apply the verified pinned RKE2 release
       ansible.builtin.include_role:
         name: rke2
+      vars:
+        rke2_upgrade_allowed: true
+
+    - name: Wait for node readiness after the upgrade
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['wait', '--for=condition=Ready', 'node/nas', '--timeout=300s'] }}"
+      changed_when: false
+
+    - name: Uncordon the healthy node
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['uncordon', 'nas'] }}"
+      register: upgrade_uncordon
+      changed_when: "'already uncordoned' not in upgrade_uncordon.stdout"
+
+- name: Verify the upgraded host
+  ansible.builtin.import_playbook: verify.yml

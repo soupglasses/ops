@@ -72,44 +72,7 @@
     - name: Require the Cilium host firewall
       ansible.builtin.assert:
         that:
-          - cilium_status.stdout is regex('(?m)^Host firewall:\\s+Enabled')
-
-    - name: Require the Ansible-owned host policy
-      ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - get
-          - ciliumclusterwidenetworkpolicy/rke2-host-ingress
-      changed_when: false
-
-    - name: Read the Cilium host-endpoint audit mode
-      ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - -n
-          - kube-system
-          - exec
-          - daemonset/cilium
-          - --
-          - cilium-dbg
-          - endpoint
-          - get
-          - -l
-          - reserved:host
-          - -o
-          - jsonpath={[0].spec.options.PolicyAuditMode}
-      register: cilium_host_audit_mode
-      changed_when: false
-
-    - name: Require the configured host-firewall mode
-      ansible.builtin.assert:
-        that:
-          - >-
-            cilium_host_audit_mode.stdout == ('Enabled' if host_firewall_audit_mode | bool else 'Disabled')
+          - cilium_status.stdout is regex('(?m)^Host firewall:\s+Enabled')
 
     - name: Check node addresses
       ansible.builtin.command:
@@ -135,3 +98,31 @@
       register: zpool_status
       changed_when: false
       failed_when: zpool_status.rc != 0 or 'is healthy' not in zpool_status.stdout
+
+    - name: Require the bundled snapshot CRDs
+      ansible.builtin.command:
+        argv:
+          - /var/lib/rancher/rke2/bin/kubectl
+          - --kubeconfig
+          - /etc/rancher/rke2/rke2.yaml
+          - wait
+          - --for=condition=Established
+          - crd/volumesnapshots.snapshot.storage.k8s.io
+          - crd/volumesnapshotcontents.snapshot.storage.k8s.io
+          - crd/volumesnapshotclasses.snapshot.storage.k8s.io
+          - --timeout=120s
+      changed_when: false
+
+    - name: Require the bundled snapshot controller
+      ansible.builtin.command:
+        argv:
+          - /var/lib/rancher/rke2/bin/kubectl
+          - --kubeconfig
+          - /etc/rancher/rke2/rke2.yaml
+          - -n
+          - kube-system
+          - rollout
+          - status
+          - deployment/rke2-snapshot-controller
+          - --timeout=120s
+      changed_when: false

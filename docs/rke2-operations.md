@@ -4,218 +4,185 @@ SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
 SPDX-License-Identifier: 0BSD
 -->
 
-# RKE2 host operations
+# RKE2 cluster operations
 
-The `home` cluster is a single RKE2 server on Ubuntu. Ansible owns the physical host,
-RKE2, and the day-zero Cilium configuration. Flux owns Kubernetes applications and
-Cilium policy resources after the API is available.
+The home cluster is one Ubuntu 26.04 server. Maintenance and reboot cause downtime.
 
-## Ownership boundary
-
-| Owner | Resources |
+| Owner | Configuration |
 | --- | --- |
-| Ansible | accounts, SSH, systemd-networkd, host hardening, ZFS prerequisites, NVIDIA driver, RKE2 and its bundled Cilium chart values |
-| RKE2 | etcd, control-plane static pods, containerd, CoreDNS and the bundled Cilium release |
-| Flux | applications, OpenEBS, VolSync, Cilium BGP resources, LB-IPAM pools and workload policies |
-| RouterOS Ansible | Kubernetes BGP peers, exact prefix filters and public IPv6 firewall rules |
+| Ansible | Host accounts, security baseline, explicit network setup, ZFS prerequisites, pinned RKE2 |
+| RKE2 | etcd, containerd, Cilium, CoreDNS, metrics-server, snapshot controller and CRDs |
+| Flux | Applications, OpenEBS, VolSync, BGP advertisements and network policies |
+| RouterOS | VLANs, routing, BGP peers, perimeter firewall and WireGuard |
 
-Do not add a Flux Cilium `HelmRelease`. RKE2 must install the CNI before Flux can run;
-two Helm owners would race over the same resources.
+Do not install a second Cilium, CoreDNS or snapshot-controller release through Flux.
+CoreDNS's LDAP rewrite is declared in `kubernetes/bootstrap/rke2-coredns.yaml` and
+installed as an RKE2 `HelmChartConfig` by the host role.
 
-## Fixed network plan
+## Installation and recovery prerequisites
+
+Use [the Ansible commands](../ansible/README.md) to bootstrap the account, configure
+networking explicitly, and converge the host. Preserve these addresses:
 
 | Purpose | IPv4 | IPv6 |
 | --- | --- | --- |
 | Node | `172.21.71.10/24` | `2a13:e745:1ee8:71::10/64` |
 | Gateway | `172.21.71.1` | `2a13:e745:1ee8:71::1` |
-| Pod CIDR | `10.42.0.0/16` | `fd94:a259:ebb8:4200::/56` |
-| Service CIDR | `10.43.0.0/16` | `fd94:a259:ebb8:4300::/112` |
-| Public service VIP | `172.21.68.10/32` | `2a13:e745:1ee8:68::10/128` |
+| Pods | `10.42.0.0/16` | `fd94:a259:ebb8:4200::/56` |
+| Services | `10.43.0.0/16` | `fd94:a259:ebb8:4300::/112` |
+| Public VIP | `172.21.68.10/32` | `2a13:e745:1ee8:68::10/128` |
 
-The host uses native files under `/etc/systemd/network`; Netplan and cloud-init do not
-own networking. Both node addresses are static. The RouterOS DHCP reservation for
-`.10` remains only to prevent accidental allocation to another machine.
+Keep an independent human login and console access. Record verified SSH host keys,
+router administrator access, repository access, SOPS identities, restic passwords,
+S3 endpoints/credentials and the original RKE2 server token in off-cluster recovery
+storage. Keep a repository copy and record the pinned release/checksum and required
+image/chart sources. Verify those artifacts remain fetchable during recovery drills.
 
-## Bootstrap and converge
+Never overwrite legacy datasets to make space for a restore. Provision additional
+storage if the empty recovery parent lacks room.
 
-Install the pinned collections, create the automation account through the temporary
-installer account, and then converge the host:
+## Flux bootstrap
 
-```bash
-cd ansible
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-galaxy collection install -r requirements.yml
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/bootstrap.yml \
-  -u sofie -e initial_ansible_host=172.21.71.254
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/site.yml \
-  -u ansible -e initial_ansible_host=172.21.71.254
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/verify.yml
-```
-
-The network role reconnects at `.10`. Run it from the trusted LAN or WireGuard and
-keep a local console available for the first handoff. Never disable SSH host-key
-checking to make the transition pass. The inventory reads the dedicated public key from
-`~/.ssh/ansible.pub` and pins the controller to `172.21.69.10/32` plus its recorded global
-IPv6 `/128`. The role fails closed unless it receives exactly one `/32` and one `/128` in
-the trusted management subnet. Use `initial_ansible_host` only for this handoff; overriding
-`ansible_host` would prevent the role from switching the remaining play to `.10`.
-
-While audit mode is active, open a new SSH session and exercise API, monitoring, BGP,
-backup, IPv4, and IPv6 paths while inspecting Hubble verdicts. Audit is the default and
-direct enforcement fails unless the current host endpoint is already audited, both BGP
-peers are established, fresh dual-stack SSH/API probes pass, and the lockout-risk phrase
-is acknowledged. Promote and run the post-enforcement probes with:
+For a clean GitOps rebuild, use the operator's kubeconfig and run:
 
 ```bash
-task firewall:promote
+task ansible:verify
+task flux:install
 ```
 
-TCP/22 stays limited to the trusted-LAN and WireGuard `/24` and `/64` networks plus the
-controller's exact `/32` and `/128`. See `ansible/README.md` for console rollback and key
-revocation commands.
+The human operator then installs the existing `flux-system` Git authentication Secret
+and `sops-age` Secret in namespace `flux-system` using the independently held recovery
+credentials. Their encrypted sources are `kubernetes/clusters/home/secret.sops.yaml`
+and `kubernetes/components/common/sops/secret.sops.yaml`. This step requires the human
+credential workflow; automation agents must not decrypt those files or read `.secure`.
+No secret rotation or new secret format is required.
 
-The imported Talos-era datasets have been inventoried and remain unmounted. The reviewed
-inventory creates only the isolated `zfspool/k8s` parent; it neither mounts nor modifies
-those legacy datasets:
+From the repository root, the human operator imports both existing Secrets with:
 
 ```bash
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ansible-playbook playbooks/site.yml
+task flux:bootstrap:import-secrets
 ```
 
-The role may create `zfspool/k8s`; it never destroys a pool or old dataset.
+The task uses the age identity configured by mise and the dedicated SSH account;
+it needs no local kubeconfig. It streams decrypted data directly to the API and
+verifies the two Secret names afterward. Repeating it updates the existing Secrets.
+It neither reads credentials back from Kubernetes nor starts reconciliation.
+Do not enable shell tracing or redirect decrypted output to a file.
 
-## Secrets and recovery material
-
-Do not put private SSH keys, RKE2 tokens, restic passwords, or S3 credentials in clear
-text. New Ansible secrets belong in a newly created SOPS file and must be encrypted
-exactly once according to `AGENTS.md`. The minimum independent recovery set is:
-
-- every SOPS age identity and an offline recipient;
-- restic repository password and S3 endpoint/credentials;
-- `/var/lib/rancher/rke2/server/token`;
-- an RKE2 etcd snapshot if etcd recovery, rather than GitOps rebuild, is desired;
-- this repository and fetchable image/chart artifacts.
-
-The operator must copy the RKE2 token to encrypted offline storage. Ansible deliberately
-does not read or print it.
-
-Both local and S3 etcd retention are explicitly 28 compressed snapshots at a six-hour cadence. This
-is a nominal six-hour RPO and seven-day directly selectable history when every run succeeds. The S3
-bucket must retain deleted/noncurrent versions for at least 30 days so delayed corruption is not
-bounded by the rolling RKE2 window. Use `docs/rke2-s3-etcd-restore.md` for the version-matched clean-host
-restore procedure and its strict ordering relative to Flux and VolSync.
-
-## CIS posture
-
-RKE2 runs with `profile: cis`, secret encryption, protected kernel defaults, and
-restricted Pod Security Admission. Validate it with the release-matched RKE2 CIS 1.12
-profile. Ubuntu receives the CIS-derived controls mapped in `docs/cis-control-mapping.md`.
-Do not call the host formally Ubuntu-CIS certified until Canonical publishes and runs a
-26.04 USG profile.
-
-Privileged namespaces are exceptions, not the default. Keep Cilium in `kube-system` and
-limit the repository's `privileged` component to infrastructure that demonstrably needs
-it. Application namespaces must meet the restricted Pod Security Standard.
-
-## Upgrade and reboot
-
-Before an RKE2 or kernel change:
-
-1. Confirm fresh successful VolSync backups and perform periodic restore drills.
-2. Create and verify an etcd snapshot; ensure the RKE2 token is recoverable.
-3. Change the pinned `rke2_version`; never follow an unpinned channel.
-4. Run `playbooks/upgrade-rke2.yml`, one Kubernetes minor at a time.
-5. Run `playbooks/verify.yml`, Cilium connectivity tests, BGP checks, and public TCP/UDP tests.
-
-The cluster is single-node. A drain or reboot is planned downtime, not a highly
-available rollout.
-
-## S3 snapshot monitoring
-
-Ansible installs a root-only systemd timer that runs `rke2 etcd-snapshot list` every
-15 minutes using the S3 configuration already protected in
-`/etc/rancher/rke2/config.yaml`. Raw command output is held briefly in a mode `0600`
-file and discarded. Only the listing status, check time, newest scheduled snapshot
-time, scheduled snapshot count, and configured retention target are written to the
-node exporter's textfile directory. Bucket names, object names, endpoints, and errors
-are never exported as metric labels or values.
-
-Flux declares the private node-exporter endpoint, a `ServiceMonitor`, and alerts for a
-missing signal, repeated listing failure, a snapshot older than ten hours, and a
-retention deficit that persists beyond the seven-day warm-up needed for 28 snapshots
-at the six-hour schedule. VictoriaMetrics Operator converts the Prometheus objects;
-there is no Prometheus server or second runtime operator. VMAgent uses an exact label
-selector, VMSingle keeps up to two days in ephemeral storage, and VMAlert evaluates
-the rules and forwards them to VMAlertmanager. VMSingle stops ingestion before the node
-has less than 5 GB free rather than letting monitoring exhaust the root filesystem.
-
-The Prometheus Operator CRDs remain installed only as compatibility schemas for
-repository-owned `ServiceMonitor` and `PrometheusRule` objects. VictoriaMetrics
-Operator is the sole runtime reconciler and its converter produces the corresponding
-`VMServiceScrape` and `VMRule` resources.
-
-Metric history is useful operational context, but it is not authoritative application
-data. Pod or node replacement may discard it by design; VMAgent repopulates current
-signals automatically after the stack returns. Restore etcd and application data first.
-Grafana is likewise stateless: its
-VictoriaMetrics datasource and RKE2 snapshot dashboard are provisioned from Git, so its
-SQLite database is intentionally excluded from the backup contract. Grafana also
-installs the signed VictoriaLogs datasource plugin pinned to 0.32.0 and discovers its provisioned
-datasource and dashboards after VictoriaLogs is reconciled.
-
-VMAlertmanager sends firing and resolved notifications through
-`prod-mta-06.swg-srv.net:2525` with required TLS to `alerts+ops@finnes.dev`, using
-`alertmanager@noreply.finnes.dev` as its sender. Its authentication values arrive as
-Helm values from the monitoring-owned `alertmanager-smtp` Secret; do not reuse an
-application credential across namespaces. The raw Alertmanager configuration is stored
-in a generated Kubernetes Secret so credentials are not exposed in a custom resource.
-
-Verify the complete path after convergence:
+Both imports must succeed and report `secret/flux-system` and `secret/sops-age`
+created, configured or unchanged. Stop on a decryption or SSH error; never bypass host
+key checking. These are human recovery commands, not automation-agent instructions.
 
 ```bash
-sudo systemctl start rke2-etcd-snapshot-metrics.service
-sudo systemctl status rke2-etcd-snapshot-metrics.timer
-sudo grep '^rke2_etcd_s3_snapshot_' \
-  /var/lib/prometheus/node-exporter/rke2-etcd-s3-snapshots.prom
-curl --fail --silent http://172.21.71.10:9100/metrics \
-  | grep '^rke2_etcd_s3_snapshot_'
-kubectl -n monitoring get endpointslice,servicemonitor,prometheusrule \
-  -l app.kubernetes.io/name=rke2-host-metrics
-kubectl -n monitoring get vmservicescrape,vmrule,vmagent,vmsingle,vmalert,vmalertmanager
-kubectl -n monitoring get pvc
-kubectl -n monitoring port-forward \
-  svc/vmagent-victoria-metrics-victoria-metrics-k8s-stack 8429:8429
-# In another shell, confirm rke2-host-metrics is up at http://127.0.0.1:8429/targets.
-kubectl -n monitoring port-forward \
-  svc/vmalert-victoria-metrics-victoria-metrics-k8s-stack 8080:8080
-# Confirm the snapshot rule group is healthy at http://127.0.0.1:8080/groups.
-kubectl -n monitoring port-forward \
-  svc/vmalertmanager-victoria-metrics-victoria-metrics-k8s-stack 9093:9093
-# Confirm expected firing alerts appear at http://127.0.0.1:9093/#/alerts.
-# Retrieve the local break-glass username and password for https://grafana.${DOMAIN}
-# from the recovery password manager. Kubernetes reads the same values from the
-# SOPS-encrypted grafana-auth Secret; do not print that Secret during routine checks.
+kubectl -n flux-system get secret flux-system sops-age
+task flux:bootstrap
 ```
 
-A fresh timestamp and full retention count prove that RKE2 can list S3 objects; they
-do not prove that a snapshot is restorable. Continue to require the documented clean
-host S3 restore drill and application-level validation.
+Bootstrap applies the committed controllers and synchronization configuration without
+uninstalling Flux. It refuses to continue without the two Secrets and a ready bundled
+snapshot controller. It does not bootstrap over a restored etcd database; use
+[etcd recovery](rke2-s3-etcd-restore.md) for that separate path.
 
-## Verification
+## Application recovery
 
-After provisioning and after every reboot, require all of the following:
+The migration commits suspend OpenLDAP, Canaille, LDAP provisioning, Minecraft,
+VictoriaLogs and host-policy promotion. Infrastructure can reconcile first. Change
+these gates in Git as each stage completes; a live `flux resume` is overwritten by Git.
+
+1. Verify Flux infrastructure, OpenEBS and VolSync, then validate dual-stack BGP and VIP
+   routing with [the router checks](routeros-bgp-config.md).
+2. Inventory each application's off-cluster snapshots and select a known-good point.
+   A missing backup, listing error or wrong repository must stop recovery. The shared
+   VolSync component never creates empty backups.
+3. For each application, commit its writer stopped and its ReplicationSource paused
+   before removing the Kustomization suspension. Use Deployment replicas `0` for
+   OpenLDAP and HelmRelease `spec.suspend: true` for Minecraft/VictoriaLogs. Set
+   ReplicationSource `spec.paused: true` through that application's Kustomize patch.
+   Temporarily remove application readiness health checks while writers are stopped.
+4. Reconcile the RD and PVC, with the chosen `restoreAsOf` set before the initial
+   restore when an older point is required. Validate the restored files using an
+   isolated pod with matching UID/GID. Preserve the recovery point and evidence.
+5. Start OpenLDAP, validate DNs/schema and login, then enable Canaille and LDAP
+   provisioning. Validate Minecraft world/player data and voice traffic. Validate
+   existing VictoriaLogs contents before allowing ingestion.
+6. Restore normal application health checks and backup scheduling in Git. Trigger a
+   backup and restore it into an isolated PVC; also demonstrate an older recovery
+   point. Record content checks, recovery duration and backup timestamps.
+7. Remove all disposable pods/PVCs/CRs. Preserve rollback snapshots until content
+   validation succeeds. Keep legacy ZFS datasets and Talos recovery files intact.
+
+For a genuinely new application, create and validate its initial dataset explicitly,
+back it up to its new restic repository, then enable the normal restore-on-create
+component. Do not bypass recovery by initializing an application with missing history.
+
+## Host firewall handoff
+
+Cilium's endpoint audit flag is temporary: an agent restart reenables enforcement.
+Do not rely on an inventory default to infer live mode. The migration preserves the
+existing `rke2-host-ingress` policy while Ansible relinquishes ownership.
+
+With console access and working human recovery login, inspect Hubble verdicts and
+prove new SSH/API connections over both families, both BGP sessions, monitoring,
+backup and application traffic. The pending Flux policy is in the suspended
+`network/cilium-host-policy` Kustomization. After those checks and security review,
+remove its suspension in Git and reconcile it. Do not delete the existing policy
+before adoption. Ansible no longer writes the policy or changes audit mode.
+
+Run `task ansible:firewall:verify`, restart Cilium during the maintenance window,
+then repeat the checks. Repeat after a controlled host reboot and verify applications
+and ZFS. Remove `/etc/rancher/rke2/host-firewall.yaml` only after Flux adoption is proven;
+it is an obsolete local copy, not the active policy.
+
+For emergency rollback, suspend the policy Kustomization and delete
+`ciliumclusterwidenetworkpolicy/rke2-host-ingress` through the console's loopback API:
 
 ```bash
-networkctl status enp33s0
-systemctl --failed
-systemctl status rke2-server
-sudo zpool status -x zfspool
-kubectl get nodes -o wide
-kubectl -n kube-system get pods
-cilium status --wait
-cilium connectivity test
-kubectl get ciliumbgpnodeconfigs.cilium.io -A
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+KUBECTL=/var/lib/rancher/rke2/bin/kubectl
+$KUBECTL -n flux-system patch kustomization flux-system --type=merge \
+  -p '{"spec":{"suspend":true}}'
+$KUBECTL -n network patch kustomization cilium-host-policy --type=merge \
+  -p '{"spec":{"suspend":true}}'
+$KUBECTL -n flux-system patch kustomization cluster-apps --type=merge \
+  -p '{"spec":{"suspend":true}}'
+$KUBECTL delete ciliumclusterwidenetworkpolicy/rke2-host-ingress
 ```
 
-RouterOS must learn only the `/32` and `/128` service VIPs. Verify external HTTPS,
-Minecraft TCP, voice-chat UDP, IPv4, and IPv6. A green controller or Ready pod is not
-restore evidence.
+Persist the suspension in Git before resuming `flux-system` and `cluster-apps`; otherwise reconciliation
+reinstalls the policy. Diagnose the denied path before reenforcing it.
+
+## Maintenance and recovery
+
+Inspect `task ansible:check` before applying host configuration. Kernel reboots are
+explicit maintenance; automatic security updates do not automatically reboot.
+
+For RKE2, change `rke2_version` and `rke2_tarball_sha256` together. Verify application
+backups and independent token custody, then run:
+
+```bash
+task ansible:upgrade -- -e rke2_recovery_verified=true
+task ansible:firewall:verify
+```
+
+The upgrade refuses downgrades and skipped minors, saves and verifies an S3 etcd
+snapshot, cordons the node, installs the checksum-verified release and waits for node
+readiness before uncordoning. A failure after cordoning leaves the node cordoned for
+inspection. Do not downgrade binaries against an upgraded datastore: restore the
+matching pre-upgrade snapshot with the original token using the recovery runbook.
+
+Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
+The current RKE2 pin stays unchanged during this migration.
+
+Etcd snapshots run every six hours, retaining 28 locally and in S3. Independent S3
+history must preserve deleted/noncurrent objects for at least 30 days and prevent the
+writer from permanently erasing the only copy. Application retention remains unchanged.
+The host exports aggregate backup freshness metrics; prove both firing and resolved
+notifications reach the off-cluster recipient. A Ready pod or successful backup job
+alone is not restore evidence.
+
+Recovery procedures: [etcd](rke2-s3-etcd-restore.md), [ZFS and application data](zfs-s3-recovery.md),
+[LDAP contents](openldap-volsync-migration.md). RAIDZ2 reformatting remains separate.
+
+References: [RKE2 upgrades](https://docs.rke2.io/upgrades/manual),
+[RKE2 restore](https://docs.rke2.io/datastore/backup_restore),
+[Cilium host firewall](https://docs.cilium.io/en/stable/security/host-firewall/).

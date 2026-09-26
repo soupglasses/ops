@@ -47,7 +47,7 @@ spec:
           volumeSnapshots:
             enabled: false
 
-    # crds handled by snapshot-controller
+    # CRDs and the snapshot controller are bundled with RKE2.
     openebs-crds:
       csi:
         volumeSnapshots:

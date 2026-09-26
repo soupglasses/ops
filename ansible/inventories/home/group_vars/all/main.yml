@@ -25,21 +25,6 @@ network_dns_servers:
 network_ntp_servers:
   - 172.21.71.1
 
-host_firewall_management_ipv4:
-  - 172.21.69.0/24
-  - 172.21.70.0/24
-host_firewall_management_ipv6:
-  - 2a13:e745:1ee8:69::/64
-  - 2a13:e745:1ee8:70::/64
-host_firewall_ssh_ipv4:
-  - 172.21.69.0/24
-  - 172.21.70.0/24
-host_firewall_ssh_ipv6:
-  - 2a13:e745:1ee8:69::/64
-  - 2a13:e745:1ee8:70::/64
-host_firewall_audit_mode: true
-host_firewall_enforcement_acknowledgement: ""
-
 zfs_pool_name: zfspool
 zfs_dataset_name: zfspool/k8s
 # The parent does not exist in the imported Talos-era pool. Create this isolated child without mounting or

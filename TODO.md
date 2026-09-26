@@ -45,6 +45,20 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Platform
 
+- [ ] **Finish the simplified RKE2 recovery.** Ubuntu/RKE2 and ZFS verified live on
+  2026-09-26; the unchanged Flux controllers are installed and both bootstrap Secrets
+  have been imported by the operator. Router management is moving to native RouterOS;
+  application recovery and host-policy adoption remain gated. Validate recovered LDAP,
+  Minecraft and logs, off-cluster restore drills, both BGP families, notifications and
+  reboot before closing. Keep the old datasets and defer RAIDZ2 reformatting.
+- [ ] **Retire the RouterOS automation identity after handoff.** Verify the independent
+  router administrator path and off-device encrypted backup first. Preserve working
+  BGP/firewall configuration and the controller DHCP reservation.
+- [ ] **Audit mode did not survive the Cilium restart.** Live `PolicyAuditMode` was
+  `Disabled` on 2026-09-26 despite the old inventory default. Verify fresh dual-stack
+  access and recovery login before Flux adopts the existing host policy; use console
+  rollback rather than relying on a persistent audit flag.
+
 - [x] **Evaluate RKE2 backup alerts in-cluster.** Deploy a tightly selected VictoriaMetrics
   stack so the host ServiceMonitor is scraped and its PrometheusRule is evaluated and
   delivered to VMAlertmanager after a clean rebuild. Keep two days of disposable local

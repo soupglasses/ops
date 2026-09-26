@@ -65,8 +65,10 @@ From `ansible/`, bootstrap and converge the clean host with the original encrypt
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
   -u sofie -e initial_ansible_host=172.21.71.254
-ansible-playbook playbooks/site.yml \
+ansible-playbook playbooks/network.yml \
   -u ansible -e initial_ansible_host=172.21.71.254
+ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops \
+  ansible-playbook playbooks/site.yml
 ```
 
 This initially creates a disposable empty control plane so Ansible can validate the pinned binary and
@@ -204,9 +206,10 @@ Run the host checks and record their output in the recovery issue:
 ```bash
 cd ansible
 ansible-playbook playbooks/verify.yml
-ansible-playbook playbooks/verify-host-firewall.yml
 ssh router '/routing/bgp/session/print detail'
 ```
+
+After restoring Flux host-policy ownership, run `playbooks/verify-host-firewall.yml`.
 
 Also require:
 
