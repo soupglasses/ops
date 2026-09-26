@@ -15,7 +15,8 @@ changes. Node upgrades remain explicit maintenance through `task ansible:upgrade
 | Cilium | Remains bundled with RKE2. Kubeconform reads the selected release's chart metadata to use its exact Cilium schema. |
 | Gateway API | All six CRD URLs carry the same release tag and immutable commit. Renovate updates both parts together. |
 | VictoriaMetrics, VictoriaLogs, Minecraft | Runtime and restore guard use the same pinned image. Each application's chart and image updates share a proposal. |
-| Vector, OpenEBS | Explicit image repository and `tag@sha256` let Renovate update the version and digest together with their chart. |
+| Vector | A coupled regex updates its separate tag and digest fields. The chart also uses the tag as a Kubernetes label, so it must remain a plain version. |
+| OpenEBS | Explicit image repository and `tag@sha256` let Renovate update the version and digest together with its chart. |
 | Backup watcher | The current `latest` image is pinned by digest. Renovate proposes digest changes rather than allowing an unreviewed image change on restart. |
 | Validation tools and actions | Mise and GitHub Actions managers track Flate, tools, action digests and the Mise runtime. Krew pins use their upstream release annotations. Automerge requires successful checks. |
 | Ansible and ordinary workloads | Native pip, Ansible Galaxy, Flux, Helm-values and Kubernetes managers track requirements, charts and images, including both OpenLDAP container references. |

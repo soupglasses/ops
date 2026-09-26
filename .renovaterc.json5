@@ -36,6 +36,13 @@
   },
   packageRules: [
     {
+      description: "Vector tag and digest are updated together by its regex manager",
+      matchFileNames: ["kubernetes/apps/monitoring/log-collector/app/helmrelease.yaml"],
+      matchManagers: ["flux", "helm-values"],
+      matchPackageNames: ["docker.io/timberio/vector", "timberio/vector"],
+      enabled: false,
+    },
+    {
       description: "Auto-merge GitHub Actions",
       matchManagers: ["github-actions"],
       automerge: true,
@@ -161,6 +168,18 @@
     },
   ],
   customManagers: [
+    {
+      description: "Vector image tag and digest, keeping its version label valid",
+      customType: "regex",
+      managerFilePatterns: [
+        "/kubernetes/apps/monitoring/log-collector/app/helmrelease\\.yaml$/"
+      ],
+      matchStrings: [
+        "repository: (?<depName>docker\\.io/timberio/vector)\\n      tag: (?<currentValue>\\S+)\\n      digest: (?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      datasourceTemplate: "docker",
+      versioningTemplate: "docker"
+    },
     {
       description: "RKE2 release and Linux amd64 archive checksum",
       customType: "regex",
