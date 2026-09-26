@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 OpenAI
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
 # SPDX-License-Identifier: MIT
 
