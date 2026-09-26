@@ -233,3 +233,14 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [ ] Find a first-party Flux way to visualize the Kustomization dependsOn order
   (topo-sorted tree) as a `task`. Prefer `flux tree` or similar over hand-rolled
   parsing.
+
+## Log ingestion follow-up
+
+- [x] Normalize severity and parse structured application fields at ingestion, including
+  klog, logfmt, Minecraft and OpenLDAP connection statistics. Test representative lines
+  with Vector before rollout.
+- [ ] Resolve OpenEBS cleanup of the old Victoria restore source datasets through a
+  reviewed clone lifecycle procedure. Their snapshots are parents of the live metrics
+  and logs volumes. Do not recursively destroy dependent clones.
+- [ ] Reduce idle CPU in the Minecraft and LDAP quiesce watchers. Their five-second
+  kubectl polling currently consumes about 3% of one core each between backups.

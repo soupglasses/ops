@@ -39,3 +39,13 @@ spec:
               - op: add
                 path: /metadata/labels/monitoring.finnes.dev~1enabled
                 value: "true"
+          - target:
+              kind: Deployment
+              name: volsync
+            patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/args/-
+                value: --zap-log-level=info
+              - op: add
+                path: /spec/template/spec/containers/0/args/-
+                value: --zap-encoder=json

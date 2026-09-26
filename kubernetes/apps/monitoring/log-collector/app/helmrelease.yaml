@@ -107,7 +107,36 @@ spec:
           inputs:
             - k8s
           source: |
-            .log = parse_json(.message) ?? .message
+            raw = string!(.message)
+            parsed, json_error = parse_json(raw)
+            if json_error == null && is_object(parsed) {
+              .log = parsed
+            } else {
+              parsed, err = parse_klog(raw)
+              if err != null && match(raw, r'^[A-Za-z_][A-Za-z0-9_.]*=') {
+                parsed, err = parse_logfmt(raw)
+              }
+              if err != null {
+                parsed, err = parse_regex(raw, r'^(?P<timestamp>\d{4}-\d{2}-\d{2}T\S+)\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)\s+(?P<logger>\S+)\s+(?P<message>.*)$')
+              }
+              if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "minecraft" {
+                parsed, err = parse_regex(raw, r'^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[(?P<thread>.+)/(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\]: (?P<message>.*)$')
+              }
+              if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "openldap" {
+                parsed, err = parse_regex(raw, r'^(?P<timestamp_hex>[0-9a-f]+\.[0-9a-f]+) (?P<thread>0x[0-9a-f]+) (?P<message>conn=\d+ .*)$')
+                if err == null {
+                  # slapd connection statistics have no severity token.
+                  parsed.level = "info"
+                  fields = parse_logfmt(string!(parsed.message)) ?? {}
+                  parsed.fields = filter(fields) -> |_key, value| { !is_boolean(value) }
+                }
+              }
+              if err == null {
+                .log = parsed
+              } else {
+                .log = raw
+              }
+            }
             del(.message)
             .source = "kubernetes"
         journald_normalize:
@@ -117,6 +146,176 @@ spec:
           source: |
             .node_name = get_env_var!("VECTOR_SELF_NODE_NAME")
             .source = "journald"
+        severity:
+          type: remap
+          inputs:
+            - parser
+            - journald_normalize
+          source: |
+            # Keep source fields intact and give every format the same searchable severity.
+            severity = downcase(string(.log.log.level) ?? string(.log."log.level") ?? string(.log.level) ?? string(.log.severity) ?? "")
+            if .source == "journald" {
+              severity = to_string(.PRIORITY) ?? ""
+            }
+            .level = "unknown"
+            if includes(["fatal", "panic", "critical", "emerg", "alert", "0", "1", "2"], severity) {
+              .level = "critical"
+            } else if includes(["error", "err", "3"], severity) {
+              .level = "error"
+            } else if includes(["warn", "warning", "4"], severity) {
+              .level = "warning"
+            } else if includes(["info", "notice", "5", "6"], severity) {
+              .level = "info"
+            } else if includes(["debug", "7"], severity) {
+              .level = "debug"
+            } else if severity == "trace" {
+              .level = "trace"
+            }
+      tests:
+        - name: klog error
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: E0926 18:39:45.769756       1 volume.go:259] "Unhandled Error" err="failure"
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "error") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: klog warning
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: W0926 18:40:06.999472       1 warnings.go:70] deprecated
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: console debug
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: "2026-09-26T18:37:18.984Z\tDEBUG\tcontroller.ReplicationSource\tjob completed"
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "debug") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: logfmt
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: time=2026-09-26T18:39:10Z level=info msg="Fallback node addresses updated" module=agent
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: minecraft
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[16:53:00] [Server thread/INFO]: [Rcon: Automatic saving is now enabled]'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "info") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: structured precedence
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"log.level":"WARN","level":"info","msg":"test"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "warning") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: nested severity
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '{"log":{"level":"ERROR"},"level":"info","msg":"test"}'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "error") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: unstructured
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: ordinary message with error word
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: minecraft
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: 'assert_eq!(.level, "unknown") #magic___^_^___line assert_eq!(.source, "kubernetes")'
+        - name: journal priority
+          inputs:
+            - insert_at: severity
+              type: log
+              log_fields:
+                source: journald
+                PRIORITY: '4'
+                message: warning
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: assert_eq!(.level, "warning")
+        - name: openldap search result
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '6ab8114b.14cabca1 0x7916f366bb38 conn=1107 op=14 SEARCH RESULT tag=101 err=0
+                  qtime=0.000015 etime=0.000258 nentries=1 text='
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: openldap
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.fields.conn, "1107")
+                    assert_eq!(.log.fields.err, "0")
+                    assert_eq!(.log.fields.nentries, "1")
       sinks:
         exporter:
           type: prometheus_exporter
@@ -126,8 +325,7 @@ spec:
         vlogs:
           type: elasticsearch
           inputs:
-            - parser
-            - journald_normalize
+            - severity
           mode: bulk
           api_version: v8
           compression: gzip

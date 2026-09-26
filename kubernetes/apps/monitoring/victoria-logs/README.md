@@ -6,9 +6,10 @@ SPDX-License-Identifier: 0BSD
 
 # VictoriaLogs
 
-VictoriaLogs stores seven days of Kubernetes container and node journal logs on a 40 GiB ZFS PVC.
-The 32 GiB storage limit reserves the upstream-recommended 20% free space for merges and ingestion
-bursts. Time and size retention apply independently, so high volume can shorten the effective window.
+VictoriaLogs stores one year of Kubernetes container and node journal logs on a 200 GiB
+HDD-backed ZFS PVC. Background merges compact indexed data automatically. Compression
+reduces storage use, but does not remove repeated source events. Free-space alerts and
+a 5 GB ingestion reserve protect the volume from filling completely.
 
 Vector runs once per node. It reads only `/var/log`, `/run/log/journal`, and the host machine ID required
 by `journalctl`, which cover CRI container logs and persistent or volatile systemd journals used by RKE2.
@@ -16,7 +17,7 @@ Its writable host path contains only delivery checkpoints and a 512 MiB disk buf
 to read root-owned journal files,
 drops all capabilities, uses the runtime-default seccomp profile, and has a read-only root filesystem.
 The VictoriaLogs API is not exposed outside the cluster and a NetworkPolicy limits it to the monitoring
-namespace because VictoriaLogs does not implement authorization itself.
+and log-collection namespaces because VictoriaLogs does not implement authorization itself.
 
 Grafana discovers the provisioned `VictoriaLogs` datasource and bundled dashboards by label. The
 Grafana deployment must install the signed `victoriametrics-logs-datasource` plugin before startup.
@@ -26,14 +27,47 @@ Grafana deployment must install the signed `victoriametrics-logs-datasource` plu
 VolSync snapshots the PVC to the existing off-cluster restic repository every six hours. A clean
 rebuild restores the newest snapshot through the standard `ReplicationDestination` volume-populator
 flow. The generic policy retains seven daily and four weekly recovery points, so backup objects can
-contain expired logs for roughly four weeks even though the live query retention is seven days.
+retain older versions of partitions after the live one-year retention expires.
 
 VictoriaLogs documents filesystem snapshots as a supported backup method. These CSI snapshots are
 crash-consistent rather than a portable per-partition export; recovery can lose up to six hours of logs
 and buffered node data, but does not depend on a live VictoriaLogs process. For an older recovery point,
 use `task volsync:restore-at APP=victoria-logs AT=<timestamp>`, then verify the restored partitions with
-a LogSQL query before removing the rollback snapshot. A post-deployment restore drill is still required
-before this becomes the accepted production recovery path.
+a LogSQL query before removing the rollback snapshot. The completed restore drill is recorded in
+[recovery verification](../../../../docs/rke2-recovery-verification.md).
 
 The Vector checkpoint host path is deliberately not backed up. After node loss, Vector resumes from the
 available journal and CRI files; entries already rotated off the rebuilt node cannot be recovered.
+
+## Searchable fields
+
+Vector parses JSON, Kubernetes klog, logfmt, and timestamped console logs before
+shipping them. Minecraft and OpenLDAP connection statistics use parsers scoped to
+their app labels. Kubernetes labels remain unchanged. Unrecognized text is retained.
+The container timestamp remains the event time, including for formats without a date.
+
+`level` is normalized to `critical`, `error`, `warning`, `info`, `debug`, `trace`, or
+`unknown`. Explicit `log.level` wins over a top-level JSON `level` or `severity`.
+Journal entries use `PRIORITY`. OpenLDAP connection statistics are informational,
+and their LDAP result code remains separately searchable as `log.fields.err`.
+Other slapd messages without severity remain unknown.
+
+```logsql
+level:="error"
+```
+
+```logsql
+"kubernetes.pod_labels.app.kubernetes.io/name":="openldap" "log.fields.conn":="1107"
+```
+
+```logsql
+"kubernetes.pod_labels.app.kubernetes.io/name":="openldap" "log.fields.err":* NOT "log.fields.err":="0"
+```
+
+Parsed application fields live under `log`, including `log.logger`, `log.thread`,
+and logfmt keys such as `log.module`. Grafana uses the stored `level` for severity.
+Older entries retain their original schema. Parser changes do not replay stored logs.
+
+Parser fixtures are native Vector tests alongside the collector configuration. Run
+`vector test` against its rendered configuration when changing formats. Built-in
+parsers follow the [Vector VRL reference](https://vector.dev/docs/reference/vrl/functions/).
