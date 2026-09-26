@@ -41,6 +41,9 @@ spec:
     vmsingle:
       enabled: true
       spec:
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
         retentionPeriod: 1y
         # The shared VolSync component owns the PVC and restores it before binding.
         storage: null
@@ -80,6 +83,9 @@ spec:
     vmagent:
       enabled: true
       spec:
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
         selectAllByDefault: false
         serviceScrapeNamespaceSelector: {}
         serviceScrapeSelector:
@@ -100,6 +106,9 @@ spec:
     vmalert:
       enabled: true
       spec:
+        managedMetadata:
+          labels:
+            monitoring.finnes.dev/enabled: "true"
         selectAllByDefault: false
         ruleNamespaceSelector: {}
         evaluationInterval: 1m
