@@ -61,21 +61,46 @@ jobs:
             --branch-orig "origin/$GITHUB_BASE_REF" --strip-attrs "$STRIP_ATTRS" \
             --all-namespaces | tee -a diff.txt
 
-      - name: Add diff to job summary
+      - name: Upload rendered diff
         if: always() && github.event_name == 'pull_request'
+        id: diff-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flux-local-diff
+          path: diff.txt
+          if-no-files-found: ignore
+
+      - name: Prepare diff summary
+        if: always() && github.event_name == 'pull_request'
+        env:
+          DIFF_ARTIFACT_URL: ${{ steps.diff-artifact.outputs.artifact-url }}
         run: |
           if [ ! -s diff.txt ]; then
             echo "No Flux Local diff." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          test -n "$DIFF_ARTIFACT_URL"
 
           {
             echo "## Flux Local Diff"
             echo
+            echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
+            echo
             echo '```diff'
             cat diff.txt
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } > body.md
+
+          # Keep the comment and summary below GitHub's comment size limit.
+          if [ "$(wc -c < body.md)" -gt 60000 ]; then
+            {
+              echo "## Flux Local Diff"
+              echo
+              echo "The rendered diff exceeds the inline size limit."
+              echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
+            } > body.md
+          fi
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on pull request
         if: >-
@@ -88,13 +113,5 @@ jobs:
           if [ ! -s diff.txt ]; then
             exit 0
           fi
-
-          {
-            echo "## Flux Local Diff"
-            echo
-            echo '```diff'
-            cat diff.txt
-            echo '```'
-          } > body.md
 
           gh pr comment "$PR_NUMBER" --body-file body.md
