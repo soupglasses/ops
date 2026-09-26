@@ -34,7 +34,7 @@ krew="https://github.com/soupglasses/mise-krew"
 "pipx:reuse" = "6.2.0"
 "github:home-operations/flate" = "0.6.5"
 "aqua:google/yamlfmt" = "v0.21.0"
-"aqua:pre-commit/pre-commit" = "4.4.0"
+"aqua:pre-commit/pre-commit" = "4.6.2"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
 # renovate: datasource=github-releases depName=utkuozdemir/pv-migrate
 "krew:pv-migrate" = "v3.0.0"
