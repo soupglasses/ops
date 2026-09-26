@@ -27,7 +27,6 @@ spec:
   values:
     policy: sync
     sources:
-      - ingress
       - service
       - gateway-httproute
     domainFilters:

@@ -21,8 +21,6 @@ spec:
       namespace: volsync-system
     - name: cloudflare-issuers
       namespace: cert-manager
-    - name: ingress-nginx-public
-      namespace: network
     - name: prometheus-operator-crds
       namespace: monitoring
   healthChecks:

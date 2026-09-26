@@ -182,18 +182,7 @@ spec:
       plugins:
         - victoriametrics-logs-datasource@0.32.0
       ingress:
-        enabled: true
-        ingressClassName: nginx-public
-        annotations:
-          cert-manager.io/cluster-issuer: cloudflare-dns01-production
-          external-dns.alpha.kubernetes.io/hostname: grafana.${DOMAIN}
-          external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
-        hosts:
-          - grafana.${DOMAIN}
-        tls:
-          - secretName: grafana-tls
-            hosts:
-              - grafana.${DOMAIN}
+        enabled: false
       persistence:
         # Dashboards and datasources are provisioned from Git. Keeping Grafana
         # stateless makes clean recovery deterministic and avoids backing up an

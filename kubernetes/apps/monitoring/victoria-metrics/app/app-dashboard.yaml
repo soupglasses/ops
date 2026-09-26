@@ -1376,7 +1376,7 @@ data:
         },
         {
           "id": 17,
-          "title": "Ingress access logs",
+          "title": "HTTP access logs",
           "type": "logs",
           "gridPos": {
             "x": 0,
