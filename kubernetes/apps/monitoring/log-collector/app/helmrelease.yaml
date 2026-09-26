@@ -95,7 +95,8 @@ spec:
           self_node_name: $${VECTOR_SELF_NODE_NAME}
         journald:
           type: journald
-          current_boot_only: false
+          # The collector's systemd 257 cannot read all boots through Vector.
+          current_boot_only: true
           since_now: false
         internal_metrics:
           type: internal_metrics

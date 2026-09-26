@@ -117,15 +117,21 @@ For a genuinely new application, create and validate its initial dataset explici
 back it up to its new restic repository, then enable the normal restore-on-create
 component. Do not bypass recovery by initializing an application with missing history.
 
-### Log recovery
+### Metrics and log recovery
 
 Vector collects Kubernetes container logs, including VictoriaMetrics and VictoriaLogs,
 and the host journal into VictoriaLogs. The collector runs in `log-collection`, with
 read-only access to host logs; the database and dashboards remain in `monitoring`.
 
-VictoriaLogs keeps seven days of searchable logs on its ZFS PVC. VolSync sends encrypted
-restic backups to the existing S3 bucket at 00:17, 06:17, 12:17 and 18:17 UTC, retaining
-seven daily and four weekly recovery points. Successful backups bound the recovery
+VictoriaMetrics and VictoriaLogs retain one year of data on HDD-backed `openebs-zfs`
+volumes beneath `zfspool/k8s`. Start with 100 GiB for metrics and 200 GiB for logs;
+both volumes can expand. Low-space alerts fire below 20% free, and no disk-pressure
+policy deletes old history. Restic deduplicates backup content across recovery points;
+there is no second raw-log S3 archive.
+
+VolSync sends encrypted restic backups to the existing S3 bucket every six hours:
+logs at minute 17 and metrics at minute 37. It retains seven daily and four weekly
+recovery points, each containing the retained application history. Successful backups bound the recovery
 point; events collected since the last successful backup can be lost with the node.
 [VictoriaLogs supports filesystem snapshots](https://docs.victoriametrics.com/victorialogs/#backup-and-restore),
 which lets this use the same ZFS/VolSync recovery path as other applications.
@@ -140,7 +146,7 @@ task volsync:restore-logs AT=2026-09-26T18:30:00Z
 
 The task preserves a local rollback snapshot before replacement. Validate recovered
 records in Grafana before removing that snapshot. Before restoring history older than
-seven days, increase `server.retentionPeriod` in the VictoriaLogs HelmRelease in Git;
+one year, increase `server.retentionPeriod` in the VictoriaLogs HelmRelease in Git;
 otherwise the server discards that history at startup. Restore checks should query
 known records from both monitoring services, not merely check pod readiness.
 

@@ -32,10 +32,9 @@ spec:
       automountToken: false
 
     server:
-      retentionPeriod: 7d
-      # Keep 20% of the PVC free for merges and ingestion bursts. Time and size
-      # retention both apply; whichever threshold is reached first wins.
-      retentionDiskSpaceUsage: 32GiB
+      retentionPeriod: 1y
+      # Alert and expand the ZFS volume rather than delete history under pressure.
+      retentionDiskSpaceUsage: ""
       extraArgs:
         envflag.enable: true
         envflag.prefix: VM_
@@ -43,6 +42,7 @@ spec:
         httpListenAddr: :9428
         http.shutdownDelay: 15s
         snapshotsMaxAge: 1d
+        storage.minFreeDiskSpaceBytes: 5GB
       persistentVolume:
         enabled: true
         existingClaim: victoria-logs

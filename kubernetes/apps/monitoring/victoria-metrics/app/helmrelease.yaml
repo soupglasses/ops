@@ -38,13 +38,10 @@ spec:
           # Never let removing this release delete unrelated VM custom resources.
           enabled: false
 
-    # Metric history is operational cache, not application data. Keeping it
-    # ephemeral avoids an unbacked stateful recovery dependency: current
-    # signals, alerts, and dashboards rebuild entirely from Git after loss.
     vmsingle:
       enabled: true
       spec:
-        retentionPeriod: 2d
+        retentionPeriod: 1y
         storage: null
         extraArgs:
           storage.minFreeDiskSpaceBytes: 5GB

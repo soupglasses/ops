@@ -67,8 +67,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 - [x] **Evaluate RKE2 backup alerts in-cluster.** Deploy a tightly selected VictoriaMetrics
   stack so the host ServiceMonitor is scraped and its PrometheusRule is evaluated and
-  delivered to VMAlertmanager after a clean rebuild. Keep two days of disposable local
-  history while leaving monitoring metrics outside the authoritative recovery contract.
+  delivered to VMAlertmanager after a clean rebuild. Metrics and logs now target one
+  year of HDD ZFS storage with encrypted S3 recovery; complete the migration and restore
+  evidence before considering their persistence verified.
 - [ ] **Prove Alertmanager notifications off-cluster.** The evaluator, dedicated SMTP
   receiver, and encrypted `alertmanager-smtp` Secret are declared. Trigger and receive a
   test firing/resolved notification after bootstrap.
