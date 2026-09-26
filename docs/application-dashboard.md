@@ -20,15 +20,20 @@ CPU displays 100% per core and memory as the container working set. Gauges use t
 selected apps’ total configured resource requests as their baseline. Requests are scheduling
 reservations, so usage can exceed them. With no request configured, gauges use the
 allocatable capacity of the nodes hosting the selected apps. Peak stats show the highest combined usage, sampled
-at one-minute resolution and including the current value. Request and limit lines show the configured totals.
+at one-minute resolution and including the current value.
 
 Top gauges add resource usage and requests across the selection. The CPU and
-memory history panels show a separate series and legend row for each app. Shared pods
+memory histories stack app usage at each timestamp, with a legend row for each app.
+CPU stacks can exceed 100%, since 100% is one core. Requests and limits are shown
+in a separate resource-budget table. A total limit is shown only when every
+container has that limit configured. Missing or partial limits remain unconfigured.
+Shared pods
 and PVCs are counted once. Logs include entries from any selected app. A separate ingress access view follows
 HTTP requests routed to those apps’ current pod IPs, using
 [upstream metadata](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/log-format/).
 It includes backend service and ingress fields. Traffic to previous pods or rejected before backend selection
-remains searchable on the ingress controller’s own app view.
+remains searchable on the ingress controller’s own app view. Reload the dashboard
+to discover newly created apps or replacement ingress backend addresses.
 
 Backups are matched through the PVCs mounted by the selected apps and each ReplicationSource's
 `sourcePVC`. The dashboard shows the last successful sync, native VolSync status,

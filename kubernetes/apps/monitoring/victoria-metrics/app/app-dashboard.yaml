@@ -43,7 +43,7 @@ data:
               "query": "label_values(namespace_pod:app:info, namespace)",
               "refId": "namespace"
             },
-            "refresh": 2,
+            "refresh": 1,
             "sort": 1,
             "multi": false,
             "includeAll": false,
@@ -65,7 +65,7 @@ data:
               "query": "label_values(namespace_pod:app:info{namespace=\"$namespace\"}, app)",
               "refId": "app"
             },
-            "refresh": 2,
+            "refresh": 1,
             "sort": 1,
             "multi": true,
             "includeAll": true,
@@ -91,7 +91,7 @@ data:
               "query": "query_result(kube_pod_info{namespace=\"$namespace\",pod_ip!=\"\",host_network!=\"true\"} and on (namespace,pod) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
               "refId": "backend_pod_ip"
             },
-            "refresh": 2,
+            "refresh": 1,
             "sort": 1,
             "multi": true,
             "includeAll": true,
@@ -625,7 +625,7 @@ data:
         },
         {
           "id": 9,
-          "title": "CPU usage, requests and limits",
+          "title": "CPU usage by app",
           "type": "timeseries",
           "gridPos": {
             "x": 0,
@@ -641,21 +641,7 @@ data:
             {
               "refId": "A",
               "expr": "100 * (sum by (app) ((max by (namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "{{app}} · Used",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "B",
-              "expr": "100 * (sum by (app) ((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "{{app}} · Requested",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "C",
-              "expr": "100 * (sum by (app) ((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
-              "legendFormat": "{{app}} · Limits (configured containers)",
+              "legendFormat": "{{app}}",
               "instant": false,
               "range": true
             }
@@ -678,9 +664,13 @@ data:
               },
               "custom": {
                 "drawStyle": "line",
-                "lineWidth": 2,
-                "fillOpacity": 12,
-                "spanNulls": false
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                }
               }
             },
             "overrides": []
@@ -700,11 +690,11 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Usage, requests and configured limits for each selected app. 100% CPU equals one core."
+          "description": "App CPU usage stacked at each timestamp. 100% equals one core. The stack can exceed 100%."
         },
         {
           "id": 10,
-          "title": "Memory working set, requests and limits",
+          "title": "Memory working set by app",
           "type": "timeseries",
           "gridPos": {
             "x": 12,
@@ -720,21 +710,7 @@ data:
             {
               "refId": "A",
               "expr": "sum by (app) ((max by (namespace, pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",container!=\"POD\"}) * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "{{app}} · Used",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "B",
-              "expr": "sum by (app) ((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "{{app}} · Requested",
-              "instant": false,
-              "range": true
-            },
-            {
-              "refId": "C",
-              "expr": "sum by (app) ((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} * on (namespace, pod) group_left (app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))",
-              "legendFormat": "{{app}} · Limits (configured containers)",
+              "legendFormat": "{{app}}",
               "instant": false,
               "range": true
             }
@@ -757,9 +733,13 @@ data:
               },
               "custom": {
                 "drawStyle": "line",
-                "lineWidth": 2,
-                "fillOpacity": 12,
-                "spanNulls": false
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                }
               }
             },
             "overrides": []
@@ -779,7 +759,212 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Working set, requests and configured limits for each selected app."
+          "description": "Container working sets stacked by app at each timestamp."
+        },
+        {
+          "id": 24,
+          "title": "Resource budgets by app",
+          "type": "table",
+          "gridPos": {
+            "x": 0,
+            "y": 18,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "B",
+              "expr": "100 * (sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or on (app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "C",
+              "expr": "(100 * ((sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) and on (app) (count by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) == on (app) (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))))) or on(app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) - 1)",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "D",
+              "expr": "sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) or on (app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})))",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            },
+            {
+              "refId": "E",
+              "expr": "((sum by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) and on (app) (count by (app) ((max by (namespace,pod,container) (kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} > 0) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) == on (app) (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"}))))) or on(app) (0 * (count by (app) (max by (namespace,pod,container) (kube_pod_container_info{namespace=\"$namespace\"}) * on (namespace,pod) group_left(app) namespace_pod:app:info{namespace=\"$namespace\",app=~\"$${app:regex}\"})) - 1)",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "description": "Requests are summed across the app’s containers. A total limit appears only when every container has a positive limit. Otherwise the app is not fully limited. CPU: 100% equals one core.",
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "—"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU requested"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU limit"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  },
+                  {
+                    "id": "noValue",
+                    "value": "Unconfigured / partial"
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "-1": {
+                            "text": "Unconfigured / partial"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory requested"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory limit"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  },
+                  {
+                    "id": "noValue",
+                    "value": "Unconfigured / partial"
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "-1": {
+                            "text": "Unconfigured / partial"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "sortBy": [
+              {
+                "displayName": "App",
+                "desc": false
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "joinByField",
+              "options": {
+                "byField": "app",
+                "mode": "outerTabular"
+              }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "app",
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "app": "App",
+                  "Value #A": "Containers",
+                  "Value #B": "CPU requested",
+                  "Value #C": "CPU limit",
+                  "Value #D": "Memory requested",
+                  "Value #E": "Memory limit"
+                },
+                "indexByName": {
+                  "app": 0,
+                  "Value #A": 1,
+                  "Value #B": 2,
+                  "Value #C": 3,
+                  "Value #D": 4,
+                  "Value #E": 5
+                }
+              }
+            }
+          ]
         },
         {
           "id": 23,
@@ -787,7 +972,7 @@ data:
           "type": "table",
           "gridPos": {
             "x": 0,
-            "y": 18,
+            "y": 24,
             "w": 24,
             "h": 6
           },
@@ -841,7 +1026,7 @@ data:
           "collapsed": false,
           "gridPos": {
             "x": 0,
-            "y": 24,
+            "y": 30,
             "w": 24,
             "h": 1
           },
@@ -853,7 +1038,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 0,
-            "y": 25,
+            "y": 31,
             "w": 8,
             "h": 5
           },
@@ -910,7 +1095,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 8,
-            "y": 25,
+            "y": 31,
             "w": 8,
             "h": 5
           },
@@ -982,7 +1167,7 @@ data:
           "type": "stat",
           "gridPos": {
             "x": 16,
-            "y": 25,
+            "y": 31,
             "w": 8,
             "h": 5
           },
@@ -1040,7 +1225,7 @@ data:
           "collapsed": false,
           "gridPos": {
             "x": 0,
-            "y": 30,
+            "y": 36,
             "w": 24,
             "h": 1
           },
@@ -1052,7 +1237,7 @@ data:
           "type": "table",
           "gridPos": {
             "x": 0,
-            "y": 31,
+            "y": 37,
             "w": 24,
             "h": 6
           },
@@ -1125,7 +1310,7 @@ data:
           "collapsed": false,
           "gridPos": {
             "x": 0,
-            "y": 37,
+            "y": 43,
             "w": 24,
             "h": 1
           },
@@ -1137,7 +1322,7 @@ data:
           "type": "logs",
           "gridPos": {
             "x": 0,
-            "y": 38,
+            "y": 44,
             "w": 24,
             "h": 14
           },
@@ -1195,7 +1380,7 @@ data:
           "type": "logs",
           "gridPos": {
             "x": 0,
-            "y": 52,
+            "y": 58,
             "w": 24,
             "h": 12
           },
