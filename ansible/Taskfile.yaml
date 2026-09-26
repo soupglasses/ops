@@ -43,7 +43,7 @@ tasks:
   upgrade:
     desc: Upgrade to the pinned RKE2 version after independent-backup preflight
     env:
-      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
+      ANSIBLE_VARS_ENABLED: host_group_vars
     cmds:
       - ansible-playbook playbooks/upgrade-rke2.yml {{.CLI_ARGS}}
 

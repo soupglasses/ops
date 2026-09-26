@@ -194,23 +194,61 @@ then repeat the checks. Repeat after a controlled host reboot and verify applica
 and ZFS. Remove `/etc/rancher/rke2/host-firewall.yaml` only after Flux adoption is proven;
 it is an obsolete local copy, not the active policy.
 
-For emergency rollback, suspend the policy Kustomization and delete
-`ciliumclusterwidenetworkpolicy/rke2-host-ingress` through the console's loopback API:
+Before a firewall experiment, verify fresh management connections over both address
+families and capture the working policy from a root shell on nas. The checkpoint
+contains policy configuration, not secrets. Keep it root-only and preserve its
+management source exceptions.
 
 ```bash
 export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
 KUBECTL=/var/lib/rancher/rke2/bin/kubectl
+umask 077
+$KUBECTL get ciliumclusterwidenetworkpolicy/rke2-host-ingress -o json |
+  python3 -c '
+import json, sys
+policy = json.load(sys.stdin)
+checkpoint = {key: policy[key] for key in ("apiVersion", "kind", "spec")}
+checkpoint["metadata"] = {"name": policy["metadata"]["name"]}
+json.dump(checkpoint, sys.stdout)
+' > /root/rke2-host-ingress.before.json
+chmod 600 /root/rke2-host-ingress.before.json
+```
+
+Suspend the parent reconcilers and policy Kustomization before experimenting or
+restoring through the console's loopback API. This prevents reconciliation from
+replacing the checkpoint during recovery.
+
+```bash
 $KUBECTL -n flux-system patch kustomization flux-system --type=merge \
-  -p '{"spec":{"suspend":true}}'
-$KUBECTL -n network patch kustomization cilium-host-policy --type=merge \
   -p '{"spec":{"suspend":true}}'
 $KUBECTL -n flux-system patch kustomization cluster-apps --type=merge \
   -p '{"spec":{"suspend":true}}'
-$KUBECTL delete ciliumclusterwidenetworkpolicy/rke2-host-ingress
+$KUBECTL -n network patch kustomization cilium-host-policy --type=merge \
+  -p '{"spec":{"suspend":true}}'
 ```
 
-Persist the suspension in Git before resuming `flux-system` and `cluster-apps`; otherwise reconciliation
-reinstalls the policy. Diagnose the denied path before reenforcing it.
+For a remote experiment, arm a local timed restore before changing the policy:
+
+```bash
+systemd-run --unit=rke2-host-policy-rollback --on-active=5m \
+  "$KUBECTL" --kubeconfig /etc/rancher/rke2/rke2.yaml \
+  apply -f /root/rke2-host-ingress.before.json
+```
+
+If access fails, let the timer restore the checkpoint or apply it immediately
+through the physical console:
+
+```bash
+/var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml \
+  apply -f /root/rke2-host-ingress.before.json
+```
+
+Keep the host policy installed and enforcing throughout recovery. Verify fresh
+IPv4/IPv6 SSH and API connections, BGP and application traffic before cancelling a
+pending timer with `systemctl stop rke2-host-policy-rollback.timer`. Correct the
+policy in Git and preserve its suspension until the corrected version has been
+reviewed. Then resume reconciliation deliberately and repeat the checks. Gateway
+migration alone does not require changing the host policy.
 
 ## Maintenance and recovery
 
@@ -230,9 +268,26 @@ snapshot, cordons the node, installs the checksum-verified release and waits for
 readiness before uncordoning. A failure after cordoning leaves the node cordoned for
 inspection. Do not downgrade binaries against an upgraded datastore: restore the
 matching pre-upgrade snapshot with the original token using the recovery runbook.
+The upgrade uses the configuration and credentials already installed on the host.
+It does not load encrypted inventory or reconverge host and Cilium configuration.
+If interrupted after installation, a retry only skips work when the node reports
+the target version, is Ready and is uncordoned. Otherwise it stops before creating
+another snapshot. Inspect `systemctl status rke2-server` and `kubectl get node nas`,
+preserve the original pre-upgrade snapshot, and complete the restart and checks
+before uncordoning. Use the matching release and snapshot for recovery if needed.
 
 Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
-The current RKE2 pin stays unchanged during this migration.
+The next pinned release is [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
+one Kubernetes minor above the recovered cluster. It retains Cilium 1.19.6, etcd
+3.6.14, containerd 2.2.7 and the snapshot-controller chart, keeping the networking
+and storage rollout separate from the control-plane upgrade. Cilium 1.19.6
+[tests Kubernetes 1.35](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/network/kubernetes/compatibility.rst).
+Keep Cilium managed by RKE2 and advance it with a compatible bundled release.
+
+The inventory checksum matches the release's `sha256sum-amd64.txt` and GitHub
+artifact digest. Renovate proposes version updates, but the checksum must be
+updated and reviewed with each proposal. A changed inventory pin does not upgrade
+an installed node through the normal convergence playbook.
 
 Etcd snapshots run every six hours, retaining 28 locally and in S3. Independent S3
 history must preserve deleted/noncurrent objects for at least 30 days and prevent the

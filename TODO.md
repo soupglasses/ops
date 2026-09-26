@@ -236,6 +236,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Log ingestion follow-up
 
+- [x] Provision a Kubernetes-managed node overview with stacked per-app CPU and memory,
+  host totals, disk utilization, ZFS state and network traffic using existing scrapes.
+- [x] Label warning-prefixed messages conservatively while preserving their text.
+- [x] Add inspected, guarded ZFS bootstrap-clone maintenance tasks. Refuse active
+  recovery images and data-bearing origins.
+- [ ] Complete Cilium Gateway production cutover after dual-stack staging and backend
+  isolation checks. Keep native Cilium Services for Minecraft TCP/UDP.
+- [ ] Verify the RKE2 1.35.8 upgrade live, including fresh dual-stack management access,
+  BGP, application data and off-cluster recovery points.
 - [x] Count compressed RKE2 S3 snapshots correctly. The collector now reports 24
   scheduled snapshots and the stale-backup alert has cleared.
 - [x] Normalize severity and parse structured application fields at ingestion, including

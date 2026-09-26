@@ -34,8 +34,10 @@ zfs_create_dataset: true
 # Driver installation is opt-in after `ubuntu-drivers list --gpgpu` identifies the supported package.
 nvidia_driver_package: ""
 
-rke2_version: v1.34.11+rke2r1
-rke2_tarball_sha256: 88cbe2eb111ac7ed96c17466451dbe853a8510fc3639d96dd42237cf18c7a071
+# Update the release checksum together with the version before running the upgrade playbook.
+# renovate: datasource=github-releases depName=rancher/rke2
+rke2_version: v1.35.8+rke2r1
+rke2_tarball_sha256: 805f26f1e7e875b7721515d7a3e55b79b86124252a8c9191f5fc3f06523af26f
 rke2_cluster_cidrs:
   - 10.42.0.0/16
   - fd94:a259:ebb8:4200::/56

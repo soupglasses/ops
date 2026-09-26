@@ -13,6 +13,12 @@
       - --kubeconfig
       - /etc/rancher/rke2/rke2.yaml
   pre_tasks:
+    - name: Require a real maintenance run
+      ansible.builtin.assert:
+        that:
+          - not ansible_check_mode
+        fail_msg: This upgrade requires a verified new S3 snapshot. Use --syntax-check for offline validation.
+
     - name: Require independently recoverable application backups and server token
       ansible.builtin.assert:
         that:
@@ -46,6 +52,53 @@
             | regex_search('rke2r[0-9]+') | replace('rke2r', '') | int)
         fail_msg: Upgrade one minor at a time. Rollback requires the documented datastore restore procedure.
 
+    - name: Check the running node before accepting an already-installed release
+      when: upgrade_installed.stdout.split()[2] == rke2_version
+      block:
+        - name: Read the running node state
+          ansible.builtin.command:
+            argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'json', '--request-timeout=15s'] }}"
+          register: upgrade_running_node
+          changed_when: false
+          failed_when: false
+          check_mode: false
+
+        - name: Require a completed healthy upgrade before skipping installation
+          ansible.builtin.assert:
+            that:
+              - >-
+                upgrade_running_node.rc == 0 and (upgrade_running_node.stdout | from_json).status.nodeInfo.kubeletVersion
+                == rke2_version and not ((upgrade_running_node.stdout | from_json).spec.unschedulable
+                | default(false)) and ((upgrade_running_node.stdout | from_json).status.conditions | selectattr('type',
+                'equalto', 'Ready') | map(attribute='status') | first | default('False')) == 'True'
+            fail_msg: >-
+              The target binary is installed but the node is not running that version, Ready and uncordoned.
+              Inspect systemctl status rke2-server and kubectl get node nas before continuing. Preserve
+              the original pre-upgrade S3 snapshot. Complete the interrupted restart and verify the node
+              before uncordoning, or restore the matching pre-upgrade release and snapshot.
+
+    - name: Skip installation when the pinned release is healthy and schedulable
+      ansible.builtin.meta: end_host
+      when: upgrade_installed.stdout.split()[2] == rke2_version
+
+    - name: Create the RKE2 artifact cache
+      ansible.builtin.file:
+        path: /var/cache/rke2
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Download and verify the release before interrupting the node
+      ansible.builtin.get_url:
+        url: >-
+          https://github.com/rancher/rke2/releases/download/{{ rke2_version | replace('+', '%2B') }}/rke2.linux-amd64.tar.gz
+        dest: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+        owner: root
+        group: root
+        mode: "0640"
+        checksum: "sha256:{{ rke2_tarball_sha256 }}"
+
     - name: Name the pre-upgrade recovery point
       ansible.builtin.set_fact:
         upgrade_snapshot: "pre-upgrade-{{ ansible_date_time.epoch }}"
@@ -60,7 +113,10 @@
       ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls --s3
       register: upgrade_snapshots
       changed_when: false
-      failed_when: upgrade_snapshots.rc != 0 or upgrade_snapshot not in upgrade_snapshots.stdout
+      # The listing also contains local copies, which cannot prove off-node survival.
+      failed_when: >-
+        upgrade_snapshots.rc != 0 or (upgrade_snapshots.stdout_lines | select('match', '^' + upgrade_snapshot
+        + '-nas-[0-9]+(?:\\.zip)?\\s+s3://') | list | length) == 0
       no_log: true
 
   tasks:
@@ -70,11 +126,35 @@
       register: upgrade_cordon
       changed_when: "'already cordoned' not in upgrade_cordon.stdout"
 
-    - name: Apply the verified pinned RKE2 release
-      ansible.builtin.include_role:
-        name: rke2
-      vars:
-        rke2_upgrade_allowed: true
+    - name: Install the verified release using the existing host configuration
+      ansible.builtin.unarchive:
+        src: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+        dest: /usr/local
+        remote_src: true
+
+    - name: Restart the installed RKE2 service
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: restarted
+
+    - name: Wait for the Kubernetes API after restart
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', '--raw=/readyz'] }}"
+      register: upgrade_api_ready
+      changed_when: false
+      retries: 60
+      delay: 5
+      until: upgrade_api_ready.rc == 0 and upgrade_api_ready.stdout == 'ok'
+
+    - name: Wait for the node to report the pinned Kubernetes version
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'jsonpath={.status.nodeInfo.kubeletVersion}']
+          }}"
+      register: upgrade_node_version
+      changed_when: false
+      retries: 60
+      delay: 5
+      until: upgrade_node_version.rc == 0 and upgrade_node_version.stdout == rke2_version
 
     - name: Wait for node readiness after the upgrade
       ansible.builtin.command:
@@ -89,3 +169,5 @@
 
 - name: Verify the upgraded host
   ansible.builtin.import_playbook: verify.yml
+  vars:
+    rke2_expected_version: "{{ rke2_version }}"

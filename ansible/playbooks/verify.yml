@@ -43,6 +43,15 @@
           }}"
       changed_when: false
 
+    - name: Read the running Kubernetes version after an upgrade
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'jsonpath={.status.nodeInfo.kubeletVersion}']
+          }}"
+      register: verified_node_version
+      changed_when: false
+      failed_when: verified_node_version.stdout != rke2_expected_version
+      when: rke2_expected_version is defined
+
     - name: Read Cilium host-firewall status
       ansible.builtin.command:
         argv: "{{ kubectl_argv + ['-n', 'kube-system', 'exec', 'daemonset/cilium', '--', 'cilium-dbg',
