@@ -24,7 +24,8 @@ tasks:
         mkdir -p .secure
         temporary=$(mktemp .secure/kubeconfig.XXXXXX)
         trap 'rm -f "$temporary"' EXIT
-        ssh -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 \
+        # Bash reads this script from stdin; SSH must not consume the remaining commands.
+        ssh -n -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 \
           -i "$HOME/.ssh/ansible" -o StrictHostKeyChecking=yes \
           -o HostKeyAlias=nas.home.finnes.dev ansible@172.21.71.10 \
           'sudo -n cat /etc/rancher/rke2/rke2.yaml' > "$temporary"
