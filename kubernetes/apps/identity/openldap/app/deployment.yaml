@@ -19,8 +19,18 @@ spec:
       labels:
         app.kubernetes.io/name: openldap
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: openldap
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           image: ghcr.io/soupglasses/openldap:2.6.10@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
           ports:
             - containerPort: 636

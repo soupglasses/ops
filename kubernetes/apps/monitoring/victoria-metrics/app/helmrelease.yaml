@@ -30,6 +30,9 @@ spec:
       retries: 3
   values:
     victoria-metrics-operator:
+      podSecurityContext:
+        seccompProfile:
+          type: RuntimeDefault
       crds:
         cleanup:
           # Never let removing this release delete unrelated VM custom resources.
