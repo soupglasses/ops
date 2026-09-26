@@ -13,10 +13,10 @@ From this repository, with verified SSH access to `nas` through the Ansible key 
 to the destination host, deploy access to its existing `hermes` container:
 
 ```bash
-task kube:hermes:deploy -- --host satellite
+task hermes:deploy-keys HOST=satellite
 ```
 
-`--host` accepts an SSH host or configured alias and defaults to `satellite`. The
+`HOST` is an SSH host or alias. SSH uses your normal configuration and keys. The
 host must allow `sudo -n podman`, with a running container named `hermes`, its
 `hermes` user, and all six existing `/opt/data/profiles/<profile>` directories.
 This task configures access in that container. It does not provision a host or container.
@@ -34,11 +34,11 @@ finished. Subsequent credential rotations replace files at the same paths. Profi
 remain rotated, so rerunning the task is safe.
 
 The output lists each identity and its actual server-issued expiry. Schedule the next
-rotation before that expiry using `task kube:hermes:rotate` (the same operation).
+rotation before that expiry by running the same task again.
 To rotate one profile or request a different lifetime:
 
 ```bash
-task kube:hermes:rotate -- --profile observability --duration-seconds 604800
+task hermes:deploy-keys HOST=satellite -- --profile observability --duration-seconds 604800
 ```
 
 Profile kubeconfigs live at `/opt/data/profiles/<profile>/kubeconfig.yaml`, backed by

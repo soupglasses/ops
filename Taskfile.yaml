@@ -30,3 +30,11 @@ includes:
   volsync:
     taskfile: .taskfiles/volsync.yaml
     dir: .
+
+tasks:
+  hermes:deploy-keys:
+    desc: Install or renew Kubernetes credentials in an existing Hermes container
+    silent: true
+    requires:
+      vars: [HOST]
+    cmd: python3 scripts/hermes-kubeconfig.py --host {{.HOST | shellQuote}} {{.CLI_ARGS}}

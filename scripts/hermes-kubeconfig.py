@@ -92,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', choices=PROFILES, help='rotate one profile instead of all six')
     parser.add_argument('--duration-seconds', type=int, default=30 * 24 * 60 * 60)
-    parser.add_argument('--host', '--satellite', dest='host', default='satellite',
+    parser.add_argument('--host', required=True,
                         help='verified SSH host with the existing Hermes container')
     args = parser.parse_args()
     if args.duration_seconds <= 0:
@@ -100,7 +100,7 @@ def main():
     nas = ['ssh', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
            '-i', os.path.expanduser('~/.ssh/ansible'), '-o', 'StrictHostKeyChecking=yes',
            '-o', 'HostKeyAlias=nas.home.finnes.dev', 'ansible@172.21.71.10']
-    satellite = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+    destination = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
                  '-o', 'StrictHostKeyChecking=yes', args.host]
     version = tomllib.loads((Path(__file__).resolve().parents[1] / '.mise.toml').read_text())['tools']['aqua:kubernetes/kubectl']
     for profile in (args.profile,) if args.profile else PROFILES:
@@ -108,7 +108,7 @@ def main():
                                   profile, str(args.duration_seconds)])], capture_output=True)
         if issued.returncode:
             sys.exit(profile + ': credential issuance failed; kubeconfig unchanged.')
-        installed = subprocess.run(satellite + [shlex.join(['sudo', '-n', 'podman', 'exec', '-i',
+        installed = subprocess.run(destination + [shlex.join(['sudo', '-n', 'podman', 'exec', '-i',
                                     '--user', 'hermes', '-w', '/opt/data', 'hermes', 'python3', '-c', INSTALL, version])],
                                    input=issued.stdout, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         if installed.returncode:

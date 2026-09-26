@@ -18,15 +18,6 @@ tasks:
       - command -v bash
     cmd: bash scripts/kubeconfig.sh {{.CLI_ARGS}}
 
-  hermes:rotate:
-    aliases: ['hermes:deploy']
-    desc: Deploy or rotate Kubernetes access in an existing Hermes container
-    silent: true
-    preconditions:
-      - command -v ssh
-      - command -v python3
-    cmd: python3 scripts/hermes-kubeconfig.py {{.CLI_ARGS}}
-
   clean-pods:
     desc: Delete all pods with a Failed/Pending/Succeeded status
     cmds:
