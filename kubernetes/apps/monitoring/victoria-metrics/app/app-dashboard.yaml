@@ -104,8 +104,8 @@ data:
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) and (count((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) == count((kube_pod_container_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
-              "legendFormat": "Capacity",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -140,29 +140,19 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses container limits when all containers have one, otherwise allocatable capacity of the app’s hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
           "transformations": [
             {
               "id": "configFromData",
               "options": {
                 "configRefId": "B",
-                "applyTo": {
-                  "id": "byFrameRefID",
-                  "options": "A"
-                },
                 "mappings": [
                   {
-                    "fieldName": "Value",
+                    "fieldName": "Gauge maximum",
                     "handlerKey": "max",
                     "reducerId": "lastNotNull"
                   }
                 ]
-              }
-            },
-            {
-              "id": "filterByRefId",
-              "options": {
-                "include": "A"
               }
             }
           ]
@@ -191,8 +181,8 @@ data:
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) and (count((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) == count((kube_pod_container_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
-              "legendFormat": "Capacity",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"cpu\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"cpu\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -227,29 +217,19 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses container limits when all containers have one, otherwise allocatable capacity of the app’s hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
           "transformations": [
             {
               "id": "configFromData",
               "options": {
                 "configRefId": "B",
-                "applyTo": {
-                  "id": "byFrameRefID",
-                  "options": "A"
-                },
                 "mappings": [
                   {
-                    "fieldName": "Value",
+                    "fieldName": "Gauge maximum",
                     "handlerKey": "max",
                     "reducerId": "lastNotNull"
                   }
                 ]
-              }
-            },
-            {
-              "id": "filterByRefId",
-              "options": {
-                "include": "A"
               }
             }
           ]
@@ -278,8 +258,8 @@ data:
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) and (count((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) == count((kube_pod_container_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
-              "legendFormat": "Capacity",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -314,29 +294,19 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses container limits when all containers have one, otherwise allocatable capacity of the app’s hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
           "transformations": [
             {
               "id": "configFromData",
               "options": {
                 "configRefId": "B",
-                "applyTo": {
-                  "id": "byFrameRefID",
-                  "options": "A"
-                },
                 "mappings": [
                   {
-                    "fieldName": "Value",
+                    "fieldName": "Gauge maximum",
                     "handlerKey": "max",
                     "reducerId": "lastNotNull"
                   }
                 ]
-              }
-            },
-            {
-              "id": "filterByRefId",
-              "options": {
-                "include": "A"
               }
             }
           ]
@@ -365,8 +335,8 @@ data:
             },
             {
               "refId": "B",
-              "expr": "(sum((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) and (count((kube_pod_container_resource_limits{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) == count((kube_pod_container_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})))) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
-              "legendFormat": "Capacity",
+              "expr": "(sum((kube_pod_container_resource_requests{namespace=\"$namespace\",resource=\"memory\"} and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"})) > 0) or sum(kube_node_status_allocatable{resource=\"memory\"} and on (node) (kube_pod_info and on (namespace, pod) namespace_pod:app:info{namespace=\"$namespace\",app=\"$app\"}))",
+              "legendFormat": "Gauge maximum",
               "instant": true,
               "range": false
             }
@@ -401,29 +371,19 @@ data:
             "showThresholdLabels": false,
             "showThresholdMarkers": false
           },
-          "description": "Peak is over the selected time range. Scale uses container limits when all containers have one, otherwise allocatable capacity of the app’s hosting nodes.",
+          "description": "Peak is over the selected time range. Scale uses configured resource requests. Usage may exceed a request. If no request is configured, the scale uses allocatable capacity of the hosting nodes.",
           "transformations": [
             {
               "id": "configFromData",
               "options": {
                 "configRefId": "B",
-                "applyTo": {
-                  "id": "byFrameRefID",
-                  "options": "A"
-                },
                 "mappings": [
                   {
-                    "fieldName": "Value",
+                    "fieldName": "Gauge maximum",
                     "handlerKey": "max",
                     "reducerId": "lastNotNull"
                   }
                 ]
-              }
-            },
-            {
-              "id": "filterByRefId",
-              "options": {
-                "include": "A"
               }
             }
           ]

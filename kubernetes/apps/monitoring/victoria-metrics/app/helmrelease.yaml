@@ -271,19 +271,21 @@ spec:
                   group: volsync.backube
                   version: v1alpha1
                   kind: ReplicationSource
-                metricNamePrefix: volsync_source
+                metricNamePrefix: volsync
                 labelsFromPath:
                   namespace: [metadata, namespace]
                   source: [metadata, name]
                   persistentvolumeclaim: [spec, sourcePVC]
                 metrics:
-                  - name: info
+                  - name: source_info
                     help: Configured VolSync backup source and its PVC.
                     each:
                       type: Info
                       info:
                         path: [metadata]
-                  - name: last_sync_time_seconds
+                        labelsFromPath:
+                          source: [name]
+                  - name: source_last_sync_time_seconds
                     help: Timestamp of the last successful VolSync synchronization.
                     each:
                       type: Gauge

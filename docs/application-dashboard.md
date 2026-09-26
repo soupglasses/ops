@@ -14,8 +14,9 @@ Apps use the pod's `app.kubernetes.io/name` label, falling back to `app`, `k8s-a
 then `component`. Original log fields remain intact. Workloads sharing an app label
 within a namespace appear together.
 
-CPU is measured in cores and memory as the container working set. Gauge capacity is
-the sum of container limits when every container has a limit, otherwise the
+CPU is measured in cores and memory as the container working set. Gauges use the
+app's configured resource requests as their baseline. Requests are scheduling
+reservations, so usage can exceed them. With no request configured, gauges use the
 allocatable capacity of the nodes hosting the app. Peaks are sampled at one-minute
 resolution. Request and limit lines show the configured totals.
 
@@ -44,6 +45,9 @@ Add a word or phrase to search the message:
 
 Quoted field names preserve Kubernetes labels containing dots or slashes. See the
 [LogsQL reference](https://docs.victoriametrics.com/victorialogs/logsql/).
+
+Grafana detects severity from `log.level` and journal `PRIORITY`. Messages without
+severity metadata remain unknown.
 
 The dashboard, app identity rules, and exporter configuration are provisioned from
 Git under `kubernetes/apps/monitoring/victoria-metrics/app`. kube-state-metrics exports
