@@ -41,6 +41,30 @@ image/chart sources. Verify those artifacts remain fetchable during recovery dri
 Never overwrite legacy datasets to make space for a restore. Provision additional
 storage if the empty recovery parent lacks room.
 
+## Local Kubernetes access
+
+The API endpoint is `https://k8s.home.finnes.dev:6443`. Upstream DNS resolves it to
+`172.21.71.10`; access requires the home network or VPN. The name must appear in
+`rke2_tls_sans` before clients use it.
+
+From the repository root, the human operator runs:
+
+```bash
+mise exec -- task kube:kubeconfig
+mise exec -- kubectl get pods -A
+```
+
+This replaces the former `task talos:kubeconfig` workflow. The task retrieves the
+RKE2 administrator configuration over verified SSH, selects the DNS endpoint, and
+verifies TLS and API access before installing `.secure/kubeconfig` with private
+permissions. An existing file is backed up alongside it. Mise selects this file
+unless `HERMES_KUBECONFIG` overrides it. Do not share this administrator credential.
+
+After a clean cluster rebuild, repeat the task to obtain the new CA and client
+certificate. An old kubeconfig can report `certificate signed by unknown authority`;
+do not disable TLS verification. The SSH host-key alias currently remains
+`nas.home.arpa` to use the independently verified key; it performs no DNS lookup.
+
 ## Flux bootstrap
 
 For a clean GitOps rebuild, use the operator's kubeconfig and run:

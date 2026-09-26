@@ -13,7 +13,7 @@ Minimal facts a Claude agent needs to test changes against the live cluster.
 - This (ops) repo: `~/Code/codeberg.org/soupglasses/ops/` — Flux source of truth
   (branch `main` on `git@github.com:soupglasses/ops.git`).
 - Tooling: `mise`. Run commands as `mise exec -- <cmd>` from the repo root, or `mise activate`. Without mise no `kubectl`/`flux`/`kustomize`/`task` exist.
-- Cluster API: `https://k8s.home.arpa:6443` — only resolves on home VPN. If `kubectl` fails with `lookup k8s.home.arpa ... no such host`, the user is off-VPN; stop and ask.
+- Cluster API: `https://k8s.home.finnes.dev:6443` — upstream DNS resolves to the private node address; routing requires the home network or VPN. After a clean rebuild, the human operator refreshes credentials with `task kube:kubeconfig`.
 
 ## Golden rule
 

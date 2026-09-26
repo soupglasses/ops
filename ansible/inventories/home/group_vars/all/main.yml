@@ -44,7 +44,7 @@ rke2_service_cidrs:
   - fd94:a259:ebb8:4300::/112
 rke2_tls_sans:
   - nas
-  - k8s.home.arpa
+  - k8s.home.finnes.dev
   - 172.21.71.10
   - 2a13:e745:1ee8:71::10
 rke2_etcd_snapshot_schedule: "0 */6 * * *"

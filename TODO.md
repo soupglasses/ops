@@ -10,6 +10,14 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Backups / disaster recovery
 
+- [x] **Refresh local access after the RKE2 rebuild.** `task kube:kubeconfig` fetches
+  and verifies the current credentials before replacing the operator's local file.
+  On 2026-09-26, verified upstream DNS and authenticated TLS access through
+  `k8s.home.finnes.dev`; the RKE2 serving certificate includes this name.
+- [ ] **Retire remaining router-local home.arpa names.** The API now uses upstream
+  DNS. Inventory replacement records before removing DHCP-generated names used by
+  other LAN devices, and migrate verified SSH host-key aliases independently.
+
 - [x] **Recover OpenLDAP from off-cluster backups.** On 2026-09-26, restored the
   September 9 and September 8 restic snapshots into separate ZFS PVCs. Both contained
   the database and an 88-entry portable LDIF dump; the running LDAP server contains six
