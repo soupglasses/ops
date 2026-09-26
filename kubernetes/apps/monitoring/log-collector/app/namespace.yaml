@@ -11,4 +11,5 @@ metadata:
   labels:
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/audit: restricted
-    pod-security.kubernetes.io/warn: restricted
+    # Node log collection requires hostPath mounts and root journal access.
+    pod-security.kubernetes.io/warn: privileged
