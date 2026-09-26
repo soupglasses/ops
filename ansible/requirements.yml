@@ -8,6 +8,6 @@ collections:
   - name: ansible.utils
     version: 6.1.0
   - name: community.general
-    version: 11.4.0
+    version: 11.4.9
   - name: community.sops
     version: 2.4.0
