@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# Recovery tools must be installable before either RKE2 or Flux is available.
+- name: Install standalone encrypted-backup recovery dependencies
+  ansible.builtin.apt:
+    name:
+      - restic
+      - python3-boto3
+      - python3-yaml
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create the standalone etcd recovery tool directory
+  ansible.builtin.file:
+    path: /opt/etcd-recovery
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download the checksum-verified native etcd recovery tools
+  ansible.builtin.get_url:
+    url: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
+    dest: /opt/etcd-recovery/etcd-v3.6.14-linux-amd64.tar.gz
+    checksum: sha256:ffe840ff9295808e88cce2794a18a5ac87f12a5203c8314d0bf6aa119b41bac5
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install only the native offline recovery utility
+  ansible.builtin.unarchive:
+    src: /opt/etcd-recovery/etcd-v3.6.14-linux-amd64.tar.gz
+    dest: /opt/etcd-recovery
+    remote_src: true
+    include:
+      - etcd-v3.6.14-linux-amd64/etcdutl
+    creates: /opt/etcd-recovery/etcd-v3.6.14-linux-amd64/etcdutl
+    owner: root
+    group: root

@@ -264,6 +264,9 @@
     state: started
     daemon_reload: true
 
+- name: Install tools for independent etcd recovery
+  ansible.builtin.import_tasks: recovery-tools.yml
+
 - name: Install encrypted scheduled etcd backups
   ansible.builtin.import_tasks: encrypted-backup.yml
 

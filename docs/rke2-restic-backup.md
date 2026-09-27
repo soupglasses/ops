@@ -51,6 +51,21 @@ RKE2 server token, restic password, and S3 endpoint/access credentials. The inve
 a repository copy without the recovery identity is insufficient. Token equality with
 the running server must be established by the operator before disaster recovery.
 
+Install tools before Kubernetes or Flux, using the standalone playbook:
+
+```bash
+cd ansible
+ansible-playbook playbooks/install-rke2-recovery-tools.yml
+```
+
+It installs restic and the S3 SDK from signed Ubuntu packages, and etcdutl 3.6.14
+from the official release archive with pinned SHA-256
+`ffe840ff9295808e88cce2794a18a5ac87f12a5203c8314d0bf6aa119b41bac5`.
+The utility is `/opt/etcd-recovery/etcd-v3.6.14-linux-amd64/etcdutl`.
+This playbook needs only SSH/sudo and package/artifact access: it neither starts RKE2
+nor requires a Kubernetes Secret. Cache its packages/archive off-cluster for recovery
+without internet access. Use the utility matching the selected backup's etcd version.
+
 On a trusted recovery machine, supply `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`,
 `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` through protected environment or
 credential files. These are the same existing backup credentials used by Flux.
@@ -61,7 +76,8 @@ restic snapshots --tag rke2-etcd
 restic check --read-data
 restic restore SNAPSHOT_ID --target /protected/recovery
 sha256sum /protected/recovery/work/source/snapshot.db
-etcdutl snapshot status /protected/recovery/work/source/snapshot.db --write-out=json
+/opt/etcd-recovery/etcd-v3.6.14-linux-amd64/etcdutl snapshot status \
+  /protected/recovery/work/source/snapshot.db --write-out=json
 ```
 
 Compare the checksum and versions with restored `work/source/recovery.json` and the
