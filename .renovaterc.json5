@@ -67,7 +67,7 @@
       description: "Review the bundled network stack before scheduling node maintenance",
       matchPackageNames: ["rancher/rke2", "kubernetes-sigs/gateway-api"],
       groupName: "RKE2 and Gateway API",
-      dependencyDashboardApproval: true,
+      dependencyDashboardApproval: false,
       automerge: false,
     },
     {

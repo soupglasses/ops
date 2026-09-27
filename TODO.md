@@ -120,9 +120,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
   pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
   IPv6 pod CIDR. Flux owns the post-bootstrap Cilium policy resources.
-- [ ] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.34.11+rke2r1`.
-  Confirm fresh S3/etcd backups and the recovery token, then upgrade one Kubernetes
-  minor at a time with the Ansible upgrade playbook and full post-upgrade verification.
+- [x] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.35.8+rke2r1`.
+  Renovate can propose coupled release/checksum updates without dashboard approval.
+  Maintenance requires recovery and release review, rejects interrupted upgrades and
+  unsupported Cilium transitions, and checks the bundled network rollout. See
+  [RKE2 operations](docs/rke2-operations.md) for Cilium preflight and recovery.
 - [x] **Use static node addresses.** Ansible configures native systemd-networkd with
   `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`; the DHCP reservation remains only
   as collision protection.
@@ -189,6 +191,20 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   VIP. Both nginx controllers and all Ingress resources are removed. ExternalDNS
   follows Services and HTTPRoutes. Public application checks passed over IPv4 and
   IPv6, with backend isolation and management access preserved.
+- [x] **Cut over OpenLDAP to the tested Nfrastack runtime.** Production uses
+  `openldap-directory` with native config/data exports and UID/GID 389 movers.
+  Restored and validated a real off-cluster backup before cutover; archived the
+  pinned image for recovery. UUIDs and login names were preserved. Canaille and
+  Flux are healthy and the first production-volume backup succeeded. See the
+  [migration evidence](docs/openldap-nfrastack-migration.md). Removed the one-time
+  example system after migration; production and recovery configuration remain.
+- [ ] **Retire LDAP rollback volumes after acceptance.** Original `openldap` and
+  `openldap-nfrastack-stage` claims remain Flux-managed with pruning disabled.
+  Preserve current recovery points before removing these frozen copies.
+- [ ] **Reduce remaining LDAP administrative access.** Canaille still binds as
+  rootDN; the Terraform admin-group membership ownership bug needs a separate fix.
+  Review the existing backup controller's namespace-wide `pods/exec` permission
+  when narrowing backup permissions across applications.
 - [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
   `components/ldap-account` + `tofu/ldap/service-account` (design in
   `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
@@ -228,6 +244,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   helm 4 (#23, conflicted, breaking CLI changes).
 
 ## Tooling
+
+- [x] Fix Ansible test warnings: update `ansible.posix` to 2.2.0 for its
+  [deprecated-import fixes](https://github.com/ansible-collections/ansible.posix/issues/686),
+  and use the pinned linter's bundled schemas to avoid its unclosed HTTP 304 response.
+  Correct the literal `~` in the workstation's Elixir PATH entry in Bash dotfiles.
 
 - [x] Provide `task hermes:deploy-keys HOST=<ssh-host>` for scoped Kubernetes
   credentials in the existing Hermes container. Verify profile identities, native

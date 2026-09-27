@@ -16,6 +16,14 @@ The home cluster is one Ubuntu 26.04 server. Maintenance and reboot cause downti
 | RouterOS | VLANs, routing, BGP peers, perimeter firewall and WireGuard |
 
 Do not install a second Cilium, CoreDNS or snapshot-controller release through Flux.
+RKE2 already installs Cilium through Helm. Keeping its bundled chart gives a single
+owner and restores networking before Flux starts. Independent Cilium releases are
+possible with `cni: none` and an explicitly pinned bootstrap `HelmChart`; Cilium
+[documents that pattern for new Rancher-managed clusters](https://docs.cilium.io/en/stable/installation/k8s-install-rancher-existing-nodes/).
+Adapting it here would require a separately reviewed ownership migration and clean
+rebuild test. Installing a second release or treating the current RKE2 chart as a
+one-time bootstrap does not transfer ownership safely.
+
 CoreDNS's LDAP rewrite is declared in `kubernetes/bootstrap/rke2-coredns.yaml` and
 installed as an RKE2 `HelmChartConfig` by the host role.
 
@@ -259,22 +267,69 @@ For RKE2, change `rke2_version` and `rke2_tarball_sha256` together. Verify appli
 backups and independent token custody, then run:
 
 ```bash
-task ansible:upgrade -- -e rke2_recovery_verified=true
+task ansible:upgrade -- -e rke2_recovery_verified=true -e rke2_upgrade_reviewed=true
 task ansible:firewall:verify
 ```
 
-The upgrade refuses downgrades and skipped minors, saves and verifies an S3 etcd
-snapshot, cordons the node, installs the checksum-verified release and waits for node
-readiness before uncordoning. A failure after cordoning leaves the node cordoned for
-inspection. Do not downgrade binaries against an upgraded datastore: restore the
-matching pre-upgrade snapshot with the original token using the recovery runbook.
-The upgrade uses the configuration and credentials already installed on the host.
-It does not load encrypted inventory or reconverge host and Cilium configuration.
-If interrupted after installation, a retry only skips work when the node reports
-the target version, is Ready and is uncordoned. Otherwise it stops before creating
-another snapshot. Inspect `systemctl status rke2-server` and `kubectl get node nas`,
-preserve the original pre-upgrade snapshot, and complete the restart and checks
-before uncordoning. Use the matching release and snapshot for recovery if needed.
+Follow the [RKE2 manual upgrade guide](https://docs.rke2.io/upgrades/manual):
+read the selected release's RKE2 and Kubernetes urgent upgrade notes, retain the
+installation method and configuration, and advance one Kubernetes minor at a time.
+The playbook uses the supported tarball/binary replacement followed by a service
+restart, reloading systemd for packaged unit changes. It only supports the current
+single amd64 server; a future multi-node procedure must upgrade servers serially
+before agents. A cordon prevents new scheduling but does not evict existing pods.
+We deliberately do not drain the only node: there is no alternate capacity and
+forcing eviction would unnecessarily stop applications or discard ephemeral data.
+Expect API and network downtime and keep console access throughout maintenance.
+Run only one maintenance process; do not change Cilium configuration concurrently.
+
+Before setting `rke2_upgrade_reviewed=true`, inspect the bundled Cilium version and
+Gateway API requirements, chart value changes, deprecated APIs, and the target
+Kubernetes compatibility matrix. A grouped Renovate PR does not prove compatibility.
+Gateway CRDs deploy through Flux as soon as merged; RKE2 changes only during explicit
+maintenance. Split the proposal or stage compatible CRDs first if the current and
+target Cilium cannot both support the proposed CRDs. Never merge an incompatible
+Gateway change while waiting to upgrade the node.
+
+When bundled Cilium changes, follow its
+[upgrade guide](https://docs.cilium.io/en/stable/operations/upgrade/):
+
+1. Upgrade through consecutive Cilium minors and reach the latest patch of the
+   current minor before crossing to the next. Select an intermediate RKE2 release
+   carrying that patch if needed; do not replace RKE2's managed Cilium release.
+2. Review version-specific notes and preserve the installed `HelmChartConfig`
+   settings, including dual-stack routing, BGP, host firewall and Gateway API.
+   Review `upgradeCompatibility` for the original installed Cilium minor; make any
+   needed values change through the managed host configuration before maintenance.
+3. Run the target version's documented Cilium preflight with the actual API endpoint
+   and kube-proxy replacement settings. Wait for both the preflight DaemonSet and
+   policy-validation Deployment to be ready. Confirm the RKE2 chart's mirrored
+   target images are pullable too. Remove all temporary preflight resources.
+4. Only after these checks, append `-e rke2_cilium_preflight_verified=true` to the
+   upgrade command. The playbook resolves the bundled chart's application version
+   and refuses Cilium downgrades, skipped minors, or a changed version without this
+   acknowledgment. It does not assume Kubernetes patch upgrades leave Cilium unchanged.
+
+The upgrade first rejects unhealthy nodes, pre-existing cordons, unexpected cluster
+members and installed/running version mismatches. It downloads and verifies the
+release before saving and checking a new S3 etcd snapshot, then cordons and restarts.
+Node readiness and the requested kubelet version permit uncordoning so RKE2's Helm
+jobs and operator can schedule. The playbook then checks the embedded target chart in both RKE2 and the Helm
+controller ConfigMap, a completed Helm job created after chart-content publication (and a replacement
+job when the chart changes),
+agent/operator image versions, agent/operator/Envoy rollouts and Cilium health before
+running host verification. A network-rollout failure attempts to re-cordon and stops;
+API or SSH loss may require doing this through the console. Host verification failures
+occur after uncordoning and require operator inspection. There is no automatic rollback.
+
+The task does not load encrypted inventory or reconverge host and Cilium configuration.
+An already-installed release still gets Cilium and host verification without another
+snapshot or restart. If an upgrade was interrupted, preserve its original pre-upgrade
+snapshot; inspect `systemctl status rke2-server` and `kubectl get node nas`, complete
+the restart and verification, then uncordon deliberately. Follow
+[RKE2 rollback guidance](https://docs.rke2.io/upgrades/roll-back) and the recovery
+runbook to restore the matching old release and snapshot with the original token;
+never downgrade binaries against an upgraded datastore.
 
 Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
 The 2026-09-26 upgrade validated [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),

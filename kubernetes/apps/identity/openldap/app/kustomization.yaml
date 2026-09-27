@@ -10,17 +10,13 @@ resources:
   - ./deployment.yaml
   - ./service.yaml
   - ./certificate.yaml
+  - ./rollback-pvc.yaml
   - ./secret.sops.yaml
 components:
   - ../../../../components/volsync
   - ../../../../components/volsync-quiesce
 configMapGenerator:
-  - name: openldap-overlays
+  - name: openldap-runtime
     files:
-      - ./01-memberof.ldif
-      - ./02-refint.ldif
-      - ./03-ppolicy.ldif
-      - ./04-otp.ldif
-  - name: openldap-oauth-schema
-    files:
-      - ./oauth.schema.conf
+      - ./reload-tls.sh
+      - ./backup.sh

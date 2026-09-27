@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
 # SPDX-License-Identifier: 0BSD
 
-# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/deployment-apps-v1.json
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,89 +20,131 @@ spec:
         app.kubernetes.io/name: openldap
         app.kubernetes.io/component: server
     spec:
+      automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
+        fsGroup: 389
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        - name: require-restored-database
-          image: ghcr.io/soupglasses/openldap:2.6.10@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
-          command: [/bin/sh, -ec]
+        - name: require-restored-directory
+          image: docker.io/nfrastack/openldap:2.6-8.1.1@sha256:5e5c8fdd1d7e3a9623500839699b258d0569bf965528b85c682ec5d0902f5d6c
+          command:
+            - /bin/sh
+            - -ec
           args:
-            - test -s /data/data.mdb || { echo 'LDAP database missing; restore a verified backup.' >&2;
-              exit 1; }
+            - test -s /data/db/data.mdb; test -s /data/config/cn=config.ldif; test -s '/data/config/cn=config/olcDatabase={1}mdb.ldif';
+              mkdir -p /run/openldap/run
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 389
+            runAsGroup: 389
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
-              drop: [ALL]
+              drop:
+                - ALL
           volumeMounts:
             - name: data
               mountPath: /data
-              readOnly: true
+            - name: run
+              mountPath: /run/openldap
       containers:
         - name: openldap
+          image: docker.io/nfrastack/openldap:2.6-8.1.1@sha256:5e5c8fdd1d7e3a9623500839699b258d0569bf965528b85c682ec5d0902f5d6c
+          command:
+            - /usr/sbin/slapd
+          args:
+            - -F
+            - /data/config
+            - -h
+            - ldaps://0.0.0.0:1636/ ldapi:///
+            - -d
+            - '256'
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 389
+            runAsGroup: 389
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
-              drop: [ALL]
-          image: ghcr.io/soupglasses/openldap:2.6.10@sha256:ea891fd9cdaa941a3e7ddd8375319ccb4a63b4f0da418516a0393ad0527c8005
-          ports:
-            - containerPort: 636
-              name: ldaps
-          env:
-            - name: LDAP_SUFFIX
-              value: "dc=finnes,dc=dev"
-            - name: LDAP_ROOT_DN
-              value: "cn=admin,dc=finnes,dc=dev"
-            - name: LDAP_ORGANIZATION_NAME
-              value: "Finnes"
-            - name: LDAP_OVERLAYS
-              value: "memberof,refint,otp"
-            - name: LDAP_URLS
-              value: "ldaps://0.0.0.0:636/"
-            - name: LDAP_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: openldap
-                  key: LDAP_ROOT_PASSWORD
+              drop:
+                - ALL
           volumeMounts:
             - name: data
-              mountPath: /config/data
+              mountPath: /data
+            - name: data
+              mountPath: /var/lib/openldap
+              subPath: db
             - name: tls
-              mountPath: /config/tls
+              mountPath: /certs
               readOnly: true
-            - name: overlays
-              mountPath: /config/ldif.d
+            - name: run
+              mountPath: /run/openldap
+            - name: source
+              mountPath: /source
               readOnly: true
-            - name: oauth-schema
-              mountPath: /config/slapd.conf.d
-              readOnly: true
+          ports:
+            - name: ldaps
+              containerPort: 1636
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - openssl s_client -connect 127.0.0.1:1636 -servername ldap.finnes.dev -verify_hostname
+                  ldap.finnes.dev -verify_return_error </dev/null >/dev/null 2>&1
+            timeoutSeconds: 5
+            periodSeconds: 10
           resources:
             requests:
               cpu: 100m
-              memory: 512Mi
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          livenessProbe:
+            tcpSocket:
+              port: ldaps
+            initialDelaySeconds: 20
+            periodSeconds: 20
+        - name: tls-reload
+          image: docker.io/nfrastack/openldap:2.6-8.1.1@sha256:5e5c8fdd1d7e3a9623500839699b258d0569bf965528b85c682ec5d0902f5d6c
+          command:
+            - /bin/sh
+            - /source/reload-tls.sh
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 389
+            runAsGroup: 389
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: source
+              mountPath: /source
+              readOnly: true
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+            - name: run
+              mountPath: /run/openldap
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: openldap
+            claimName: openldap-directory
+        - name: run
+          emptyDir: {}
+        - name: source
+          configMap:
+            name: openldap-runtime
         - name: tls
-          projected:
-            sources:
-              - secret:
-                  name: openldap-tls
-                  items:
-                    - key: tls.crt
-                      path: tls.crt
-                    - key: tls.key
-                      path: tls.key
-                    - key: tls.crt
-                      path: ca.crt
-        - name: overlays
-          configMap:
-            name: openldap-overlays
-        - name: oauth-schema
-          configMap:
-            name: openldap-oauth-schema
+          secret:
+            secretName: openldap-tls
+            defaultMode: 0440
