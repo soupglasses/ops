@@ -1,9 +1,0 @@
-# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
-#
-# SPDX-License-Identifier: 0BSD
-
-- name: Configure the RouterOS boundary for Cilium
-  hosts: routers
-  gather_facts: false
-  roles:
-    - routeros_cilium

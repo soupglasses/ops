@@ -15,7 +15,6 @@
         fail_msg: This playbook supports Ubuntu 26.04 or newer only.
   roles:
     - accounts
-    - networkd
     - os_hardening
     - zfs
     - nvidia

@@ -4,6 +4,9 @@ SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 SPDX-License-Identifier: 0BSD
 -->
 
+Hermes agents must read [HERMES.md](HERMES.md) first. Consult that file when requesting
+Hermes reviews or delegation.
+
 # Agent Guidelines
 
 ## Working Loop
@@ -32,7 +35,7 @@ work from this repository, off-cluster backups, and the minimum documented recov
 keys. No required state may exist only in the live cluster, on one node, in an agent's
 workspace, or in an image registry with no recovery plan.
 
-Request review from the `resilience` Hermes profile when the completed rendered diff
+Request independent resilience review when the completed rendered diff
 adds, removes, or materially changes any of the following:
 
 - a PVC, StatefulSet, storage class, VolumeSnapshot, or reclaim policy;
@@ -76,39 +79,10 @@ succeeded" and "the pod became Ready" are not acceptable substitutes for a resto
 test. See `kubernetes/components/volsync/README.md` for the standard PVC contract and
 `docs/openldap-volsync-migration.md` for a migration and restore-drill pattern.
 
-## Agent Review Routing
-
-GitHub Issues and pull requests are the durable coordination record. The profile names
-and identity rules in this section apply only to agents actually launched by Hermes.
-Those agents use the shared `soupbot` GitHub identity, so each Hermes-authored comment
-or review must state its logical profile and Hermes run/session identifier.
-
-Codex, humans, and other external agents are not Hermes profiles. They must not claim a
-Hermes profile, invent a Hermes run ID, use the Soup Bot identity, or follow a profile's
-runtime instructions merely because their work resembles that profile's role. They
-still follow this repository's review gates: request Hermes help with a collaborator-
-authored `@soupbot <profile>` command and identify only their actual runtime when useful
-(for example, `Requested by Codex session /root; not a Hermes run`). The responding
-Hermes specialist supplies its own profile and run/session attribution.
-
-A bare `@soupbot` mention routes to `opslead`. A named command such as
-`@soupbot security` is addressed to that specialist; the current single-webhook
-implementation uses opslead as a thin dispatcher because a Hermes webhook route is
-bound to one profile, but opslead must not redo or reinterpret the specialist's work.
-Read `docs/soupbot-github-routing.md` for accepted commands, automatic PR routing,
-labels, and webhook operations.
-
-- `opslead`: triage, deduplication, decomposition, routing, and closure criteria.
-- `incident`: evidence-first outage diagnosis and root-cause analysis.
-- `observability`: scrape design, cardinality, alerts, recording rules, and dashboards.
-- `implementer`: scoped GitOps implementation and live verification.
-- `security`: broad security judgment across architecture, identity, workloads, networks,
-  CI/CD, secrets, supply chain, abuse cases, and operational interactions.
-- `resilience`: broad resilience judgment across availability, data survival, recovery,
-  dependencies, failure domains, capacity, rollout/rollback, and operator error.
+## Review and Collaboration
 
 An agent must not approve its own implementation. RBAC or trust-boundary changes need
-`security` review. Stateful or destructive lifecycle changes need `resilience`
+security review. Stateful or destructive lifecycle changes need resilience
 review. Changes requiring both need both reviews; one specialty does not substitute for
 the other.
 
@@ -140,16 +114,6 @@ a safe next action is available. Ask the user only for information that cannot b
 discovered, a material intent choice, unavailable credentials or permissions, or an
 exceptional irreversible action.
 
-Delegation is durable through GitHub. Before an internal agent is dispatched, the
-existing issue or PR records the focused task, expected deliverable, and ownership. A
-full handoff replaces the single active `agent/*` owner label; a bounded consultation or
-specialist PR review leaves ownership unchanged and records the requested review. Hermes
-delegation or Kanban is execution transport, not the visible source of work state. The
-delegate posts its evidence and outcome to the same item, after which the coordinator
-updates state and ownership. Labels do not themselves invoke profiles, and Soup
-Bot-authored comments remain ignored by the webhook to prevent loops, so the coordinator
-must explicitly dispatch after writing the durable GitHub handoff.
-
 ## Formatting & Validation
 
 ### YAML Formatting
@@ -174,10 +138,7 @@ task license:0bsd FILE=path/to/file  # For 0BSD
 ```
 
 Check existing files in the same directory to match the correct license.
-For files created by any Hermes profile, use
-`Soup Bot <bot+ops@finnes.dev>` as the copyright holder;
-never attribute agent-created files to Sofie or copy her personal identity from a
-neighboring header. Preserve existing copyright lines when editing existing files.
+Use the user's identity for new SPDX copyright notices. Preserve existing notices.
 
 ### Kubernetes Manifest Validation
 

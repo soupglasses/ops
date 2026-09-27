@@ -19,3 +19,60 @@ data:
         url: http://victoria-logs-victoria-logs-single-server.monitoring.svc.cluster.local:9428
         isDefault: false
         editable: false
+        jsonData:
+          logLevelRules:
+            - field: log.level
+              value: '^(fatal|FATAL|panic|PANIC|critical|CRITICAL)$'
+              level: critical
+              operator: regex
+              enabled: true
+            - field: log.level
+              value: '^(error|ERROR|err|ERR)$'
+              level: error
+              operator: regex
+              enabled: true
+            - field: log.level
+              value: '^(warn|WARN|warning|WARNING)$'
+              level: warning
+              operator: regex
+              enabled: true
+            - field: log.level
+              value: '^(info|INFO|notice|NOTICE)$'
+              level: info
+              operator: regex
+              enabled: true
+            - field: log.level
+              value: '^(debug|DEBUG)$'
+              level: debug
+              operator: regex
+              enabled: true
+            - field: log.level
+              value: '^(trace|TRACE)$'
+              level: trace
+              operator: regex
+              enabled: true
+            - field: PRIORITY
+              value: '^[0-2]$'
+              level: critical
+              operator: regex
+              enabled: true
+            - field: PRIORITY
+              value: '^3$'
+              level: error
+              operator: regex
+              enabled: true
+            - field: PRIORITY
+              value: '^4$'
+              level: warning
+              operator: regex
+              enabled: true
+            - field: PRIORITY
+              value: '^[56]$'
+              level: info
+              operator: regex
+              enabled: true
+            - field: PRIORITY
+              value: '^7$'
+              level: debug
+              operator: regex
+              enabled: true

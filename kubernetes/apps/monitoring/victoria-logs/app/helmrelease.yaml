@@ -25,6 +25,16 @@ spec:
     remediation:
       strategy: rollback
       retries: 3
+  postRenderers:
+    - kustomize:
+        patches:
+          # The repository dashboard displays event rates as e/s.
+          - target:
+              kind: ConfigMap
+              name: victoria-logs-victoria-logs-single-vector-k8s-monitoring
+            patch: |-
+              - op: remove
+                path: /metadata/labels/grafana_dashboard
   values:
     printNotes: false
     serviceAccount:
@@ -32,10 +42,31 @@ spec:
       automountToken: false
 
     server:
-      retentionPeriod: 7d
-      # Keep 20% of the PVC free for merges and ingestion bursts. Time and size
-      # retention both apply; whichever threshold is reached first wins.
-      retentionDiskSpaceUsage: 32GiB
+      image:
+        repository: victoriametrics/victoria-logs
+        tag: v1.50.0@sha256:ae9bea8d8a3b0fc47c7f0058bcca410e79c84b4a0acd12d4dac71b9302526590
+      retentionPeriod: 1y
+      initContainers:
+        - name: require-restored-logs
+          image: victoriametrics/victoria-logs:v1.50.0@sha256:ae9bea8d8a3b0fc47c7f0058bcca410e79c84b4a0acd12d4dac71b9302526590
+          command: [/bin/sh, -ec]
+          args:
+            - test -d /storage/partitions && test -n "$(ls -A /storage/partitions)"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: server-volume
+              mountPath: /storage
+              readOnly: true
+      # Alert and expand the ZFS volume rather than delete history under pressure.
+      retentionDiskSpaceUsage: ""
       extraArgs:
         envflag.enable: true
         envflag.prefix: VM_
@@ -43,6 +74,7 @@ spec:
         httpListenAddr: :9428
         http.shutdownDelay: 15s
         snapshotsMaxAge: 1d
+        storage.minFreeDiskSpaceBytes: 5GB
       persistentVolume:
         enabled: true
         existingClaim: victoria-logs
@@ -86,120 +118,7 @@ spec:
         scrapeTimeout: 10s
 
     vector:
-      enabled: true
-      role: Agent
-      image:
-        # The journald source invokes journalctl, which isn't in the distroless image.
-        base: debian
-      serviceAccount:
-        create: true
-        automountToken: true
-      rbac:
-        create: true
-      podLabels:
-        vector.dev/exclude: "true"
-      tolerations:
-        - operator: Exists
-      podSecurityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      securityContext:
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: [ALL]
-        readOnlyRootFilesystem: true
-        runAsUser: 0
-        runAsGroup: 0
-        seccompProfile:
-          type: RuntimeDefault
-      # Limit host access to logs. In particular, do not mount the chart's
-      # default /var/lib, /proc, or /sys host paths.
-      defaultVolumes:
-        - name: var-log
-          hostPath:
-            path: /var/log
-            type: Directory
-        - name: run-log-journal
-          hostPath:
-            path: /run/log/journal
-            type: Directory
-        - name: machine-id
-          hostPath:
-            path: /etc/machine-id
-            type: File
-      defaultVolumeMounts:
-        - name: var-log
-          mountPath: /var/log
-          readOnly: true
-        - name: run-log-journal
-          mountPath: /run/log/journal
-          readOnly: true
-        - name: machine-id
-          mountPath: /etc/machine-id
-          readOnly: true
-      persistence:
-        hostPath:
-          enabled: true
-          path: /var/lib/vector-victoria-logs
-      resources:
-        requests:
-          cpu: 25m
-          memory: 64Mi
-        limits:
-          memory: 256Mi
-      customConfig:
-        data_dir: /vector-data-dir
-        api:
-          enabled: false
-        sources:
-          k8s:
-            type: kubernetes_logs
-            # Escape Flux substitution; Vector expands this from the pod env.
-            self_node_name: $${VECTOR_SELF_NODE_NAME}
-          journald:
-            type: journald
-            current_boot_only: false
-            since_now: false
-          internal_metrics:
-            type: internal_metrics
-        transforms:
-          parser:
-            type: remap
-            inputs: [k8s]
-            source: |
-              .log = parse_json(.message) ?? .message
-              del(.message)
-              .source = "kubernetes"
-          journald_normalize:
-            type: remap
-            inputs: [journald]
-            source: |
-              .node_name = get_env_var!("VECTOR_SELF_NODE_NAME")
-              .source = "journald"
-        sinks:
-          exporter:
-            type: prometheus_exporter
-            address: 0.0.0.0:9090
-            inputs: [internal_metrics]
-          vlogs:
-            type: elasticsearch
-            inputs: [parser, journald_normalize]
-            mode: bulk
-            api_version: v8
-            compression: gzip
-            healthcheck:
-              enabled: true
-            buffer:
-              type: disk
-              max_size: 536870912
-              when_full: block
-            request:
-              headers:
-                VL-Time-Field: timestamp
-                VL-Stream-Fields: source,node_name,kubernetes.pod_namespace,kubernetes.container_name,_SYSTEMD_UNIT
-                VL-Msg-Field: message,msg,_msg,log.msg,log.message,log
-                AccountID: "0"
-                ProjectID: "0"
+      enabled: false
 
     dashboards:
       enabled: true

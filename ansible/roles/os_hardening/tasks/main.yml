@@ -184,6 +184,9 @@
     content: |
       # Managed by Ansible. Forwarding, bridge netfilter, BPF, and namespaces are
       # intentionally enabled for RKE2 and Cilium.
+      # Log collectors and container watchers share the host's inotify limits.
+      fs.inotify.max_user_instances = 1024
+      fs.inotify.max_user_watches = 524288
       fs.protected_fifos = 2
       fs.protected_hardlinks = 1
       fs.protected_regular = 2

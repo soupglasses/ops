@@ -10,6 +10,7 @@ metadata:
   labels:
     monitoring.finnes.dev/enabled: "true"
 spec:
+  serviceDiscoveryRole: EndpointSlice
   endpoints:
     - interval: 1m
       port: metrics

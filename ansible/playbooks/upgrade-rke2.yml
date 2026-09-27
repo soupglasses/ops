@@ -2,22 +2,296 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-- name: Upgrade RKE2 after backup preflight
+- name: Upgrade the single RKE2 server during a maintenance window
   hosts: rke2_servers
   become: true
+  gather_facts: true
   serial: 1
-  tasks:
-    - name: Require an explicitly selected RKE2 version
+  any_errors_fatal: true
+  vars:
+    kubectl_argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --request-timeout=30s
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+  pre_tasks:
+    - name: Require a real maintenance run
       ansible.builtin.assert:
         that:
-          - rke2_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+rke2r[0-9]+$')
+          - not ansible_check_mode
+        fail_msg: This upgrade requires a verified new S3 snapshot. Use --syntax-check for offline validation.
 
-    - name: Create an etcd snapshot before upgrading
-      ansible.builtin.command: rke2 etcd-snapshot save --name pre-upgrade
-      environment:
-        PATH: /var/lib/rancher/rke2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+    - name: Require independently recoverable application backups and server token
+      ansible.builtin.assert:
+        that:
+          - rke2_recovery_verified | default(false) | bool
+          - rke2_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+rke2r[0-9]+$')
+          - rke2_tarball_sha256 is match('^[0-9a-f]{64}$')
+        fail_msg: Verify application backups and off-node token custody, then set rke2_recovery_verified=true.
+
+    - name: Read the installed version
+      ansible.builtin.command: /usr/local/bin/rke2 --version
+      register: upgrade_installed
+      changed_when: false
+      check_mode: false
+
+    - name: Parse the installed and requested Kubernetes versions
+      ansible.builtin.set_fact:
+        upgrade_current: >-
+          {{ upgrade_installed.stdout | regex_search('v[0-9]+\.[0-9]+\.[0-9]+') }}
+        upgrade_target: "{{ rke2_version.split('+')[0] }}"
+
+    - name: Refuse downgrades and skipped Kubernetes minor versions
+      ansible.builtin.assert:
+        that:
+          - upgrade_current | length > 0
+          - upgrade_target[1:].split('.')[0] == upgrade_current[1:].split('.')[0]
+          - upgrade_target[1:].split('.')[1] | int >= upgrade_current[1:].split('.')[1] | int
+          - upgrade_target[1:].split('.')[1] | int <= (upgrade_current[1:].split('.')[1] | int) + 1
+          - upgrade_target[1:] is version(upgrade_current[1:], '>=')
+          - >-
+            upgrade_target != upgrade_current or (rke2_version.split('rke2r')[1] | int) >= (upgrade_installed.stdout
+            | regex_search('rke2r[0-9]+') | replace('rke2r', '') | int)
+        fail_msg: Upgrade one minor at a time. Rollback requires the documented datastore restore procedure.
+
+    - name: Restrict this maintenance procedure to the single server
+      ansible.builtin.assert:
+        that:
+          - groups['rke2_servers'] == ['nas']
+          - ansible_facts.architecture == 'x86_64'
+        fail_msg: This procedure is for nas only. Multi-node clusters need server-first rolling maintenance.
+
+    - name: Read all running nodes before any mutation
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', 'nodes', '-o', 'json'] }}"
+      register: upgrade_running_nodes
+      changed_when: false
+
+    - name: Require a healthy single node without an interrupted upgrade or existing cordon
+      ansible.builtin.assert:
+        that:
+          - (upgrade_running_nodes.stdout | from_json)['items'] | length == 1
+          - (upgrade_running_nodes.stdout | from_json)['items'][0].metadata.name == 'nas'
+          - >-
+            (upgrade_running_nodes.stdout | from_json)['items'][0].status.nodeInfo.kubeletVersion == upgrade_installed.stdout.split()[2]
+          - not ((upgrade_running_nodes.stdout | from_json)['items'][0].spec.unschedulable | default(false))
+          - >-
+            ((upgrade_running_nodes.stdout | from_json)['items'][0].status.conditions | selectattr('type',
+            'equalto', 'Ready') | map(attribute='status') | first | default('False')) == 'True'
+        fail_msg: >-
+          Resolve node health, an existing cordon or an interrupted upgrade first. Preserve the original
+          pre-upgrade S3 snapshot. Inspect systemctl status rke2-server and kubectl get node nas; complete
+          the interrupted restart and verification, or restore the matching release and snapshot.
+
+    - name: Read the installed embedded Cilium chart
+      ansible.builtin.shell: |
+        set -o pipefail
+        {{ kubectl_argv | map('quote') | join(' ') }} -n kube-system get helmchart/rke2-cilium \
+          -o 'jsonpath={.spec.chartContent}' | base64 --decode | tar -xzOf - rke2-cilium/Chart.yaml
+      args:
+        executable: /bin/bash
+      register: upgrade_cilium_installed_chart
+      changed_when: false
+
+    - name: Record the installed Cilium chart version
+      ansible.builtin.set_fact:
+        upgrade_cilium_previous_chart: "{{ (upgrade_cilium_installed_chart.stdout | from_yaml).version
+          | string }}"
+
+    - name: Record the completed Cilium Helm job before maintenance
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'get', 'job/helm-install-rke2-cilium', '-o', upgrade_job_jsonpath]
+          }}"
+      vars:
+        upgrade_job_jsonpath: >-
+          jsonpath={.metadata.uid} {.status.conditions[?(@.type=="Complete")].status} {.metadata.deletionTimestamp}
+      register: upgrade_cilium_previous_job
+      changed_when: false
+
+    - name: Refuse maintenance during an unfinished Cilium Helm installation
+      ansible.builtin.assert:
+        that:
+          - upgrade_cilium_previous_job.stdout.split() | length == 2
+          - upgrade_cilium_previous_job.stdout.split()[1] == 'True'
+        fail_msg: Resolve the current Cilium Helm installation before upgrading RKE2.
+
+    - name: Require review of the selected release before maintenance
+      ansible.builtin.assert:
+        that:
+          - rke2_upgrade_reviewed | default(false) | bool
+        fail_msg: >-
+          Read the RKE2 and Kubernetes urgent upgrade notes and review bundled Cilium/Gateway API compatibility,
+          then set rke2_upgrade_reviewed=true. See docs/rke2-operations.md.
+
+    - name: Create the RKE2 artifact cache
+      ansible.builtin.file:
+        path: /var/cache/rke2
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Read the target release's bundled chart versions
+      ansible.builtin.uri:
+        url: >-
+          https://raw.githubusercontent.com/rancher/rke2/{{ rke2_version | replace('+', '%2B') }}/charts/chart_versions.yaml
+        return_content: true
+      register: upgrade_charts
+
+    - name: Select the bundled Cilium chart
+      ansible.builtin.set_fact:
+        upgrade_cilium_chart: >-
+          {{ (upgrade_charts.content | from_yaml).charts | selectattr('filename', 'equalto', '/charts/rke2-cilium.yaml')
+          | map(attribute='version') | first }}
+
+    - name: Download the bundled chart for compatibility inspection
+      ansible.builtin.get_url:
+        url: >-
+          https://raw.githubusercontent.com/rancher/rke2-charts/main/assets/rke2-cilium/rke2-cilium-{{
+          upgrade_cilium_chart }}.tgz
+        dest: "/var/cache/rke2/cilium-{{ upgrade_cilium_chart }}.tgz"
+        mode: "0640"
+
+    - name: Read bundled Cilium application metadata
+      ansible.builtin.command:
+        argv: [tar, -xzOf, "/var/cache/rke2/cilium-{{ upgrade_cilium_chart }}.tgz", rke2-cilium/Chart.yaml]
+      register: upgrade_cilium_metadata
+      changed_when: false
+
+    - name: Read the running Cilium version
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'exec', 'daemonset/cilium', '--', 'cilium-dbg',
+          'version'] }}"
+      register: upgrade_cilium_running
+      changed_when: false
+
+    - name: Record current and target Cilium versions
+      ansible.builtin.set_fact:
+        upgrade_cilium_current: "{{ upgrade_cilium_running.stdout | regex_search('[0-9]+\\.[0-9]+\\.[0-9]+')
+          }}"
+        upgrade_cilium_target: "{{ (upgrade_cilium_metadata.stdout | from_yaml).appVersion | string }}"
+
+    - name: Refuse unsupported Cilium transitions
+      ansible.builtin.assert:
+        that:
+          - upgrade_cilium_current is match('^[0-9]+\.[0-9]+\.[0-9]+$')
+          - upgrade_cilium_target is match('^[0-9]+\.[0-9]+\.[0-9]+$')
+          - upgrade_cilium_target.split('.')[0] == upgrade_cilium_current.split('.')[0]
+          - upgrade_cilium_target is version(upgrade_cilium_current, '>=')
+          - upgrade_cilium_target.split('.')[1] | int <= (upgrade_cilium_current.split('.')[1] | int)
+            + 1
+          - >-
+            upgrade_cilium_target == upgrade_cilium_current or (rke2_cilium_preflight_verified | default(false)
+            | bool)
+        fail_msg: >-
+          Cilium must advance at most one minor, without downgrading. When its version changes, complete
+          the target Cilium preflight and compatibility checks in docs/rke2-operations.md, remove the
+          temporary preflight resources, then set rke2_cilium_preflight_verified=true.
+
+    - name: Verify an already-installed release without reinstalling or taking another snapshot
+      when: upgrade_installed.stdout.split()[2] == rke2_version
+      block:
+        - name: Verify the existing Cilium rollout
+          ansible.builtin.include_tasks: tasks/verify-upgrade-cilium.yml
+        - name: Leave installation unchanged
+          ansible.builtin.meta: end_host
+
+    - name: Download and verify the release before interrupting the node
+      ansible.builtin.get_url:
+        url: >-
+          https://github.com/rancher/rke2/releases/download/{{ rke2_version | replace('+', '%2B') }}/rke2.linux-amd64.tar.gz
+        dest: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+        owner: root
+        group: root
+        mode: "0640"
+        checksum: "sha256:{{ rke2_tarball_sha256 }}"
+
+    - name: Name the pre-upgrade recovery point
+      ansible.builtin.set_fact:
+        upgrade_snapshot: "pre-upgrade-{{ ansible_facts.date_time.epoch }}"
+
+    - name: Create an off-cluster etcd recovery point
+      ansible.builtin.command:
+        argv: [/usr/local/bin/rke2, etcd-snapshot, save, --name, "{{ upgrade_snapshot }}"]
       changed_when: true
+      no_log: true
 
-    - name: Apply the pinned RKE2 role
-      ansible.builtin.include_role:
-        name: rke2
+    - name: Confirm the new snapshot is listed in S3
+      ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls
+      register: upgrade_snapshots
+      changed_when: false
+      # The listing also contains local copies, which cannot prove off-node survival.
+      failed_when: >-
+        upgrade_snapshots.rc != 0 or (upgrade_snapshots.stdout_lines | select('match', '^' + upgrade_snapshot
+        + '-nas-[0-9]+(?:\\.zip)?\\s+s3://') | list | length) == 0
+      no_log: true
+
+  tasks:
+    - name: Cordon the node before changing RKE2
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['cordon', 'nas'] }}"
+      register: upgrade_cordon
+      changed_when: "'already cordoned' not in upgrade_cordon.stdout"
+
+    - name: Install the verified release using the existing host configuration
+      ansible.builtin.unarchive:
+        src: "/var/cache/rke2/rke2-{{ rke2_version | replace('+', '_') }}.tar.gz"
+        dest: /usr/local
+        remote_src: true
+
+    - name: Restart the installed RKE2 service
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: restarted
+        daemon_reload: true
+
+    - name: Wait for the Kubernetes API after restart
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', '--raw=/readyz'] }}"
+      register: upgrade_api_ready
+      changed_when: false
+      retries: 60
+      delay: 5
+      until: upgrade_api_ready.rc == 0 and upgrade_api_ready.stdout == 'ok'
+
+    - name: Wait for the node to report the pinned Kubernetes version
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'jsonpath={.status.nodeInfo.kubeletVersion}']
+          }}"
+      register: upgrade_node_version
+      changed_when: false
+      retries: 60
+      delay: 5
+      until: upgrade_node_version.rc == 0 and upgrade_node_version.stdout == rke2_version
+
+    - name: Wait for node readiness after the upgrade
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['wait', '--for=condition=Ready', 'node/nas', '--timeout=300s'] }}"
+      changed_when: false
+
+    # Helm jobs and the operator need the sole node schedulable to finish reconciliation.
+    - name: Finish the bundled network rollout
+      block:
+        - name: Uncordon the healthy node
+          ansible.builtin.command:
+            argv: "{{ kubectl_argv + ['uncordon', 'nas'] }}"
+          register: upgrade_uncordon
+          changed_when: "'already uncordoned' not in upgrade_uncordon.stdout"
+
+        - name: Verify the target Cilium rollout
+          ansible.builtin.include_tasks: tasks/verify-upgrade-cilium.yml
+      rescue:
+        - name: Cordon the node after a failed network rollout
+          ansible.builtin.command:
+            argv: "{{ kubectl_argv + ['cordon', 'nas'] }}"
+          changed_when: true
+
+        - name: Stop for operator recovery
+          ansible.builtin.fail:
+            msg: >-
+              Cilium verification failed. Preserve the pre-upgrade S3 snapshot and inspect RKE2 Helm jobs
+              and Cilium through the console. Do not downgrade binaries against the new datastore.
+- name: Verify the upgraded host
+  ansible.builtin.import_playbook: verify.yml
+  vars:
+    rke2_expected_version: "{{ rke2_version }}"

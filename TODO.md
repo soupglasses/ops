@@ -10,11 +10,30 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Backups / disaster recovery
 
-- [ ] **OpenLDAP data is not backed up.** IN PROGRESS. `openldap-data` is 1Gi on
-  `openebs-hostpath`: node-local, on the EPHEMERAL partition, not snapshottable, no
-  volsync. `talos:rebootstrap` destroys every human account and password; only system
-  users are reconstructable via tofu. Wiring is committed; live migration steps are in
-  `docs/openldap-volsync-migration.md`.
+- [x] **Refresh local access after the RKE2 rebuild.** `task kube:kubeconfig` fetches
+  and verifies the current credentials before replacing the operator's local file.
+  On 2026-09-26, verified upstream DNS and authenticated TLS access through
+  `k8s.home.finnes.dev`; the RKE2 serving certificate includes this name.
+- [ ] **Retire remaining router-local home.arpa names.** The API now uses upstream
+  DNS. Inventory replacement records before removing DHCP-generated names used by
+  other LAN devices, and migrate verified SSH host-key aliases independently.
+
+- [x] **Recover OpenLDAP from off-cluster backups.** On 2026-09-26, restored the
+  September 9 and September 8 restic snapshots into separate ZFS PVCs. Both contained
+  the database and an 88-entry portable LDIF dump; the running LDAP server contains six
+  person entries. Legacy datasets remain untouched. Fresh backup and login acceptance
+  checks remain part of the migration below.
+- [x] **Complete application backup restore drills.** Fresh LDAP, Minecraft, metrics
+  and logs backups restored into separate PVCs; native Victoria queries verified
+  historical samples and both services' own logs. Evidence and remaining acceptance
+  limits are in [the recovery record](docs/rke2-recovery-verification.md).
+- [ ] **Complete recovery safety checks.** VolSync 0.15 can initialize a missing
+  repository and publish an empty successful restore. LDAP/Minecraft now require their
+  data files before startup and withhold backup triggers on preparation failure.
+  The new hooks and fresh S3 restores passed live checks. Review the existing manual
+  PVC-replacement helper's interaction with Helm/operator reconciliation before using
+  it for in-place monitoring recovery. VictoriaLogs initialization was explicitly
+  approved on 2026-09-26; its repository had no snapshots.
 - [ ] **Single age key is a single point of total backup loss.**
   `cluster-secrets.sops.yaml` (holding `SECRET_PASSWORD`, the restic repo password) is
   encrypted to one recipient (`.sops.yaml`). Losing `.secure/age.agekey` makes the
@@ -45,13 +64,32 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Platform
 
+- [x] **Per-app observability dashboard.** Grafana's Application overview selects
+  namespace and multiple apps, with usage gauges, peak statistics, resource requests, logs, alerts,
+  and PVC-linked VolSync backup status. Scoped kube-state-metrics and kubelet
+  scrapes are live. [Usage guide](docs/application-dashboard.md).
+
+- [ ] **Finish the simplified RKE2 recovery.** Ubuntu/RKE2 and ZFS verified live on
+  2026-09-26; the unchanged Flux controllers are installed and both bootstrap Secrets
+  have been imported by the operator. Router management is moving to native RouterOS;
+  application recovery and host-policy adoption remain gated. Validate recovered LDAP,
+  Minecraft and logs, off-cluster restore drills, both BGP families, notifications and
+  reboot before closing. Keep the old datasets and defer RAIDZ2 reformatting.
+- [ ] **Retire the RouterOS automation identity after handoff.** Verify the independent
+  router administrator path and off-device encrypted backup first. Preserve working
+  BGP/firewall configuration and the controller DHCP reservation.
+- [ ] **Audit mode did not survive the Cilium restart.** Live `PolicyAuditMode` was
+  `Disabled` on 2026-09-26 despite the old inventory default. Verify fresh dual-stack
+  access and recovery login before Flux adopts the existing host policy; use console
+  rollback rather than relying on a persistent audit flag.
+
 - [x] **Evaluate RKE2 backup alerts in-cluster.** Deploy a tightly selected VictoriaMetrics
   stack so the host ServiceMonitor is scraped and its PrometheusRule is evaluated and
-  delivered to VMAlertmanager after a clean rebuild. Keep two days of disposable local
-  history while leaving monitoring metrics outside the authoritative recovery contract.
-- [ ] **Prove Alertmanager notifications off-cluster.** The evaluator, dedicated SMTP
-  receiver, and encrypted `alertmanager-smtp` Secret are declared. Trigger and receive a
-  test firing/resolved notification after bootstrap.
+  delivered to VMAlertmanager after a clean rebuild. Metrics and logs now target one
+  year of HDD ZFS storage with encrypted S3 recovery; complete the migration and restore
+  evidence before considering their persistence verified.
+- [x] **Prove Alertmanager notifications off-cluster.** Email delivery through the
+  configured SMTP receiver was confirmed by the operator on 2026-09-26.
 - [ ] **Complete the Talos-to-RKE2 recovery.** Ansible now describes Ubuntu 26.04,
   systemd-networkd, the CIS-oriented host baseline, RKE2, bundled Cilium, ZFS, and
   RouterOS. Converge it, bootstrap Flux, complete both S3 restore passes from
@@ -64,11 +102,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   dual-stack pod, Service, DNS, ingress, and egress traffic; then run the two-pass S3
   application restore drill. Do not enable host-firewall enforcement or remove Talos
   data/configuration before those checks pass.
-- [ ] **Prove an independent human recovery login.** The managed `ansible` account and
-  passwordless sudo work. The `sofie` account still has its two pre-existing
-  GitHub-imported authorized keys and correct file permissions, but the locally selected
-  recovery key did not match either entry. Test with the matching key or explicitly add
-  a designated recovery public key before enforcing the Cilium host firewall.
+- [x] **Prove an independent human recovery login.** The operator confirmed
+  `ssh sofie@nas` and physical console access on 2026-09-26. Independent RouterOS
+  administrator SSH also passed; its off-device encrypted backup is still pending.
 - [ ] **Complete the new observability acceptance tests.** After Flux bootstrap, verify
   VictoriaMetrics Operator/CRDs, VMAgent, VMAlert, VMAlertmanager, Grafana, VictoriaLogs,
   Vector journald/Kubernetes ingestion, and the host exporters. Prove a firing and
@@ -84,9 +120,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
   pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
   IPv6 pod CIDR. Flux owns the post-bootstrap Cilium policy resources.
-- [ ] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.34.11+rke2r1`.
-  Confirm fresh S3/etcd backups and the recovery token, then upgrade one Kubernetes
-  minor at a time with the Ansible upgrade playbook and full post-upgrade verification.
+- [x] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.35.8+rke2r1`.
+  Renovate can propose coupled release/checksum updates without dashboard approval.
+  Maintenance requires recovery and release review, rejects interrupted upgrades and
+  unsupported Cilium transitions, and checks the bundled network rollout. See
+  [RKE2 operations](docs/rke2-operations.md) for Cilium preflight and recovery.
 - [x] **Use static node addresses.** Ansible configures native systemd-networkd with
   `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`; the DHCP reservation remains only
   as collision protection.
@@ -121,6 +159,21 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Networking / future
 
+- [x] **Restore Minecraft public access after RKE2 migration.** Shared VIP Services
+  now use compatible `Cluster` policy, Minecraft's chart receives its dual-stack
+  settings, and a port-specific ingress rule permits game traffic through RKE2's
+  default namespace isolation. Minecraft status handshakes passed via the VIP,
+  public IPv4 and public IPv6 on 2026-09-26. HTTPS remained available on both families.
+
+- [ ] **Reassess shared VIP policy with Cilium 1.21.** Minecraft and public ingress
+  use `externalTrafficPolicy: Cluster` because Cilium 1.19 rejects shared `Local`
+  Services selecting different pods. [Upstream change #45819](https://github.com/cilium/cilium/pull/45819)
+  adds `lbipam.cilium.io/sharing-permit-different-pods`. Verify availability in the
+  RKE2-supported release and BGP behavior before adopting it: the annotation relaxes
+  allocation checks but does not ensure every advertising node has both backends.
+  Consider dedicated IPv6 Service addresses with ExternalDNS and `Local` policy
+  instead. Validate Minecraft and HTTPS over both families after any change.
+
 - [ ] **Verify RKE2 and Cilium dual stack live.** Day-zero config now has IPv6 pod and
   service CIDRs, dual-stack IPAM, and dual-stack public Services. Prove pod, service,
   DNS, and egress connectivity before considering this complete.
@@ -133,16 +186,25 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   is now the VLAN 71 access port, the node is 172.21.71.10, Cilium advertises the
   shared 172.21.68.10 VIP to RouterOS, and 80.248.139.51 is DNATed to that VIP. New
   server-to-trusted-LAN connections are blocked while replies and internet egress work.
-- [ ] **Gateway API migration (before palworld/nextcloud/immich).** Replace
-  ingress-nginx and the lbipam sharing-key hack with one Gateway owning the single BGP
-  IP 172.21.68.10. Recommended implementation: Envoy Gateway (Flux-managed, supports
-  TCPRoute/UDPRoute/TLSRoute; Cilium's implementation has no UDPRoute). Steps:
-  experimental-channel Gateway API CRDs as their own ks, Envoy Gateway in `network/`,
-  one Gateway with HTTPS/TCP/UDP listeners, convert the single canaille Ingress to an
-  HTTPRoute, point external-dns at gateway-httproute sources, let cert-manager issue
-  via the Gateway, retire ingress-nginx-public. Keep ingress-nginx-tailscale until a
-  Tailscale-class Gateway replaces it. Game servers may stay direct LoadBalancer
-  Services on the shared IP if the Envoy hop shows in latency.
+- [x] **Gateway API migration.** Cilium serves public HTTP/TLS through HTTPRoutes,
+  with native LoadBalancer Services for Minecraft TCP/UDP on the shared dual-stack
+  VIP. Both nginx controllers and all Ingress resources are removed. ExternalDNS
+  follows Services and HTTPRoutes. Public application checks passed over IPv4 and
+  IPv6, with backend isolation and management access preserved.
+- [x] **Cut over OpenLDAP to the tested Nfrastack runtime.** Production uses
+  `openldap-directory` with native config/data exports and UID/GID 389 movers.
+  Restored and validated a real off-cluster backup before cutover; archived the
+  pinned image for recovery. UUIDs and login names were preserved. Canaille and
+  Flux are healthy and the first production-volume backup succeeded. See the
+  [migration evidence](docs/openldap-nfrastack-migration.md). Removed the one-time
+  example system after migration; production and recovery configuration remain.
+- [ ] **Retire LDAP rollback volumes after acceptance.** Original `openldap` and
+  `openldap-nfrastack-stage` claims remain Flux-managed with pruning disabled.
+  Preserve current recovery points before removing these frozen copies.
+- [ ] **Reduce remaining LDAP administrative access.** Canaille still binds as
+  rootDN; the Terraform admin-group membership ownership bug needs a separate fix.
+  Review the existing backup controller's namespace-wide `pods/exec` permission
+  when narrowing backup permissions across applications.
 - [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
   `components/ldap-account` + `tofu/ldap/service-account` (design in
   `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
@@ -164,6 +226,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Renovate / PR hygiene
 
+- [x] Audit migration dependencies with Renovate extraction and update fixtures.
+  Couple RKE2 checksums, Gateway CRDs and runtime/restore image pins. Derive the
+  Cilium validation schema from the selected RKE2 release.
+- [x] Replace Flux Local with Flate validation and rendered PR diffs, including
+  complete text and HTML artifacts for large changes.
+
 - [ ] **Rotate GitHub automation tokens annually.** The `soupbot` Flux source token
   (`public_repo`) and commit-status token (`repo:status`) have no provider expiry.
   Rotate both by 2027-08-27, keeping the credentials separate and least-privileged.
@@ -177,8 +245,63 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Tooling
 
+- [x] Fix Ansible test warnings: update `ansible.posix` to 2.2.0 for its
+  [deprecated-import fixes](https://github.com/ansible-collections/ansible.posix/issues/686),
+  and use the pinned linter's bundled schemas to avoid its unclosed HTTP 304 response.
+  Correct the literal `~` in the workstation's Elixir PATH entry in Bash dotfiles.
+
+- [x] Provide `task hermes:deploy-keys HOST=<ssh-host>` for scoped Kubernetes
+  credentials in the existing Hermes container. Verify profile identities, native
+  terminal configuration and operational permissions without exposing credentials.
+
 - [ ] Guard the completions in `.mise.toml` with a tool-exists check so a fresh
   `mise trust` does not spew errors for tools not yet installed.
 - [ ] Find a first-party Flux way to visualize the Kustomization dependsOn order
   (topo-sorted tree) as a `task`. Prefer `flux tree` or similar over hand-rolled
   parsing.
+
+## Log ingestion follow-up
+
+- [ ] Simplify AIDE scheduling to Ubuntu's working `dailyaidecheck.timer`. The
+  redundant `ansible-aidecheck` fails without a configuration path. Review runtime
+  filesystem exclusions and the changed-file report before accepting a new baseline.
+- [ ] Remove unused OpenIPMI startup on hosts without an IPMI interface. The current
+  driver reports no compatible system interface.
+- [ ] Group Java stack-trace continuation lines with their originating event at
+  ingestion, preserving container boundaries and avoiding guessed severity.
+- [ ] Reduce the OpenEBS ZFS snapshot controller's `--v=5` verbosity after confirming
+  the chart setting. Routine watch lifecycle messages dominate its logs.
+- [ ] Track Cilium's internal access-log UTF-8 handling. A synthetic HTTP header
+  containing byte `0xff` reproduces a rejected protobuf record in 1.19.6 while
+  forwarding and native JSON access logs succeed. The agent and proxy schemas match.
+  [The proxy copies raw header values into string fields](https://github.com/cilium/proxy/blob/edeb3f2af56c37c407efa1f63f0b32f595399bbc/cilium/accesslog.cc#L194).
+  Keep the independent JSON log pipeline and verify an upstream sanitization fix
+  before changing versions. Do not suppress the warning or strip application headers.
+- [x] Provision a Kubernetes-managed node overview with stacked per-app CPU and memory,
+  host totals, disk utilization, ZFS state and network traffic using existing scrapes.
+- [x] Label warning-prefixed messages conservatively while preserving their text.
+- [x] Add inspected, guarded ZFS bootstrap-clone maintenance tasks. Refuse active
+  recovery images and data-bearing origins.
+- [x] Complete Cilium Gateway production cutover after dual-stack staging and backend
+  isolation checks. Keep native Cilium Services for Minecraft TCP/UDP.
+- [x] Verify the RKE2 1.35.8 upgrade live, including fresh dual-stack management access,
+  BGP, application data and off-cluster recovery points.
+- [x] Count compressed RKE2 S3 snapshots correctly. The collector now reports 24
+  scheduled snapshots and the stale-backup alert has cleared.
+- [x] Normalize severity and parse structured application fields at ingestion, including
+  klog, logfmt, Minecraft and OpenLDAP connection statistics. Test representative lines
+  with Vector before rollout.
+- [x] Resolve OpenEBS cleanup of retired Victoria restore sources through independently
+  reviewed clone promotion. Historical queries and fresh ingestion passed, volume
+  identity and quotas were preserved, and ordinary controller cleanup completed.
+- [ ] Reduce idle CPU in the Minecraft and LDAP quiesce watchers. Their five-second
+  kubectl polling currently consumes about 3% of one core each between backups.
+
+- [ ] Show healthy configured alert rules scoped to the selected namespace and apps.
+  Grafana’s native alert list filters labels on active instances, so inactive generic
+  rules cannot currently be scoped this way. Keep the app view scoped and avoid
+  duplicating alert definitions or changing alert evaluation for the dashboard.
+
+- [x] Replace OpenEBS host-path Endpoints leader election with the upstream Lease-based
+  provisioner. Disable incompatible XFS quotas on the Ubuntu ext4 root filesystem.
+  Existing application data uses quota-enforced ZFS PVCs.

@@ -13,7 +13,7 @@ Minimal facts a Claude agent needs to test changes against the live cluster.
 - This (ops) repo: `~/Code/codeberg.org/soupglasses/ops/` — Flux source of truth
   (branch `main` on `git@github.com:soupglasses/ops.git`).
 - Tooling: `mise`. Run commands as `mise exec -- <cmd>` from the repo root, or `mise activate`. Without mise no `kubectl`/`flux`/`kustomize`/`task` exist.
-- Cluster API: `https://k8s.home.arpa:6443` — only resolves on home VPN. If `kubectl` fails with `lookup k8s.home.arpa ... no such host`, the user is off-VPN; stop and ask.
+- Cluster API: `https://k8s.home.finnes.dev:6443` — upstream DNS resolves to the private node address; routing requires the home network or VPN. After a clean rebuild, the human operator refreshes credentials with `task kube:kubeconfig`.
 
 ## Golden rule
 
@@ -23,8 +23,8 @@ End state is **always** flux-managed. Never leave `kubectl apply`'d resources be
 
 ```
 edit YAML
-task flux-local:test     # validate kustomizations + helmreleases
-task flux-local:diff     # see rendered diff vs HEAD
+task flate:test     # validate kustomizations + helmreleases
+task flate:diff     # see rendered diff vs HEAD
 git add …                        # explicit paths only
 mise exec -- git commit …        # pre-commit hooks need mise's PATH (ec, kubeconform, …)
 git push                         # → GitHub → flux GitRepository polls
@@ -40,8 +40,8 @@ Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `
 
 ## Useful task targets
 
-- `flux-local:test` — full local validation (use before every commit that touches manifests)
-- `flux-local:diff` — rendered diff vs HEAD
+- `flate:test` — full local validation (use before every commit that touches manifests)
+- `flate:diff` — rendered diff vs HEAD
 - `flux:reconcile` — kick the flux-system Kustomization
 - `flux:reconcile-ks` — reconcile every Kustomization
 - `flux:unstuck` — same, plus retry stuck ones

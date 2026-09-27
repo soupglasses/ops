@@ -1,0 +1,6 @@
+SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+SPDX-License-Identifier: Apache-2.0
+
+Adapted from VictoriaMetrics helm-charts, victoria-logs-single 0.12.3:
+https://github.com/VictoriaMetrics/helm-charts/blob/victoria-logs-single-0.12.3/charts/victoria-logs-single/files/dashboards/generated/vector-k8s-monitoring.yaml
+Rendered with default single-cluster settings. Changed event-rate units to e/s.

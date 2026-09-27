@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-# yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
 tasks:
@@ -12,57 +11,51 @@ tasks:
       - ansible-galaxy collection install -r requirements.yml
 
   test:
-    desc: Run offline syntax and lint checks
+    desc: Check all playbooks without loading encrypted variables
+    env:
+      # Use the pinned linter's bundled schemas; its HTTP 304 refresh leaks a response.
+      ANSIBLE_LINT_SKIP_SCHEMA_UPDATE: "1"
     cmds:
-      - ansible-playbook playbooks/bootstrap.yml --syntax-check
-      - ansible-playbook playbooks/site.yml --syntax-check
-      - ansible-playbook playbooks/verify.yml --syntax-check
-      - ansible-playbook playbooks/verify-host-firewall.yml --syntax-check
-      - ansible-playbook playbooks/upgrade-rke2.yml --syntax-check
-      - ansible-playbook playbooks/bootstrap-router.yml --syntax-check
-      - ansible-playbook playbooks/router.yml --syntax-check
-      - ansible-playbook playbooks/verify-router.yml --syntax-check
+      - for playbook in playbooks/*.yml; do ansible-playbook "$playbook" --syntax-check || exit; done
       - ansible-lint
 
+  bootstrap:
+    desc: Create the automation account through the human administrator login
+    cmds:
+      - ansible-playbook playbooks/bootstrap.yml {{.CLI_ARGS}}
+
+  network:
+    desc: Configure static addresses during a console-backed maintenance window
+    cmds:
+      - ansible-playbook playbooks/network.yml {{.CLI_ARGS}}
+
   check:
-    desc: Preview host changes without applying them
+    desc: Preview host changes (operator credential access required)
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
     cmds:
       - ansible-playbook playbooks/site.yml --check --diff
 
   apply:
-    desc: Converge the RKE2 server
+    desc: Converge host configuration (operator credential access required)
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
     cmds:
       - ansible-playbook playbooks/site.yml
 
+  upgrade:
+    desc: Upgrade pinned RKE2 and bundled Cilium after recovery and release preflight
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/upgrade-rke2.yml {{.CLI_ARGS}}
+
   verify:
-    desc: Verify host, Kubernetes, Cilium, and ZFS health
+    desc: Verify host, Kubernetes, Cilium, snapshots and ZFS without loading credentials
     cmds:
       - ansible-playbook playbooks/verify.yml
 
-  firewall:promote:
-    desc: Enforce the Cilium host firewall after the documented audit drill
-    cmds:
-      - >-
-        ansible-playbook playbooks/site.yml -e '{"host_firewall_audit_mode":false, "host_firewall_enforcement_acknowledgement":
-        "I_HAVE_VERIFIED_DUAL_STACK_HOST_ACCESS_AND_ACCEPT_LOCKOUT_RISK"}'
-      - ansible-playbook playbooks/verify-host-firewall.yml
-
   firewall:verify:
-    desc: Verify enforced host policy through fresh dual-stack connections and BGP state
+    desc: Verify enforced Flux host policy through fresh dual-stack connections
     cmds:
       - ansible-playbook playbooks/verify-host-firewall.yml
-
-  router:bootstrap:
-    desc: Create the dedicated RouterOS automation identity using an existing administrator
-    cmds:
-      - ansible-playbook playbooks/bootstrap-router.yml
-
-  router:apply:
-    desc: Converge the RouterOS Cilium BGP and IPv6 boundary
-    cmds:
-      - ansible-playbook playbooks/router.yml
-
-  router:verify:
-    desc: Verify Cilium BGP sessions, routes, and scoped firewall counters
-    cmds:
-      - ansible-playbook playbooks/verify-router.yml
