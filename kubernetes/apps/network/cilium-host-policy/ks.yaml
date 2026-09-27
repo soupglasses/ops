@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: MIT
+
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app cilium-host-policy
+  namespace: &namespace network
+spec:
+  # Enable only after the access and recovery drill in docs/rke2-operations.md.
+  suspend: true
+  path: ./kubernetes/apps/network/cilium-host-policy/app
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true

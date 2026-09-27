@@ -10,7 +10,14 @@ resources:
   - ./grafana-datasource.yaml
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
-  - ./service.yaml
-  - ./servicemonitor.yaml
 components:
   - ../../../../components/volsync
+
+configMapGenerator:
+  - name: vector-k8s-monitoring-dashboard
+    files:
+      - vector-k8s-monitoring-custom.json=vector-k8s-monitoring.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"

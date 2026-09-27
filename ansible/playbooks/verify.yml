@@ -6,6 +6,11 @@
   hosts: rke2_servers
   become: true
   gather_facts: false
+  vars:
+    kubectl_argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
   tasks:
     - name: Gather service facts
       ansible.builtin.service_facts:
@@ -29,109 +34,64 @@
 
     - name: Read node readiness from the Kubernetes API
       ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - wait
-          - --for=condition=Ready
-          - node/nas
-          - --timeout=180s
+        argv: "{{ kubectl_argv + ['wait', '--for=condition=Ready', 'node/nas', '--timeout=180s'] }}"
       changed_when: false
 
     - name: Read Cilium status
       ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - -n
-          - kube-system
-          - rollout
-          - status
-          - daemonset/cilium
-          - --timeout=180s
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'rollout', 'status', 'daemonset/cilium', '--timeout=180s']
+          }}"
       changed_when: false
+
+    - name: Read the running Kubernetes version after an upgrade
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'jsonpath={.status.nodeInfo.kubeletVersion}']
+          }}"
+      register: verified_node_version
+      changed_when: false
+      failed_when: verified_node_version.stdout != rke2_expected_version
+      when: rke2_expected_version is defined
 
     - name: Read Cilium host-firewall status
       ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - -n
-          - kube-system
-          - exec
-          - daemonset/cilium
-          - --
-          - cilium-dbg
-          - status
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'exec', 'daemonset/cilium', '--', 'cilium-dbg',
+          'status'] }}"
       register: cilium_status
       changed_when: false
 
     - name: Require the Cilium host firewall
       ansible.builtin.assert:
         that:
-          - cilium_status.stdout is regex('(?m)^Host firewall:\\s+Enabled')
-
-    - name: Require the Ansible-owned host policy
-      ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - get
-          - ciliumclusterwidenetworkpolicy/rke2-host-ingress
-      changed_when: false
-
-    - name: Read the Cilium host-endpoint audit mode
-      ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - -n
-          - kube-system
-          - exec
-          - daemonset/cilium
-          - --
-          - cilium-dbg
-          - endpoint
-          - get
-          - -l
-          - reserved:host
-          - -o
-          - jsonpath={[0].spec.options.PolicyAuditMode}
-      register: cilium_host_audit_mode
-      changed_when: false
-
-    - name: Require the configured host-firewall mode
-      ansible.builtin.assert:
-        that:
-          - >-
-            cilium_host_audit_mode.stdout == ('Enabled' if host_firewall_audit_mode | bool else 'Disabled')
+          - cilium_status.stdout is regex('(?m)^Host firewall:\s+Enabled')
 
     - name: Check node addresses
       ansible.builtin.command:
-        argv:
-          - /var/lib/rancher/rke2/bin/kubectl
-          - --kubeconfig
-          - /etc/rancher/rke2/rke2.yaml
-          - get
-          - node/nas
-          - -o
-          - jsonpath={.status.addresses[*].address}
+        argv: "{{ kubectl_argv + ['get', 'node/nas', '-o', 'jsonpath={.status.addresses[*].address}']
+          }}"
       register: node_addresses
       changed_when: false
 
     - name: Require both static node addresses
       ansible.builtin.assert:
         that:
-          - "'172.21.71.10' in node_addresses.stdout"
-          - "'2a13:e745:1ee8:71::10' in node_addresses.stdout"
+          - network_ipv4_address.split('/')[0] in node_addresses.stdout.split()
+          - network_ipv6_address.split('/')[0] in node_addresses.stdout.split()
 
     - name: Check the adopted ZFS pool
       ansible.builtin.command: zpool status -x {{ zfs_pool_name }}
       register: zpool_status
       changed_when: false
       failed_when: zpool_status.rc != 0 or 'is healthy' not in zpool_status.stdout
+
+    - name: Require the bundled snapshot CRDs
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['wait', '--for=condition=Established', 'crd/volumesnapshots.snapshot.storage.k8s.io',
+          'crd/volumesnapshotcontents.snapshot.storage.k8s.io', 'crd/volumesnapshotclasses.snapshot.storage.k8s.io',
+          '--timeout=120s'] }}"
+      changed_when: false
+
+    - name: Require the bundled snapshot controller
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'rollout', 'status', 'deployment/rke2-snapshot-controller',
+          '--timeout=120s'] }}"
+      changed_when: false

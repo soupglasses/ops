@@ -1,9 +1,0 @@
-# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
-#
-# SPDX-License-Identifier: 0BSD
-
-- name: Bootstrap the RouterOS automation identity
-  hosts: routers
-  gather_facts: false
-  roles:
-    - routeros_bootstrap

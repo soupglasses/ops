@@ -43,7 +43,9 @@ task --list
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
 | `ansible:check` | Preview host changes |
-| `ansible:apply` | Converge Ubuntu and RKE2 |
+| `ansible:apply` | Maintain Ubuntu and the pinned RKE2 version |
+| `ansible:network` | Explicit network setup or maintenance |
+| `ansible:upgrade` | Back up and upgrade the pinned RKE2 release |
 | `ansible:verify` | Verify host, Kubernetes, Cilium, and ZFS health |
 
 See `ansible/README.md` for the initial `.254` to `.10` network handoff and
@@ -57,17 +59,23 @@ See `ansible/README.md` for the initial `.254` to `.10` network handoff and
 | `flux:reconcile` | Trigger manual reconcile for Flux |
 | `flux:reconcile-ks` | Reconcile all Flux Kustomizations |
 
-### Flux Local Validation
+### Flux validation
 
-Validate Flux configurations locally before committing:
+Validate Flux configurations locally with [Flate](https://github.com/home-operations/flate)
+before committing. Mise and CI use the same pinned release and render settings.
 
 | Task | Description |
 |---|---|
-| `flux-local:test` | Validate all Kustomizations and HelmReleases |
-| `flux-local:diff` | Show diff of rendered manifests against HEAD |
-| `flux-local:build` | Build all Kustomizations and count resources |
-| `flux-local:get-ks` | List all Kustomizations |
-| `flux-local:get-hr` | List all HelmReleases |
+| `flate:test` | Validate all Kustomizations and HelmReleases |
+| `flate:diff` | Show diff of rendered manifests against HEAD |
+| `flate:build` | Render all managed manifests, excluding Secrets |
+| `flate:get-ks` | List all Kustomizations |
+| `flate:get-hr` | List all HelmReleases |
+
+Use `task flate:diff BASE=origin/main` to compare against another revision, or add
+`OUTPUT=html` to save a browsable diff. CI attaches both text and HTML diffs to each
+pull request. Rendering includes CRDs, excludes Secret objects and uses the pinned
+RKE2 Kubernetes version. Existing `flux-local:*` task names remain aliases.
 
 ### Kubernetes
 
@@ -104,10 +112,9 @@ password, or S3 credentials.
 
 1. Install Ubuntu 26.04 LTS with OpenSSH and temporary passwordless sudo access.
 2. Bootstrap and converge the host using `ansible/README.md`.
-3. Install FluxCD with `task flux:bootstrap`. The recovery task uses generic Git
-   bootstrap over HTTPS so the `soupbot` collaborator does not need repository
-   administration access. It places the configuration in
-   `kubernetes/clusters/$CLUSTER_NAME`.
+3. Install the committed controllers with `task flux:install`, import existing Git
+   and SOPS credentials with `task flux:bootstrap:import-secrets` as the human operator, then run
+   `task flux:bootstrap`. See `docs/rke2-operations.md` for staged application recovery.
 4. Restore fresh PVCs from S3 and validate application contents as described in
    `docs/zfs-s3-recovery.md`.
 

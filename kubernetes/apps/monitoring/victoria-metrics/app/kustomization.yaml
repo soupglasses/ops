@@ -9,5 +9,11 @@ resources:
   - ./alertmanager-smtp.sops.yaml
   - ./grafana-auth.sops.yaml
   - ./grafana-dashboard.yaml
+  - ./app-dashboard.yaml
+  - ./node-dashboard.yaml
+  - ./app-recording-rules.yaml
   - ./grafana-rbac.yaml
   - ./helmrelease.yaml
+  - ./storage-alerts.yaml
+components:
+  - ../../../../components/volsync

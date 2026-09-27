@@ -18,7 +18,7 @@ map and evidence checklist, not a claim of Canonical certification for Ubuntu 26
 | File integrity | initialized AIDE database and daily persistent timer | `aide --check`; timer status |
 | Audit | auditd, retained logs, failure actions, config/sudo/time/delete/module watches | `auditctl -l`; controlled event search |
 | Kernel/network | hardened sysctls with explicit Kubernetes/Cilium exceptions | `sysctl --system`; compare managed file |
-| Host firewall | Cilium host firewall; Ansible-owned node policy for management, cluster, BGP, and ICMP traffic | `cilium-dbg status`; Hubble verdicts; external port scan |
+| Host firewall | Cilium host firewall; Flux-owned node policy for management, cluster, BGP, and ICMP traffic | `cilium-dbg status`; Hubble verdicts; external port scan |
 | Kubernetes | RKE2 `profile: cis`, secrets encryption, protected kernel defaults | release-matched RKE2 CIS 1.12 scan |
 
 Forwarding, bridge netfilter, eBPF, user namespaces, overlayfs, and ZFS are required

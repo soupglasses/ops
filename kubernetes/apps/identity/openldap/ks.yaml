@@ -36,13 +36,13 @@ spec:
   prune: true
   postBuild:
     substitute:
-      APP: *app
+      APP: openldap-directory
       VOLSYNC_CAPACITY: 5Gi
-      # slapd runs as nobody; the mover must match to read the 0600 mdb files.
-      VOLSYNC_PUID: "65534"
-      VOLSYNC_PGID: "65534"
-      VOLSYNC_QUIESCE_TARGET_SELECTOR: app.kubernetes.io/name=openldap
-      # Not a quiesce: mdb snapshots are crash-consistent. This drops a
-      # portable LDIF dump into the volume so every snapshot carries one.
-      VOLSYNC_QUIESCE_CMD: slapcat -f /config/slapd.conf -l /config/data/dump.ldif
+      # Configuration and database are owned by the packaged ldap account.
+      VOLSYNC_PUID: "389"
+      VOLSYNC_PGID: "389"
+      VOLSYNC_QUIESCE_TARGET_SELECTOR: app.kubernetes.io/name=openldap,app.kubernetes.io/component=server
+      VOLSYNC_QUIESCE_TARGET_CONTAINER: openldap
+      # Native transaction-consistent dumps; no claim of stopping directory writes.
+      VOLSYNC_QUIESCE_CMD: /bin/sh /source/backup.sh
       VOLSYNC_RESUME_CMD: echo resume-noop

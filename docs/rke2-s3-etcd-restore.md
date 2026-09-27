@@ -40,7 +40,7 @@ Do not run `--cluster-reset` unless all of these are true:
 - the host is disposable or the current database has an independently preserved rollback copy;
 - the installed binary reports exactly `v1.34.11+rke2r1`;
 - `/etc/rancher/rke2/config.yaml` contains the original stable token and mode-`0600` S3 settings;
-- `rke2 etcd-snapshot ls --s3` lists the selected object by filename;
+- `rke2 etcd-snapshot ls` lists the selected object by filename;
 - the selected snapshot predates the incident and is compatible with the intended VolSync recovery
   points;
 - the off-cluster SOPS identities, RKE2 token, S3 credentials, and repository are independently
@@ -65,8 +65,10 @@ From `ansible/`, bootstrap and converge the clean host with the original encrypt
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
   -u sofie -e initial_ansible_host=172.21.71.254
-ansible-playbook playbooks/site.yml \
+ansible-playbook playbooks/network.yml \
   -u ansible -e initial_ansible_host=172.21.71.254
+ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops \
+  ansible-playbook playbooks/site.yml
 ```
 
 This initially creates a disposable empty control plane so Ansible can validate the pinned binary and
@@ -105,7 +107,7 @@ continuing. If physical isolation is impossible, stop and use the clean GitOps-p
 List S3 snapshots using the credentials already held in the mode-`0600` RKE2 config:
 
 ```bash
-sudo /usr/local/bin/rke2 etcd-snapshot ls --s3
+sudo /usr/local/bin/rke2 etcd-snapshot ls
 ```
 
 Record the exact filename, creation time, incident time, and reason it is considered known-good in the
@@ -204,15 +206,16 @@ Run the host checks and record their output in the recovery issue:
 ```bash
 cd ansible
 ansible-playbook playbooks/verify.yml
-ansible-playbook playbooks/verify-host-firewall.yml
 ssh router '/routing/bgp/session/print detail'
 ```
+
+After restoring Flux host-policy ownership, run `playbooks/verify-host-firewall.yml`.
 
 Also require:
 
 - the API and SSH work through new IPv4 and IPv6 connections;
 - both authenticated Cilium BGP sessions are established and only the `/32` and `/128` VIPs appear;
-- `rke2 etcd-snapshot ls --s3` succeeds and a new post-recovery snapshot uploads;
+- `rke2 etcd-snapshot ls` succeeds and a new post-recovery snapshot uploads;
 - every restored application passes a content or login test;
 - VolSync restores are proven from off-cluster data;
 - Flux resumes without pruning a recovery resource or recreating a stale volume;

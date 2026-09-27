@@ -1,0 +1,841 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-overview-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  node-overview.json: |-
+    {
+      "uid": "node-overview",
+      "title": "Node overview",
+      "description": "Host utilization with stacked Kubernetes application usage.",
+      "editable": false,
+      "schemaVersion": 41,
+      "version": 1,
+      "tags": [
+        "kubernetes",
+        "nodes"
+      ],
+      "timezone": "browser",
+      "refresh": "1m",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "graphTooltip": 1,
+      "templating": {
+        "list": [
+          {
+            "name": "node",
+            "label": "Node",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "label_values(node_uname_info{job=\"rke2-host-metrics\"}, nodename)",
+            "query": {
+              "query": "label_values(node_uname_info{job=\"rke2-host-metrics\"}, nodename)",
+              "refId": "node"
+            },
+            "refresh": 1,
+            "sort": 1,
+            "multi": false,
+            "includeAll": false,
+            "hide": 0,
+            "current": {
+              "text": "nas",
+              "value": "nas"
+            }
+          },
+          {
+            "name": "instance",
+            "label": "Instance",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "VictoriaMetrics"
+            },
+            "definition": "label_values(node_uname_info{job=\"rke2-host-metrics\",nodename=\"$node\"}, instance)",
+            "query": {
+              "query": "label_values(node_uname_info{job=\"rke2-host-metrics\",nodename=\"$node\"}, instance)",
+              "refId": "instance"
+            },
+            "refresh": 1,
+            "sort": 1,
+            "multi": false,
+            "includeAll": false,
+            "hide": 2,
+            "current": {
+              "text": "172.21.71.10:9100",
+              "value": "172.21.71.10:9100"
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "list": []
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Node overview",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 2,
+          "title": "CPU busy",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"rke2-host-metrics\",instance=\"$instance\",mode=\"idle\"}[$__rate_interval])))",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          },
+          "description": "Percentage of total node CPU capacity across all cores."
+        },
+        {
+          "id": 3,
+          "title": "Memory used",
+          "type": "stat",
+          "gridPos": {
+            "x": 6,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"rke2-host-metrics\",instance=\"$instance\"} / node_memory_MemTotal_bytes{job=\"rke2-host-metrics\",instance=\"$instance\"})",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 4,
+          "title": "Root filesystem used",
+          "type": "stat",
+          "gridPos": {
+            "x": 12,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (1 - node_filesystem_avail_bytes{job=\"rke2-host-metrics\",instance=\"$instance\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"rke2-host-metrics\",instance=\"$instance\",mountpoint=\"/\"})",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 5,
+          "title": "Uptime",
+          "type": "stat",
+          "gridPos": {
+            "x": 18,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "time() - node_boot_time_seconds{job=\"rke2-host-metrics\",instance=\"$instance\"}",
+              "legendFormat": "",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto"
+          }
+        },
+        {
+          "id": 6,
+          "title": "Applications on this node",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 5,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 7,
+          "title": "CPU by app",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 6,
+            "w": 12,
+            "h": 10
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (sum by (namespace,app) ((max by (namespace,pod,container) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[$__rate_interval])) and on (namespace,pod) max by (namespace,pod) (kube_pod_info{node=\"$node\"})) * on (namespace,pod) group_left(app) (namespace_pod:app:info or on (namespace,pod) label_replace(max by (namespace,pod) (kube_pod_info), \"app\", \"(unlabelled)\", \"pod\", \".+\"))))",
+              "legendFormat": "{{namespace}} / {{app}}",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "100 * sum(1 - rate(node_cpu_seconds_total{job=\"rke2-host-metrics\",instance=\"$instance\",mode=\"idle\"}[$__rate_interval]))",
+              "legendFormat": "Node total",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                },
+                "spanNulls": false
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Node total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none",
+                      "group": "host"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "text"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "App usage is stacked by namespace and app. The line shows total host usage. CPU: 100% equals one core. Memory: app working sets and host total minus available memory use different cache accounting."
+        },
+        {
+          "id": 8,
+          "title": "Memory by app",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 6,
+            "w": 12,
+            "h": 10
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (namespace,app) ((max by (namespace,pod,container) (container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}) and on (namespace,pod) max by (namespace,pod) (kube_pod_info{node=\"$node\"})) * on (namespace,pod) group_left(app) (namespace_pod:app:info or on (namespace,pod) label_replace(max by (namespace,pod) (kube_pod_info), \"app\", \"(unlabelled)\", \"pod\", \".+\")))",
+              "legendFormat": "{{namespace}} / {{app}}",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "node_memory_MemTotal_bytes{job=\"rke2-host-metrics\",instance=\"$instance\"} - node_memory_MemAvailable_bytes{job=\"rke2-host-metrics\",instance=\"$instance\"}",
+              "legendFormat": "Node total",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 65,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "apps"
+                },
+                "spanNulls": false
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Node total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none",
+                      "group": "host"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "text"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "App usage is stacked by namespace and app. The line shows total host usage. CPU: 100% equals one core. Memory: app working sets and host total minus available memory use different cache accounting."
+        },
+        {
+          "id": 9,
+          "title": "Storage",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 16,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 10,
+          "title": "Disk throughput",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 17,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(node_disk_read_bytes_total{job=\"rke2-host-metrics\",instance=\"$instance\",device=~\"nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+\"}[$__rate_interval])",
+              "legendFormat": "{{device}} read",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "rate(node_disk_written_bytes_total{job=\"rke2-host-metrics\",instance=\"$instance\",device=~\"nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+\"}[$__rate_interval])",
+              "legendFormat": "{{device}} write",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 11,
+          "title": "Disk busy",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 17,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * rate(node_disk_io_time_seconds_total{job=\"rke2-host-metrics\",instance=\"$instance\",device=~\"nvme[0-9]+n[0-9]+|sd[a-z]+|vd[a-z]+\"}[$__rate_interval])",
+              "legendFormat": "{{device}}",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 12,
+          "title": "Filesystem used",
+          "type": "bargauge",
+          "gridPos": {
+            "x": 0,
+            "y": 24,
+            "w": 16,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (1 - node_filesystem_avail_bytes{job=\"rke2-host-metrics\",instance=\"$instance\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"rke2-host-metrics\",instance=\"$instance\",fstype!~\"tmpfs|overlay|squashfs\"})",
+              "legendFormat": "{{mountpoint}}",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              },
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "displayMode": "gradient"
+          }
+        },
+        {
+          "id": 13,
+          "title": "ZFS pool state",
+          "type": "table",
+          "gridPos": {
+            "x": 16,
+            "y": 24,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "node_zfs_zpool_state{job=\"rke2-host-metrics\",instance=\"$instance\"} == 1",
+              "legendFormat": "",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true
+          },
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "zpool",
+                    "state"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "title": "Network",
+          "type": "row",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 29,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 15,
+          "title": "Interface throughput",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 30,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(node_network_receive_bytes_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval])",
+              "legendFormat": "{{device}} receive",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "rate(node_network_transmit_bytes_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval])",
+              "legendFormat": "{{device}} transmit",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 16,
+          "title": "Interface errors and drops",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 30,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(node_network_receive_errs_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval]) + rate(node_network_receive_drop_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval])",
+              "legendFormat": "{{device}} receive",
+              "instant": false,
+              "range": true
+            },
+            {
+              "refId": "B",
+              "expr": "rate(node_network_transmit_errs_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{job=\"rke2-host-metrics\",instance=\"$instance\",device!~\"lo|veth.*|lxc.*|cilium.*|docker.*|br-.*|cni.*\"}[$__rate_interval])",
+              "legendFormat": "{{device}} transmit",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "suffix: packets/s",
+              "min": 0,
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ],
+      "links": [
+        {
+          "title": "Application overview",
+          "url": "/d/application-overview",
+          "type": "link",
+          "targetBlank": false
+        }
+      ]
+    }

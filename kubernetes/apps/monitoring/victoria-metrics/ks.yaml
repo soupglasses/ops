@@ -15,10 +15,12 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   dependsOn:
+    - name: openebs
+      namespace: openebs-system
+    - name: volsync
+      namespace: volsync-system
     - name: cloudflare-issuers
       namespace: cert-manager
-    - name: ingress-nginx-public
-      namespace: network
     - name: prometheus-operator-crds
       namespace: monitoring
   healthChecks:
@@ -35,3 +37,10 @@ spec:
   timeout: 10m
   prune: true
   wait: true
+  postBuild:
+    substitute:
+      APP: *app
+      VOLSYNC_CAPACITY: 100Gi
+      VOLSYNC_PUID: "65534"
+      VOLSYNC_PGID: "65534"
+      VOLSYNC_SCHEDULE: 37 */6 * * *

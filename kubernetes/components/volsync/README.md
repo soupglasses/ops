@@ -16,7 +16,6 @@ Per-app PVC backup + auto-restore-on-PVC-create against a restic S3 repo.
 | `replicationsource.yaml` | RS: scheduled backup of the source PVC into restic. |
 | `replicationdestination.yaml` | RD: restores from restic into an internal volume and exposes a `latestImage` snapshot for the populator. |
 | `secret.yaml` | Restic credentials (repo URL + password + S3 creds) templated from `cluster-secrets`. |
-| `bootstrap.yaml` | One-shot Job that seeds an empty snapshot into restic on first deploy, then re-triggers the RD. Idempotent; no-ops once real backups exist. |
 
 ## Consuming app contract
 
@@ -26,19 +25,25 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 |---|---|---|
 | `APP` | required | PVC name = `${APP}`; RD name = `${APP}-dst`. |
 | `VOLSYNC_CAPACITY` | `5Gi` | PVC size. |
-| `VOLSYNC_CACHE_CAPACITY` | `5Gi` | Restic cache PVC size; metadata only, keep small. |
+| `VOLSYNC_CACHE_CAPACITY` | `5Gi` | Disposable restic cache size. |
+| `VOLSYNC_CACHE_SNAPSHOTCLASS` | `openebs-zfs` | Cache StorageClass; ZFS enforces capacity independently of the root filesystem. |
 | `VOLSYNC_STORAGECLASS` | `openebs-zfs` | Must support CSI snapshots (RS `copyMethod: Snapshot`). |
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
 | `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
 
-## Bootstrap behaviour
+## Restore before first start
 
-Volsync's populator deliberately blocks PVC binding when the RD has no
-`latestImage`. There is no upstream fallback-to-empty option ([discussion](https://github.com/backube/volsync/discussions/1414)).
-`bootstrap.yaml` works around this: on first deploy it seeds the restic repo
-with one empty snapshot, then patches the RD's `trigger.manual` to make the
-mover restore the seed and produce a `latestImage`. The PVC then binds empty,
-the app starts, and real RS backups take over from there.
+The populator blocks PVC binding until the ReplicationDestination has a `latestImage`.
+VolSync 0.15 can initialize a missing repository and publish an **empty** image when no
+snapshot matches. A Bound PVC or successful mover therefore does not prove recovery.
+This component has no empty-seed Job. OpenLDAP and Minecraft additionally check for
+their database/world files before starting; their backup hooks withhold the snapshot
+trigger when the application is unavailable or backup preparation fails.
+
+For existing applications, confirm a known-good off-cluster backup before reconciliation.
+For a genuinely new application, explicitly initialize and validate its data, take the
+first backup, then adopt this component. Never use that path to bypass missing history.
+See [the recovery sequence](../../../docs/rke2-operations.md#application-recovery).
 
 ## Gotcha: RD `latestImage` is frozen between full rebuilds
 

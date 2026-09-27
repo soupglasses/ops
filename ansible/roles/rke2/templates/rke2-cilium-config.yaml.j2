@@ -40,6 +40,12 @@ spec:
       algorithm: maglev
       mode: snat
     l7Proxy: true
+    gatewayAPI:
+      enabled: true
+      externalTrafficPolicy: Cluster
+      xffNumTrustedHops: 0
+      hostNetwork:
+        enabled: false
     envoy:
       enabled: true
     hubble:

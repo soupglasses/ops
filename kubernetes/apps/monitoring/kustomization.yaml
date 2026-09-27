@@ -13,3 +13,4 @@ resources:
   - ./victoria-metrics/ks.yaml
   - ./victoria-logs/ks.yaml
   - ./rke2-host-metrics/ks.yaml
+  - ./log-collector/ks.yaml
