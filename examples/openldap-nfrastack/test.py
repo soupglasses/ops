@@ -115,6 +115,9 @@ def main():
                       "(uid=alice)", "*", "+", identity="reader").stdout
         assert "uid: alice" in people and "memberOf:" in people
         assert all(key not in people for key in ("userPassword:", "oathSecret:", "pwdHistory:"))
+        suffix_search = ldap("ldapsearch", "-LLL", "-b", SUFFIX,
+                             "(uid=alice)", "uid", "entryUUID", identity="reader").stdout
+        assert "uid: alice" in suffix_search and "entryUUID:" in suffix_search
         otp = ldap("ldapsearch", "-LLL", "-b", f"uid=mfa,ou=users,{SUFFIX}",
                    "-s", "base", "oathSecret", identity="reader").stdout
         assert "oathSecret:" not in otp
@@ -180,6 +183,55 @@ def main():
         assert served_serial() == expected and expected != original
         verify()
         print("PASS: certificate replacement + local reload serves the renewed certificate", flush=True)
+
+    def verify_watcher():
+        certs = root / "certs"
+        previous = certs / "projected-old"
+        renewed = certs / "projected-new"
+        previous.mkdir()
+        renewed.mkdir()
+        for filename in ("tls.crt", "tls.key"):
+            shutil.copyfile(certs / filename, previous / filename)
+            (certs / filename).unlink()
+            (certs / filename).symlink_to(f"..data/{filename}")
+        (certs / "..data").symlink_to(previous.name)
+        run("docker", "run", "-d", "--name", name + "-tls", "--network", "none",
+            "--user", "389:389", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+            "--read-only", "--entrypoint", "/bin/sh",
+            "-v", f"{root / 'run'}:/run/openldap", "-v", f"{certs}:/certs:ro",
+            "-v", f"{HERE / 'reload-tls.sh'}:/source/reload-tls.sh:ro",
+            IMAGE, "/source/reload-tls.sh")
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            if 'modifying entry "cn=config"' in run("docker", "logs", name + "-tls").stdout:
+                break
+            time.sleep(1)
+        else:
+            raise AssertionError("certificate watcher did not initialize")
+        run("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "2",
+            "-subj", "/CN=ldap.finnes.dev", "-addext", "subjectAltName=DNS:ldap.finnes.dev",
+            "-keyout", str(renewed / "tls.key"), "-out", str(renewed / "tls.crt"))
+        (renewed / "tls.key").chmod(0o644)
+        (certs / "ca.crt").write_text((previous / "tls.crt").read_text()
+                                     + (renewed / "tls.crt").read_text())
+        # Match Kubernetes' atomic projected-Secret directory switch.
+        (certs / "..data-new").symlink_to(renewed.name)
+        (certs / "..data-new").replace(certs / "..data")
+        expected = run("openssl", "x509", "-in", str(renewed / "tls.crt"),
+                       "-noout", "-serial").stdout
+        deadline = time.monotonic() + 45
+        while time.monotonic() < deadline:
+            cert = run("docker", "exec", name, "openssl", "s_client", "-connect",
+                       "ldap.finnes.dev:636", "-servername", "ldap.finnes.dev", "-CAfile",
+                       "/certs/ca.crt", "-verify_return_error", data="").stdout
+            if run("openssl", "x509", "-noout", "-serial", data=cert).stdout == expected:
+                break
+            time.sleep(2)
+        else:
+            raise AssertionError("watcher did not serve projected certificate within 45 seconds")
+        run("docker", "rm", "-f", name + "-tls")
+        verify()
+        print("PASS: isolated certificate watcher follows projected-Secret symlink rotation", flush=True)
 
     try:
         run("docker", "network", "create", "--internal", network)
@@ -339,8 +391,10 @@ o: Finnes test
         assert sorted(identities_before.splitlines()) == sorted(identities_prepared.splitlines())
         print("PASS: one-time restricted preparation imports old data with identical account/group UUIDs",
               flush=True)
+        verify_watcher()
         successful = True
     finally:
+        run("docker", "rm", "-f", name + "-tls", check=False)
         run("docker", "rm", "-f", name, check=False)
         run("docker", "network", "rm", network, check=False)
         if successful and args.keep:

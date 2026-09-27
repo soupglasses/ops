@@ -13,8 +13,10 @@ suffix, Canaille OAuth schema, OTP support, memberOf/refint, and password polici
 
 The [upstream image](https://github.com/nfrastack/container-openldap) supplies the
 OpenLDAP binaries and modules. Its `/init` entrypoint needs root and capabilities
-that the cluster's restricted Pod Security policy rejects. Preparation uses that
-entrypoint once in isolated Docker; the steady-state runtime runs the packaged
+that the cluster's restricted Pod Security policy rejects. The Docker drill tests
+that initializer for compatibility, then also tests `prepare.sh`: a one-time,
+rootless conversion of `prepare.conf` using packaged `slaptest` and `slapadd`.
+Kubernetes preparation uses this rootless path. The steady-state runtime runs the packaged
 `slapd` directly as UID/GID 389, with no privilege escalation, no capabilities, and
 a read-only root filesystem. No replacement image or recurring data-layout shim
 is required.
@@ -26,7 +28,11 @@ Changes to `bootstrap/*.ldif` apply to **new configuration only**, not an existi
 PVC. Future policy changes require reviewed `ldapmodify` operations or offline
 configuration migration, followed by export and a restore drill. Image upgrades
 must rerun this example against the candidate digest; do not assume `/init` will
-upgrade persisted configuration.
+upgrade persisted configuration. Administrator password rotation also needs an
+explicit update of persisted `olcRootPW` using a maintenance job; changing the
+Kubernetes Secret and restarting no longer rotates it. Keep that operation coupled
+to the credential change and a fresh native configuration backup. The restricted
+certificate reloader deliberately cannot change administrator credentials.
 
 ## Run the migration drill
 
@@ -106,8 +112,9 @@ During isolated preparation, upstream briefly opens an LDAP listener on loopback
 Membership of `cn=ldap-readers,ou=groups,dc=finnes,dc=dev` grants selected identity
 attributes under `ou=users` and membership attributes under `ou=groups`. Configure
 Nextcloud with those separate search bases, `ldaps://ldap.finnes.dev:636`, and a
-bind DN such as `uid=nextcloud,ou=system,dc=finnes,dc=dev`. A suffix-wide search is
-intentionally not granted. Service accounts use the existing
+bind DN such as `uid=nextcloud,ou=system,dc=finnes,dc=dev`. Suffix-based searches are
+also supported, but expose only the suffix entry and
+these allowed user/group attributes. Service accounts use the existing
 `cn=system,ou=policies,dc=finnes,dc=dev` password policy; they cannot change their own
 password. RootDN still has administrative access for existing Canaille/Terraform.
 
@@ -152,8 +159,9 @@ A production migration must preserve the existing data and recoverability:
    startup guard: an empty recovery must fail rather than create an empty directory.
 4. Adapt the standard VolSync component to protect the whole new `/data` layout,
    including both native exports (`slapcat -F /data/config -n 0` and `-n 1`).
-   Quiesce writes and publish the pair only after both exports succeed; withhold
-   backup triggers on failure. Update mover ownership to 389 and use the existing
+   Publish the pair only after both exports succeed; withhold
+   backup triggers on failure. LMDB supplies transaction-consistent native exports;
+   do not race configuration migrations with backup. Update mover ownership to 389 and use the existing
    `ReplicationDestination`/PVC `dataSourceRef` restore contract. Preserve retention,
    off-cluster storage, and failed/stale backup alerts.
 5. Restore the **new off-cluster backup** into another PVC. Verify real account

@@ -21,7 +21,7 @@ olcTLSCertificateKeyFile: /certs/tls.key
 EOF
 }
 
-if [ "${1:-}" = "--once" ]; then
+if [ "$#" -gt 0 ] && [ "$1" = "--once" ]; then
     reload
     exit
 fi
