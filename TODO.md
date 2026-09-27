@@ -375,3 +375,6 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [ ] Run the complete replacement-host Ansible bootstrap in a disposable host drill.
   Local etcd/restic recovery tests do not prove network handoff, host provisioning and
   all application recovery together. Do not reset the production node to test this.
+- [x] Deploy volume-aware encrypted etcd backups and repeat the live restore drill.
+  Recovery point `7917b209` passed matching SHA-256 and native validation; temporary
+  plaintext and verification Pod were removed. Backup timer and Flux remain healthy.

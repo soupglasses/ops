@@ -249,3 +249,11 @@ Temporary containers and plaintext fixtures were removed. Only ZFS identities we
 mocked in that isolated native drill; real node dataset discovery and read-only ZFS
 queries under the service's restricted capabilities were also checked independently.
 A complete replacement-host bootstrap remains a separate drill, tracked in TODO.md.
+
+The deployed job completed a fresh encrypted backup and native restore check at
+2026-09-27 13:12 UTC: restic snapshot `7917b209`, matching source/restored SHA-256
+`59a3ee55c0459678a5fb92419f2e9b7e12bd67b212ff44c107ac88c32839917d`,
+revision 2,234,622 and 2,401 keys. The inventory collector successfully resolved all
+ten Bound PVCs on the node, including retained migration and cache volumes. The
+verification Pod and new plaintext snapshot were removed; the timer remained active.
+The node and all non-suspended Flux Kustomizations were Ready after the reboot.
