@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# Preserve the pre-migration directory until replacement acceptance is complete.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openldap
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  dataSourceRef:
+    kind: ReplicationDestination
+    apiGroup: volsync.backube
+    name: openldap-dst
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: openebs-zfs
+---
+# Keep the validated preparation copy through acceptance as well. Neither rollback
+# claim is mounted by the running server or used as the source of new backups.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openldap-nfrastack-stage
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: openebs-zfs

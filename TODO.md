@@ -191,6 +191,20 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   VIP. Both nginx controllers and all Ingress resources are removed. ExternalDNS
   follows Services and HTTPRoutes. Public application checks passed over IPv4 and
   IPv6, with backend isolation and management access preserved.
+- [x] **Cut over OpenLDAP to the tested Nfrastack runtime.** Production uses
+  `openldap-directory` with native config/data exports and UID/GID 389 movers.
+  Restored and validated a real off-cluster backup before cutover; archived the
+  pinned image for recovery. UUIDs and login names were preserved. Canaille and
+  Flux are healthy and the first production-volume backup succeeded. See the
+  [migration evidence](docs/openldap-nfrastack-migration.md). Removed the one-time
+  example system after migration; production and recovery configuration remain.
+- [ ] **Retire LDAP rollback volumes after acceptance.** Original `openldap` and
+  `openldap-nfrastack-stage` claims remain Flux-managed with pruning disabled.
+  Preserve current recovery points before removing these frozen copies.
+- [ ] **Reduce remaining LDAP administrative access.** Canaille still binds as
+  rootDN; the Terraform admin-group membership ownership bug needs a separate fix.
+  Review the existing backup controller's namespace-wide `pods/exec` permission
+  when narrowing backup permissions across applications.
 - [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
   `components/ldap-account` + `tofu/ldap/service-account` (design in
   `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
