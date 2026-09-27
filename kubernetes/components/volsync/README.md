@@ -31,6 +31,42 @@ Set these in the app's `ks.yaml` `postBuild.substitute`:
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
 | `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
 
+## Run backups before maintenance
+
+From the repository root, trigger every scheduled restic ReplicationSource and wait:
+
+```bash
+task volsync:replication-sync
+```
+
+The command shows each application's progress and a periodic completion count. It
+waits for any existing run to finish before requesting a fresh backup, and returns
+success only after every requested run reports a newer successful completion.
+The default timeout is thirty minutes for the batch. To change it or select one
+namespace:
+
+```bash
+task volsync:replication-sync TIMEOUT=1h
+task volsync:replication-sync -- --namespace identity
+```
+
+Paused sources, non-restic sources, missing schedules and existing manual overrides
+are reported as errors. On completion, failure, timeout or interruption, the helper
+removes only its own manual trigger and preserves schedules. Interruption does not
+cancel controller jobs; existing quiesce watchers remain responsible for resuming
+applications. A nonzero exit means the batch is not a completed recovery checkpoint.
+
+This uses VolSync's [manual-trigger API](https://volsync.readthedocs.io/en/stable/usage/triggers.html)
+through `kubectl`. The native `kubectl volsync replication sync` manages saved rsync
+relationships and reapplies their configuration; it does not target these Git-managed
+restic sources. Application quiesce hooks, snapshots, uploads and retention remain
+owned by the existing controllers.
+
+This command confirms backup execution, not restorability. Before a destructive
+recovery drill, verify application restores and independently preserved recovery keys,
+then run `task ansible:backup-etcd` for Kubernetes state. See the
+[bootstrap guide](../../../docs/cluster-bootstrap.md). These commands do not reset RKE2.
+
 ## Restore before first start
 
 The populator blocks PVC binding until the ReplicationDestination has a `latestImage`.
@@ -74,3 +110,23 @@ task volsync:restore-at APP=minecraft AT=2026-05-01T12:00:00Z
 Switching to `trigger.schedule` would refresh automatically at the cost of an
 extra restore cycle per period; we accept the trade because cluster-rebuild
 is the actual disaster scenario and PVC-only recovery is rare and scripted.
+
+## Manual backup validation
+
+On 2026-09-27, the bulk task completed fresh backups for Minecraft, OpenLDAP,
+VictoriaLogs and VictoriaMetrics in about 36 seconds. All four reported successful
+new completion times, their original schedules remained, and no temporary manual
+triggers remained. A scoped monitoring run also verified mover waiting/running
+progress. Fourteen local tests cover failures, stale status, concurrency and cleanup.
+
+The fresh OpenLDAP snapshot `e9a1c0ff` was restored into an isolated memory-backed
+Pod. Its native database export exactly matched the paired backup export: 89 entries,
+including four `inetOrgPerson` entries, with SHA-256
+`3a6f4e5ffae23f300c76094ce6de638629a705459392988837282aa17fd61f1a`.
+The Pod and plaintext were removed afterward. This verifies that recovery point;
+other applications still need application-level restore checks before a destructive drill.
+
+For standalone restic checks, VolSync's `backup .` stores relative volume contents:
+restore `config/`, `db/` and `backup/` into the chosen data directory, without an extra
+`data/` archive prefix. Assert required files exist before native validation; a restore
+whose include filters match nothing can still exit successfully.

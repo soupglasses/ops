@@ -14,6 +14,26 @@ restores volume data, not container images. Registry access or a tested artifact
 is therefore also required. The inventory and tool configuration define supported versions; this guide deliberately
 leaves version selection there.
 
+## Before a planned recovery drill
+
+Create fresh application backups and then a separate encrypted etcd backup:
+
+```bash
+task volsync:replication-sync
+task ansible:backup-etcd
+```
+
+The VolSync task shows per-app progress, waits for all new backups, and returns
+nonzero if any source fails or times out. `TIMEOUT=1h` extends the default batch
+limit; normal backup schedules and application preparation hooks remain in place.
+The etcd task also restores and validates its encrypted backup before succeeding.
+Neither command deletes data or resets the cluster.
+
+A completed upload alone is insufficient preparation for destruction. Validate
+application restores, preserve the recovery keys independently, and keep rollback
+data until the replacement cluster passes the checks below. See
+[manual VolSync backups](../kubernetes/components/volsync/README.md#run-backups-before-maintenance).
+
 ## 1. Prepare the replacement host and workstation
 
 Install a supported Ubuntu release, enable SSH and confirm the administrator can use

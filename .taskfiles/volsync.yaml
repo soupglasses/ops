@@ -6,8 +6,13 @@ version: "3"
 
 set: [pipefail]
 
-# All tasks accept NS=<namespace> (default: default).
+# Restore tasks accept NS=<namespace> (default: default).
 tasks:
+  replication-sync:
+    desc: Trigger all scheduled restic backups and show progress until completion [TIMEOUT=30m]
+    cmd: python3 scripts/volsync-replication-sync.py --timeout {{.TIMEOUT | default "30m" | shellQuote}}
+      {{.CLI_ARGS}}
+
   zfs-inspect:
     desc: Inspect a restored PVC's ZFS origin [-- PVC --namespace NS]
     cmd: python3 scripts/zfs-clone.py inspect {{.CLI_ARGS}}

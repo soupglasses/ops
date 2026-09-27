@@ -380,3 +380,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Deploy volume-aware encrypted etcd backups and repeat the live restore drill.
   Recovery point `7917b209` passed matching SHA-256 and native validation; temporary
   plaintext and verification Pod were removed. Backup timer and Flux remain healthy.
+
+- [x] Validate `task volsync:replication-sync` live: trigger all scheduled restic
+  sources, show progress, require fresh completion, and preserve schedules/hooks.
+  All four sources completed with schedules preserved; a scoped run verified mover
+  progress. Fresh LDAP snapshot `e9a1c0ff` passed isolated native restore/export
+  comparison (89 entries); temporary Pod and plaintext were removed.
