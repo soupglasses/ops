@@ -169,6 +169,18 @@
   ],
   customManagers: [
     {
+      description: "Kubernetes editor schemas follow the grouped RKE2 release",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "yaml-language-server: \\$schema=https://raw\\.githubusercontent\\.com/yannh/kubernetes-json-schema/[^/]+/(?<currentValue>v\\d+\\.\\d+\\.\\d+)[/-]"
+      ],
+      depNameTemplate: "rancher/rke2",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>\\d+\\.\\d+\\.\\d+)\\+rke2r\\d+$",
+      versioningTemplate: "semver"
+    },
+    {
       description: "Vector image tag and digest, keeping its version label valid",
       customType: "regex",
       managerFilePatterns: [

@@ -36,6 +36,12 @@ organized into namespaced groups under `.taskfiles/`:
 task --list
 ```
 
+Run `mise exec -- task check` to run every pre-commit check on tracked files.
+The separate Pre-commit Checks workflow runs the same task for pull requests and
+pushes to main. Commit signature verification remains a local pre-push hook.
+After changing the RKE2 version, run `mise exec -- task schemas:update` to align
+Kubernetes editor schema comments. The checks reject stale versions.
+
 ### Host and RKE2
 
 | Task | Description |

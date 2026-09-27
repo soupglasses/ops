@@ -32,6 +32,14 @@ includes:
     dir: .
 
 tasks:
+  check:
+    desc: Run all configured pre-commit checks on tracked files
+    cmd: pre-commit run --all-files --hook-stage pre-commit {{.CLI_ARGS}}
+
+  schemas:update:
+    desc: Align Kubernetes editor schema comments with the RKE2 inventory
+    cmd: python3 scripts/kubernetes-schema-headers.py --write
+
   hermes:deploy-keys:
     desc: Install or renew Kubernetes credentials in an existing Hermes container
     silent: true

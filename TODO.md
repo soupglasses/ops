@@ -262,6 +262,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Renovate / PR hygiene
 
+- [x] Run every configured pre-commit check through `task check` and a separate
+  GitHub workflow on pull requests and pushes to main.
+- [x] Align Kubernetes editor schemas with RKE2 updates and check for stale pins.
+  Correct the generated Flux formatting exclusion, add its upstream license
+  attribution, and validate its CRDs against version-matched Kubernetes OpenAPI.
+
 - [x] Audit migration dependencies with Renovate extraction and update fixtures.
   Couple RKE2 checksums, Gateway CRDs and runtime/restore image pins. Derive the
   Cilium validation schema from the selected RKE2 release.

@@ -38,6 +38,20 @@ KUBECONFORM_ARGS=(
     -summary
 )
 
+schema_dir="$(mktemp -d)"
+trap 'rm -rf "$schema_dir"' EXIT
+
+# The community catalog omits CRDs themselves; validate those against the
+# selected Kubernetes release's own OpenAPI definitions.
+if grep -q '^kind: CustomResourceDefinition$' "$@"; then
+    curl --fail --silent --show-error --max-time 30 \
+        "https://raw.githubusercontent.com/kubernetes/kubernetes/v${KUBE_VERSION}/api/openapi-spec/swagger.json" \
+        | yq -e -o=json \
+            '.definitions."io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition" as $root | $root * {"definitions": .definitions}' \
+        >"$schema_dir/customresourcedefinition_v1.json"
+    KUBECONFORM_ARGS+=("-schema-location=$schema_dir/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json")
+fi
+
 # This CRD is missing from the catalog. Extract its schema from the versioned
 # upstream definition instead of maintaining a copy in this repository.
 if grep -q '^kind: CiliumGatewayClassConfig$' "$@"; then
@@ -49,8 +63,6 @@ if grep -q '^kind: CiliumGatewayClassConfig$' "$@"; then
     CILIUM_SCHEMA_VERSION="v$(curl --fail --silent --show-error --max-time 30 \
         "https://raw.githubusercontent.com/rancher/rke2-charts/main/assets/rke2-cilium/rke2-cilium-${CILIUM_CHART_VERSION}.tgz" \
         | tar -xzO rke2-cilium/Chart.yaml | yq -er '.appVersion')"
-    schema_dir="$(mktemp -d)"
-    trap 'rm -rf "$schema_dir"' EXIT
     curl --fail --silent --show-error --max-time 30 \
         "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml" \
         | yq -e -o=json '.spec.versions[] | select(.name == "v2alpha1") | .schema.openAPIV3Schema' \

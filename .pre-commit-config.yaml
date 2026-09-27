@@ -20,6 +20,13 @@ repos:
         language: system
         files: ^kubernetes/.*\.ya?ml$
         stages: [pre-commit]
+      - id: kubernetes-schema-headers
+        name: Kubernetes schema headers match RKE2
+        entry: python3 scripts/kubernetes-schema-headers.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
       - id: reuse
         name: reuse
         entry: reuse

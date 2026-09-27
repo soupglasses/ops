@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.33.2/service-v1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.36.4/service-v1.json
 apiVersion: v1
 kind: Service
 metadata:

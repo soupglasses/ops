@@ -13,6 +13,7 @@ changes. Node upgrades remain explicit maintenance through `task ansible:upgrade
 |---|---|
 | RKE2 | Version and Linux amd64 archive SHA256 change together using the published release checksum attachment. Numeric `rke2rN` revisions are ordered as builds. |
 | Cilium | Remains bundled with RKE2. Kubeconform reads the selected release's chart metadata to use its exact Cilium schema. |
+| Kubernetes schemas | Kubeconform derives the Kubernetes version from RKE2. Renovate groups editor schema comments with that release; `task schemas:update` synchronizes manual updates and the pre-commit check rejects stale pins. Generated CRDs use that Kubernetes release's OpenAPI schema. |
 | Gateway API | All six CRD URLs carry the same release tag and immutable commit. Renovate updates both parts together. |
 | VictoriaMetrics, VictoriaLogs, Minecraft | Runtime and restore guard use the same pinned image. Each application's chart and image updates share a proposal. |
 | Vector | A coupled regex updates its separate tag and digest fields. The chart also uses the tag as a Kubernetes label, so it must remain a plain version. |
