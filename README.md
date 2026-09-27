@@ -48,6 +48,10 @@ Kubernetes editor schema comments. The checks reject stale versions.
 |---|---|
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
+| `rke2:bootstrap` | Configure a replacement host and hand recovery to Flux |
+| `rke2:bootstrap RESTORE=latest` | Restore encrypted etcd first, requiring preserved application datasets |
+| `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
+| `ansible:backup-etcd` | Run and restore-verify an encrypted etcd backup |
 | `ansible:check` | Preview host changes |
 | `ansible:apply` | Maintain Ubuntu and the pinned RKE2 version |
 | `ansible:network` | Explicit network setup or maintenance |
@@ -88,9 +92,23 @@ RKE2 Kubernetes version.
 
 | Task | Description |
 |---|---|
-| `kube:clean-pods` | Delete all Failed/Pending/Succeeded pods |
+| `kube:kubeconfig` | Fetch and verify the RKE2 administrator kubeconfig |
+| `kube:clean-pods` | Delete Failed/Succeeded pods, preserving Pending restores |
 | `kube:fetch-agekey` | Fetch age key from the cluster |
-| `talos:shell` | Spawn a temporary root shell on a node |
+| `kube:shell NODE=nas` | Spawn a temporary root shell on a node |
+
+Bootstrap and the resumed Flux handoff run pod cleanup automatically after Flux
+reconciliation, using the host connection without requiring a local kubeconfig.
+
+### Backups
+
+Run `task volsync:replication-sync` to trigger fresh backups for all scheduled restic
+sources, display progress, and wait for every backup to complete. Use `TIMEOUT=1h`
+for a longer wait or `-- --namespace identity` to limit the selection. Existing
+schedules remain intact. This is separate from the encrypted etcd backup above;
+backup completion alone does not prove restorability.
+
+See the [VolSync guide](kubernetes/components/volsync/README.md) for details.
 
 ### License
 
@@ -98,6 +116,9 @@ RKE2 Kubernetes version.
 |---|---|
 | `license:mit` | License files as MIT |
 | `license:0bsd` | License files as 0BSD |
+| `license:apache2` | License files as Apache-2.0 |
+
+Pass file paths after `--`, for example `task license:apache2 -- path/to/file`.
 
 ## Getting started on a new controller
 
@@ -110,6 +131,8 @@ cd ansible
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/ansible-galaxy collection install -r requirements.yml
+cd ..
+export PATH="$PWD/ansible/.venv/bin:$PATH"
 ```
 
 Never treat the cluster as the only copy of its age identity, RKE2 token, restic
@@ -117,13 +140,18 @@ password, or S3 credentials.
 
 ## Recover the cluster
 
-1. Install Ubuntu 26.04 LTS with OpenSSH and temporary passwordless sudo access.
-2. Bootstrap and converge the host using `ansible/README.md`.
-3. Install the committed controllers with `task flux:install`, import existing Git
-   and SOPS credentials with `task flux:bootstrap:import-secrets` as the human operator, then run
-   `task flux:bootstrap`. See `docs/rke2-operations.md` for staged application recovery.
-4. Restore fresh PVCs from S3 and validate application contents as described in
-   `docs/zfs-s3-recovery.md`.
+Follow the [step-by-step bootstrap guide](docs/cluster-bootstrap.md) for prerequisites,
+inventory, recovery keys and post-bootstrap checks.
+
+1. Install a supported Ubuntu release with OpenSSH and temporary passwordless sudo access.
+2. Review the Ansible inventory and choose recovery mode. Run `task rke2:bootstrap`
+   for a fresh control plane with Flux/VolSync recovery. Use `RESTORE=latest` or a
+   known-good snapshot ID only when preserving the application datasets required by
+   the encrypted etcd backup.
+3. Fetch access with `task kube:kubeconfig`, then watch `flux get kustomizations -A --watch`
+   and `kubectl get pods -A --watch` as applications recover.
+4. Validate restored application contents before removing rollback copies. The guide
+   also covers resuming a failed Flux handoff and renewing Hermes access.
 
 ## Recovery
 
