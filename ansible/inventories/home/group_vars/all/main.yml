@@ -35,8 +35,8 @@ zfs_create_dataset: true
 nvidia_driver_package: ""
 
 # Renovate updates this release and its Linux amd64 archive checksum together.
-rke2_version: v1.35.8+rke2r1
-rke2_tarball_sha256: 805f26f1e7e875b7721515d7a3e55b79b86124252a8c9191f5fc3f06523af26f
+rke2_version: v1.37.0+rke2r1
+rke2_tarball_sha256: 57eed94ca59e1245234ad1f97d84a29a31c0b02a59760af3b7d4338c40d5b513
 rke2_cluster_cidrs:
   - 10.42.0.0/16
   - fd94:a259:ebb8:4200::/56

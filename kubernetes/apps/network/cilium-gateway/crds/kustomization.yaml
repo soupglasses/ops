@@ -6,11 +6,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # Keep standard and experimental CRDs on the same compatible release.
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml # v1.4.1
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_gateways.yaml # v1.4.1
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml # v1.4.1
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml # v1.4.1
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml # v1.4.1
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml # v1.6.2
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/standard/gateway.networking.k8s.io_gateways.yaml # v1.6.2
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml # v1.6.2
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml # v1.6.2
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml # v1.6.2
   # Cilium's backend watcher requires TLSRoute even for HTTP-only gateways.
   # https://github.com/cilium/cilium/issues/47819
-  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/477d172e6ac5eccb82b65781ddb8f924afec4170/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml # v1.4.1
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/ca6c2a65454737236fb7a937bd9b17e42b07e9de/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml # v1.6.2
