@@ -98,10 +98,15 @@ The first live run completed at `2026-09-27T11:00:20Z` on RKE2 `v1.35.8+rke2r1`:
   `ecb9d9cd25f5249b7f7e1851a92124439993a097295ecde6d87405d616e6b3fc`.
 - Native validation: revision `2184007`, `2214` keys, `48631808` bytes,
   database hash `3053146087`; checked with etcdutl `3.6.14`.
-- Local original:
-  `/var/lib/rancher/rke2/server/db/snapshots/encrypted-12f931b8f253-nas-1790506764`.
+- Local plaintext original was deleted after successful encrypted restore verification
+  at the operator's request; absence was checked over SSH.
 
 The incorrect-password test, full repository data check and exact-ID restore all
 passed. The helper exited successfully and deleted its temporary pod. Security and
 resilience reviews covered the implementation and recovery documentation; the restore
 evidence validates retrieval and native readability, not a control-plane replacement.
+
+After plaintext cleanup, Gitleaks 8.30.1 scanned the two backup commits
+(`cbdedf9..66548ac`) and reported no leaks. The encrypted etcd backup necessarily
+contains Kubernetes Secrets when decrypted; this check concerns exposed secrets in
+Git, not removal of required recovery data from the encrypted backup.
