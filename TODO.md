@@ -120,9 +120,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
   pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
   IPv6 pod CIDR. Flux owns the post-bootstrap Cilium policy resources.
-- [ ] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.34.11+rke2r1`.
-  Confirm fresh S3/etcd backups and the recovery token, then upgrade one Kubernetes
-  minor at a time with the Ansible upgrade playbook and full post-upgrade verification.
+- [x] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.35.8+rke2r1`.
+  Renovate can propose coupled release/checksum updates without dashboard approval.
+  Maintenance requires recovery and release review, rejects interrupted upgrades and
+  unsupported Cilium transitions, and checks the bundled network rollout. See
+  [RKE2 operations](docs/rke2-operations.md) for Cilium preflight and recovery.
 - [x] **Use static node addresses.** Ansible configures native systemd-networkd with
   `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`; the DHCP reservation remains only
   as collision protection.

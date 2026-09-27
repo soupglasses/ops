@@ -44,7 +44,7 @@ tasks:
       - ansible-playbook playbooks/site.yml
 
   upgrade:
-    desc: Upgrade to the pinned RKE2 version after independent-backup preflight
+    desc: Upgrade pinned RKE2 and bundled Cilium after recovery and release preflight
     env:
       ANSIBLE_VARS_ENABLED: host_group_vars
     cmds:

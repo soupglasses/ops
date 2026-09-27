@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# RKE2 embeds chartContent; spec.version is empty for its bundled charts.
+- name: Wait for the embedded target Cilium chart to reach the Helm controller
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ kubectl_argv | map('quote') | join(' ') }} -n kube-system get {{ item }} \
+      -o '{{ upgrade_content_paths[item] }}' | base64 --decode | tar -xzOf - rke2-cilium/Chart.yaml
+  args:
+    executable: /bin/bash
+  vars:
+    upgrade_content_paths:
+      helmchart/rke2-cilium: 'jsonpath={.spec.chartContent}'
+      configmap/chart-content-rke2-cilium: 'jsonpath={.data.rke2-cilium\.tgz\.base64}'
+  loop:
+    - helmchart/rke2-cilium
+    - configmap/chart-content-rke2-cilium
+  register: upgrade_chart_metadata
+  changed_when: false
+  retries: 60
+  delay: 5
+  until: >-
+    upgrade_chart_metadata.rc == 0 and (upgrade_chart_metadata.stdout | from_yaml).version | string ==
+    upgrade_cilium_chart | string
+
+- name: Read when the Helm controller published the chart content
+  ansible.builtin.command:
+    argv: "{{ kubectl_argv + ['-n', 'kube-system', 'get', 'configmap/chart-content-rke2-cilium', '-o',
+      'jsonpath={.metadata.managedFields}'] }}"
+  register: upgrade_content_fields
+  changed_when: false
+
+- name: Record the latest chart content publication time
+  ansible.builtin.set_fact:
+    upgrade_content_time: "{{ upgrade_content_fields.stdout | from_json | selectattr('fieldsV1.f:data',
+      'defined') | map(attribute='time') | sort | last }}"
+
+# A chart revision can change without changing appVersion or workload images.
+- name: Wait for the completed Helm job for the target chart
+  ansible.builtin.command:
+    argv: "{{ kubectl_argv + ['-n', 'kube-system', 'get', 'job/helm-install-rke2-cilium', '-o', upgrade_job_jsonpath]
+      }}"
+  vars:
+    upgrade_job_jsonpath: 'jsonpath={.metadata.uid} {.status.conditions[?(@.type=="Complete")].status}
+      {.metadata.creationTimestamp} {.metadata.deletionTimestamp}'
+  register: upgrade_cilium_job
+  changed_when: false
+  retries: 60
+  delay: 5
+  until:
+    - upgrade_cilium_job.rc == 0
+    - upgrade_cilium_job.stdout.split() | length == 3
+    - upgrade_cilium_job.stdout.split()[1] == 'True'
+    - upgrade_cilium_job.stdout.split()[2] >= upgrade_content_time
+    - (upgrade_cilium_previous_chart == upgrade_cilium_chart | string) or (upgrade_cilium_job.stdout.split()[0]
+      != upgrade_cilium_previous_job.stdout.split()[0])
+
+# An old healthy DaemonSet is not proof that the new Helm release has been applied.
+- name: Wait for agent and operator templates to reference the target Cilium version
+  ansible.builtin.command:
+    argv: "{{ kubectl_argv + ['-n', 'kube-system', 'get', item, '-o', 'jsonpath={.spec.template.spec.containers[0].image}']
+      }}"
+  loop:
+    - daemonset/cilium
+    - deployment/cilium-operator
+  register: upgrade_cilium_image
+  changed_when: false
+  retries: 60
+  delay: 5
+  until: "upgrade_cilium_image.rc == 0 and (upgrade_cilium_image.stdout is search(':v' + (upgrade_cilium_target
+    | regex_escape) + '(?:@|$)'))"
+
+- name: Wait for bundled Cilium workloads to finish rolling out
+  ansible.builtin.command:
+    argv: "{{ kubectl_argv + ['-n', 'kube-system', 'rollout', 'status', item, '--timeout=300s'] }}"
+  loop:
+    - daemonset/cilium
+    - deployment/cilium-operator
+    - daemonset/cilium-envoy
+  changed_when: false
+
+- name: Require healthy Cilium controllers and connectivity
+  ansible.builtin.command:
+    argv: "{{ kubectl_argv + ['-n', 'kube-system', 'exec', 'daemonset/cilium', '--', 'cilium-dbg', 'status',
+      '--all-health', '--all-controllers'] }}"
+  changed_when: false
