@@ -11,11 +11,11 @@ The Nfrastack replacement runs the maintained OpenLDAP binaries directly as UID/
 standard configuration into persistent `cn=config`; normal starts need no root
 initializer, custom image, or repeated data conversion.
 
-The complete runnable [example](../examples/openldap-nfrastack/README.md) includes
-Docker migration tests, a Kubernetes preparation renderer, native import scripts,
-and live candidate validation. Production resources are in
-[the application directory](../kubernetes/apps/identity/openldap/app), with the
-standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/ks.yaml).
+Production resources are in [the application directory](../kubernetes/apps/identity/openldap/app),
+with standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/ks.yaml).
+The one-time migration harness was removed after validation; its scripts and test
+fixtures remain in Git history at `f8945a9`. Recovery uses the backed-up native
+configuration and directory, not those migration fixtures.
 
 ## Runtime contract
 
@@ -57,8 +57,8 @@ It does not expose password hashes, OTP secrets, OAuth data, or write access.
 Suffix-based searches remain supported through a narrow suffix-entry ACL.
 
 New applications should use `entryUUID` as their stable identity key and `uid` for
-human login names. Existing account DNs are unchanged. Nextcloud mapping settings
-are documented in the example; no Nextcloud deployment exists in this repository.
+human login names. Existing account DNs are unchanged. No Nextcloud deployment
+exists in this repository.
 Canaille still uses its existing administrative bind. Its privilege scope and the
 Terraform admin-membership ownership issue remain separate follow-up work.
 
@@ -129,7 +129,7 @@ contents and binds after restoration. A Bound PVC is not proof of usable data.
 If native import is needed, restore `backup/current/config.ldif` with `slapadd -n 0`
 and `backup/current/directory.ldif` with `slapadd -n 1` into empty target directories,
 using the pinned image and the same `/var/lib/openldap` database mount. Never import
-into the only known-good copy. The runnable Docker drill exercises this path.
+into the only known-good copy. This native import path passed the migration drill.
 
 The archived image is a standard Docker image archive for the cluster's amd64
 architecture. Verify `SHA256SUMS`, load it with `docker load`, then publish it to a
