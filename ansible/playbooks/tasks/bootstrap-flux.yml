@@ -1,0 +1,163 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install committed Flux controllers through the host Kubernetes client
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: >-
+      {{ lookup('ansible.builtin.file', playbook_dir + '/../../kubernetes/clusters/home/flux-system/gotk-components.yaml')
+      }}
+  changed_when: true
+
+- name: Wait for Flux controllers
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - flux-system
+      - rollout
+      - status
+      - "deployment/{{ item }}"
+      - --timeout=180s
+  loop: [source-controller, kustomize-controller, helm-controller]
+  changed_when: false
+
+# Lookup evaluation happens only during the operator's bootstrap run. Keep secret
+# bytes in task memory/stdin, never facts, registered results, or temporary files.
+- name: Import existing Flux credentials from the operator's encrypted sources
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - flux-system
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ lookup('community.sops.sops', playbook_dir + '/../../' + item) }}"
+  loop:
+    - kubernetes/clusters/home/secret.sops.yaml
+    - kubernetes/components/common/sops/secret.sops.yaml
+  no_log: true
+  diff: false
+  changed_when: true
+
+- name: Wait for the bundled snapshot controller
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - deployment/rke2-snapshot-controller
+      - --timeout=180s
+  changed_when: false
+
+- name: Render public bootstrap manifests on the controller
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - kustomize
+      - "{{ playbook_dir }}/../../{{ item }}"
+  loop:
+    - kubernetes/apps/network/cilium-gateway/crds
+    - kubernetes/clusters/home/flux-system
+  delegate_to: localhost
+  become: false
+  register: bootstrap_flux_manifests
+  changed_when: false
+
+- name: Install Gateway API definitions before Cilium discovers them
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[0].stdout }}"
+  changed_when: true
+
+- name: Wait for Gateway API definitions to become established
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - wait
+      - --for=condition=Established
+      - --timeout=120s
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[0].stdout }}"
+  changed_when: false
+
+- name: Restart Cilium operator to discover Gateway API definitions
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - restart
+      - deployment/cilium-operator
+  changed_when: true
+
+- name: Wait for Cilium operator after Gateway API discovery
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - deployment/cilium-operator
+      - --timeout=180s
+  changed_when: false
+
+- name: Connect Flux to the committed cluster configuration
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[1].stdout }}"
+  changed_when: true
+
+- name: Reconcile the Git source and then the Flux root
+  ansible.builtin.command:
+    argv:
+      - /bin/sh
+      - -ec
+      - |
+        kube() {
+          /var/lib/rancher/rke2/bin/kubectl \
+            --kubeconfig=/etc/rancher/rke2/rke2.yaml -n flux-system "$@"
+        }
+        requested=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
+        kube annotate --overwrite "$1" "reconcile.fluxcd.io/requestedAt=$requested"
+        kube wait "$1" --timeout=300s \
+          "--for=jsonpath={.status.lastHandledReconcileAt}=$requested"
+        kube wait "$1" --for=condition=Ready --timeout=300s
+      - bootstrap-flux
+      - "{{ item }}"
+  loop:
+    - gitrepository.source.toolkit.fluxcd.io/flux-system
+    - kustomization.kustomize.toolkit.fluxcd.io/flux-system
+  changed_when: true

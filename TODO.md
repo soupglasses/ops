@@ -363,3 +363,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   All 27 database objects passed two restore/native-validation rounds; source prefix
   is empty, including historical versions and multipart uploads. Encrypted coverage
   index `5730c7da` is retained off-cluster.
+
+- [x] Add a single replacement-control-plane bootstrap task with optional encrypted
+  etcd restore before normal startup, followed by the Flux handoff. Document inventory,
+  recovery choices, application checks and Hermes credential renewal in the
+  [bootstrap guide](docs/rke2-s3-etcd-restore.md).
+- [x] Gate automatic etcd recovery on preserved PVC dataset identities. Fresh GitOps
+  recovery uses new VolSync destinations/PVCs; stale Bound PVCs from etcd do not
+  automatically repopulate missing storage. Local encrypted/native restore drills and
+  failure-path tests passed; live dataset inventory and restricted ZFS queries passed.
+- [ ] Run the complete replacement-host Ansible bootstrap in a disposable host drill.
+  Local etcd/restic recovery tests do not prove network handoff, host provisioning and
+  all application recovery together. Do not reset the production node to test this.

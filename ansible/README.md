@@ -23,6 +23,9 @@ task ansible:test
 
 | Task | Purpose |
 | --- | --- |
+| `ansible:bootstrap-rke2-controlplane` | Configure a replacement host and start Flux/VolSync recovery |
+| `ansible:bootstrap-rke2-controlplane RESTORE=latest` | Restore encrypted etcd first, requiring preserved application dataset identities |
+| `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
 | `ansible:bootstrap -- -u sofie -e initial_ansible_host=172.21.71.254` | Create the automation account |
 | `ansible:network -- -e initial_ansible_host=172.21.71.254` | Explicit initial network handoff |
 | `ansible:check` | Preview host configuration |
@@ -49,9 +52,10 @@ Keep the existing encrypted inventory at
 - `rke2_etcd_s3_access_key`, `rke2_etcd_s3_secret_key`;
 - `cilium_bgp_ipv4_password`, `cilium_bgp_ipv6_password`.
 
-Only `check` and `apply` enable the SOPS vars plugin and require the existing age
-identity. Upgrade uses the configuration already installed on the host and explicitly
-disables that plugin. Syntax/lint, bootstrap, network and verification do not enable
+`check`, `apply` and `bootstrap-rke2-controlplane` enable the SOPS vars plugin and
+require the existing age identity. The control-plane and Flux bootstrap tasks also
+read the existing encrypted Flux credentials through a protected operator-only lookup. Upgrade uses the configuration already installed on the host and explicitly
+disables that plugin. Syntax/lint, account-only bootstrap, network and verification do not enable
 decryption. Direct operator invocations of
 `site.yml` also need `ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops`.
 Never pass credentials as command arguments or print rendered secret configuration.
@@ -80,6 +84,8 @@ old PVC datasets. Preserve those datasets until recovery is proven independently
 
 The GPU package remains opt-in after checking `ubuntu-drivers list --gpgpu` and
 matching Ubuntu support. Applications and device plugins remain Flux-owned.
+
+Start with the [step-by-step bootstrap guide](../docs/rke2-s3-etcd-restore.md).
 
 See [cluster operations](../docs/rke2-operations.md) for bootstrap, maintenance,
 firewall handoff and recovery. The existing OS controls are recorded in

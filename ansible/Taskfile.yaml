@@ -24,6 +24,19 @@ tasks:
     cmds:
       - ansible-playbook playbooks/bootstrap.yml {{.CLI_ARGS}}
 
+  bootstrap-rke2-controlplane:
+    desc: Bootstrap a replacement host, optionally restore encrypted etcd, then start Flux
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
+      RKE2_RESTORE_SNAPSHOT: '{{.RESTORE | default ""}}'
+    cmds:
+      - ansible-playbook playbooks/bootstrap-rke2-controlplane.yml {{.CLI_ARGS}}
+
+  bootstrap-flux:
+    desc: Resume the GitOps handoff on an already running control plane
+    cmds:
+      - ansible-playbook playbooks/bootstrap-flux.yml {{.CLI_ARGS}}
+
   network:
     desc: Configure static addresses during a console-backed maintenance window
     cmds:
@@ -42,6 +55,13 @@ tasks:
       ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
     cmds:
       - ansible-playbook playbooks/site.yml
+
+  backup-etcd:
+    desc: Install the managed backup job and verify a fresh encrypted etcd recovery point
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/backup-etcd.yml {{.CLI_ARGS}}
 
   upgrade:
     desc: Upgrade pinned RKE2 and bundled Cilium after recovery and release preflight

@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install standalone tools before restoring the control plane
+  ansible.builtin.import_tasks: recovery-tools.yml
+
+- name: Create the root-owned recovery helper directory
+  ansible.builtin.file:
+    path: /usr/local/libexec
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the encrypted bootstrap restore helper
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../scripts/rke2-bootstrap-restore.py"
+    dest: /usr/local/libexec/rke2-bootstrap-restore
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Read independent recovery credentials on the operator workstation
+  ansible.builtin.set_fact:
+    rke2_bootstrap_credentials: "{{ (lookup('community.sops.sops', playbook_dir ~ '/../../kubernetes/components/common/config/cluster-secrets.sops.yaml')
+      | from_yaml).stringData }}"
+
+  no_log: true
+
+- name: Restore and validate an encrypted recovery point without Kubernetes
+  ansible.builtin.command:
+    argv:
+      - /usr/local/libexec/rke2-bootstrap-restore
+      - --snapshot
+      - "{{ rke2_restore_snapshot }}"
+      - --rke2-version
+      - "{{ rke2_version }}"
+      - --etcdutl
+      - /opt/etcd-recovery/etcd-v3.6.14-linux-amd64/etcdutl
+  environment:
+    RESTIC_REPOSITORY: "{{ rke2_bootstrap_credentials.SECRET_S3_ENDPOINT }}/rke2-etcd-restic"
+    RESTIC_PASSWORD: "{{ rke2_bootstrap_credentials.SECRET_PASSWORD }}"
+    AWS_ACCESS_KEY_ID: "{{ rke2_bootstrap_credentials.SECRET_AWS_ACCESS_KEY_ID }}"
+    AWS_SECRET_ACCESS_KEY: "{{ rke2_bootstrap_credentials.SECRET_AWS_SECRET_ACCESS_KEY }}"
+  register: rke2_bootstrap_restore
+  changed_when: true
+  failed_when: false
+  no_log: true
+
+- name: Drop recovery credentials from subsequent play variables
+  ansible.builtin.set_fact:
+    rke2_bootstrap_credentials: {}
+  no_log: true
+
+- name: Stop if recovery validation failed
+  ansible.builtin.assert:
+    that:
+      - rke2_bootstrap_restore.rc == 0
+    fail_msg: "Encrypted restore validation failed. RKE2 has not been started. Check repository access,
+      snapshot compatibility and preserved application datasets. No empty-cluster fallback is allowed."
+
+- name: Persist the sanitized recovery receipt
+  ansible.builtin.copy:
+    content: "{{ rke2_bootstrap_restore.stdout }}\n"
+    dest: /var/lib/rancher/rke2/server/db/snapshots/bootstrap/receipt.json
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Reset the new single-member control plane from the verified local snapshot
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/rke2
+      - server
+      - --etcd-s3=false
+      - --cluster-reset
+      - --cluster-reset-restore-path=/var/lib/rancher/rke2/server/db/snapshots/bootstrap/snapshot.db
+  async: 1200
+  poll: 10
+  register: rke2_bootstrap_reset
+  changed_when: true
+  failed_when: false
+  no_log: true
+
+- name: Require a successful membership reset before normal startup
+  ansible.builtin.assert:
+    that:
+      - rke2_bootstrap_reset.rc == 0
+      - "'Managed etcd cluster membership has been reset' in (rke2_bootstrap_reset.stdout ~ rke2_bootstrap_reset.stderr)"
+    fail_msg: "RKE2 restore failed. Preserve the recovery input and inspect the replacement host through
+      console access. Do not start RKE2 or remove reset markers to bypass this failure."
+
+- name: Permit normal startup only after a successful reset
+  ansible.builtin.set_fact:
+    rke2_restore_complete: true
+
+- name: Remove the temporary plaintext restore input after successful reset
+  ansible.builtin.file:
+    path: /var/lib/rancher/rke2/server/db/snapshots/bootstrap/snapshot.db
+    state: absent

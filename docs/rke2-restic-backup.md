@@ -231,3 +231,21 @@ and newly generated local plaintext snapshots were absent afterward. The one-tim
 host migration executable was removed; its reviewed source remains in Git.
 Standalone restic `0.18.1` and etcdutl `3.6.14` were verified on the host. Implementation
 commits passed Gitleaks 8.30.1 without exposed secrets.
+
+## Automated bootstrap validation
+
+Use the [bootstrap guide](rke2-s3-etcd-restore.md) for the supported operator commands.
+Normal backups now include each Bound PVC's actual OpenEBS ZFS dataset and GUID.
+The collector checks identities before and after snapshot capture; the standalone
+bootstrap restore requires those same datasets before permitting RKE2 startup.
+Legacy snapshots without this evidence remain encrypted archives but are not accepted
+by the automatic bootstrap. Storage loss uses fresh GitOps and VolSync recovery.
+
+Validation on 2026-09-27 covered twelve restore-helper cases using real restic,
+six volume-inventory cases, and a forced-Ansible-handler failure test. A separate
+native drill created an etcd database, encrypted and restored it through the helper,
+started a new etcd member from that restored database and read back the original key.
+Temporary containers and plaintext fixtures were removed. Only ZFS identities were
+mocked in that isolated native drill; real node dataset discovery and read-only ZFS
+queries under the service's restricted capabilities were also checked independently.
+A complete replacement-host bootstrap remains a separate drill, tracked in TODO.md.

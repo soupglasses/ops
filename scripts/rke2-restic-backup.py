@@ -13,6 +13,7 @@ import os
 import re
 import signal
 import shlex
+import socket
 import subprocess
 import sys
 import time
@@ -53,6 +54,61 @@ def run(args, **kwargs):
         # Backend errors can contain endpoint/credential details. Never echo them.
         raise RuntimeError(f"{args[0]} failed with exit code {result.returncode}")
     return result.stdout
+
+
+def capture_volume_inventory(command=run, node=None):
+    """Require each bound claim's actual OpenEBS dataset, never infer from its class."""
+    node = node or socket.gethostname()
+
+    def collection(resource, *options):
+        return json.loads(command(['kubectl', 'get', resource, *options, '-o', 'json']))['items']
+
+    claims = collection('persistentvolumeclaims', '--all-namespaces')
+    volumes = {v['metadata']['name']: v for v in collection('persistentvolumes')}
+    datasets = {v['metadata']['name']: v for v in
+                collection('zfsvolumes.zfs.openebs.io', '-n', 'openebs-system')}
+    inventory, identities, seen_datasets = [], set(), set()
+    for claim in claims:
+        phase = claim.get('status', {}).get('phase')
+        if phase != 'Bound':
+            if phase == 'Lost' or claim.get('spec', {}).get('volumeName'):
+                raise RuntimeError('Persistent volume binding is incomplete; retry after storage settles')
+            continue
+        metadata = claim['metadata']
+        identity = (metadata['namespace'], metadata['name'])
+        pv = volumes.get(claim['spec']['volumeName'])
+        if not pv or metadata.get('deletionTimestamp') or pv['metadata'].get('deletionTimestamp'):
+            raise RuntimeError('Bound persistent volume is absent or deleting')
+        reference = pv['spec'].get('claimRef', {})
+        if (reference.get('uid'), reference.get('namespace'), reference.get('name')) != (
+                metadata['uid'], *identity):
+            raise RuntimeError('Persistent volume claim identity does not match')
+        csi = pv['spec'].get('csi', {})
+        if csi.get('driver') != 'zfs.csi.openebs.io':
+            raise RuntimeError('Bound persistent volume has no supported ZFS identity')
+        handle = csi.get('volumeHandle', '')
+        volume = datasets.get(handle)
+        if not volume or volume['metadata'].get('deletionTimestamp'):
+            raise RuntimeError('Bound ZFS volume is absent or deleting')
+        spec = volume['spec']
+        if spec.get('volumeType') != 'DATASET' or spec.get('ownerNodeID') != node:
+            raise RuntimeError('Bound volume is not a dataset on this node')
+        pool = spec.get('poolName', '')
+        if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]*(?:/[A-Za-z0-9][A-Za-z0-9_.:-]*)*', pool)
+                or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', handle)):
+            raise RuntimeError('Invalid ZFS dataset identity')
+        dataset = pool + '/' + handle
+        guid = command(['/usr/sbin/zfs', 'get', '-H', '-p', '-o', 'value',
+                        'guid', dataset]).decode().strip()
+        if not re.fullmatch(r'[1-9][0-9]{0,19}', guid) or int(guid) >= 2 ** 64:
+            raise RuntimeError('ZFS dataset has no valid GUID')
+        if identity in identities or dataset in seen_datasets:
+            raise RuntimeError('Duplicate persistent volume identity')
+        identities.add(identity)
+        seen_datasets.add(dataset)
+        inventory.append({'namespace': identity[0], 'pvc': identity[1],
+                          'dataset': dataset, 'guid': guid})
+    return sorted(inventory, key=lambda value: (value['namespace'], value['pvc']))
 
 
 def main():
@@ -188,7 +244,11 @@ def main():
         execute('/bin/sh', '-ec',
                 'if RESTIC_PASSWORD=wrong-verification-password restic cat config '
                 '>/dev/null 2>&1; then exit 1; fi')
+        volume_inventory = capture_volume_inventory()
         source = json.loads(run(['/usr/bin/python3', '-c', CAPTURE, prefix]))
+        if capture_volume_inventory() != volume_inventory:
+            raise RuntimeError('Volume identities changed during snapshot capture; retry after storage settles')
+        source['volume_inventory'] = volume_inventory
         print('Local-only snapshot created; removed after verified encrypted restore.', flush=True)
         path = source['path']
         if not re.fullmatch('/var/lib/rancher/rke2/server/db/snapshots/'

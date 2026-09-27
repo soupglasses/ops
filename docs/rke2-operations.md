@@ -36,8 +36,9 @@ installed as an RKE2 `HelmChartConfig` by the host role.
 
 ## Installation and recovery prerequisites
 
-Use [the Ansible commands](../ansible/README.md) to bootstrap the account, configure
-networking explicitly, and converge the host. Preserve these addresses:
+Use the [step-by-step bootstrap guide](rke2-s3-etcd-restore.md) for a replacement
+host, encrypted etcd recovery, Flux/VolSync progress and access renewal.
+[The Ansible commands](../ansible/README.md) also expose individual maintenance phases. Preserve these addresses:
 
 | Purpose | IPv4 | IPv6 |
 | --- | --- | --- |

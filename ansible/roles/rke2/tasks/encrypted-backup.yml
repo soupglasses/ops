@@ -10,6 +10,14 @@
     group: root
     mode: "0700"
 
+- name: Create the root-owned helper directory
+  ansible.builtin.file:
+    path: /usr/local/libexec
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Install the verified encrypted backup helper
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../scripts/rke2-restic-backup.py"

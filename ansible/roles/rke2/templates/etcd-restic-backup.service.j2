@@ -19,7 +19,10 @@ IOSchedulingClass=best-effort
 CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_FOWNER
 LockPersonality=true
 NoNewPrivileges=true
-PrivateDevices=true
+# Read-only dataset identity checks need the ZFS ioctl device.
+PrivateDevices=false
+DevicePolicy=closed
+DeviceAllow=/dev/zfs rw
 PrivateTmp=true
 ProtectClock=true
 ProtectControlGroups=true

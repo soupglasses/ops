@@ -157,6 +157,17 @@
     group: root
     mode: "0640"
 
+# Restore before the first service start; failures must never initialize an empty API.
+- name: Restore an explicitly selected encrypted control-plane backup
+  ansible.builtin.include_tasks: bootstrap-restore.yml
+  when: (rke2_restore_snapshot | default('')) | length > 0
+
+- name: Require completed recovery before normal startup
+  ansible.builtin.assert:
+    that:
+      - "(rke2_restore_snapshot | default('')) | length == 0 or (rke2_restore_complete | default(false)
+        | bool)"
+
 - name: Enable and start RKE2
   ansible.builtin.systemd_service:
     name: rke2-server

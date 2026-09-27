@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Bootstrap a replacement control plane and hand applications to Flux
+  hosts: rke2_servers
+  become: true
+  gather_facts: true
+  vars:
+    rke2_restore_snapshot: "{{ lookup('env', 'RKE2_RESTORE_SNAPSHOT') | default('', true) }}"
+  pre_tasks:
+
+    - name: Require a supported host and explicit restore selection
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Ubuntu'
+          - ansible_distribution_version is version('26.04', '>=')
+          - rke2_restore_snapshot is match('^(|latest|[a-f0-9]{8,64})$')
+        fail_msg: Use a supported Ubuntu host and RESTORE=latest or a hexadecimal snapshot ID.
+
+    - name: Inspect host services without starting them
+      ansible.builtin.service_facts:
+
+    - name: Refuse a running RKE2 service
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services.get('rke2-server.service', {}).get('state', '') != 'running'
+        fail_msg: Bootstrap requires a replacement host with RKE2 stopped.
+
+    - name: Inspect existing control-plane state before changing the host
+      ansible.builtin.stat:
+        path: /var/lib/rancher/rke2/server/db/etcd
+      register: bootstrap_existing_etcd
+
+    - name: Refuse to bootstrap over an existing control plane
+      ansible.builtin.assert:
+        that:
+          - not bootstrap_existing_etcd.stat.exists
+        fail_msg: "This task is for a replacement host. Preserve existing state and use ansible:apply
+          for convergence; bootstrap never deletes or resets an existing database."
+
+  roles:
+    - accounts
+    - networkd
+    - os_hardening
+    - zfs
+    - nvidia
+    - rke2
+
+  post_tasks:
+
+    - name: Bootstrap Flux from the committed configuration
+      ansible.builtin.import_tasks: tasks/bootstrap-flux.yml

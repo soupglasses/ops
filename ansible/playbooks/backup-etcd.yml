@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install and restore-verify the encrypted etcd backup job
+  hosts: rke2_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install the managed backup helper and service
+      ansible.builtin.import_role:
+        name: rke2
+        tasks_from: encrypted-backup
+
+    - name: Run a fresh encrypted backup and restore verification
+      ansible.builtin.systemd_service:
+        name: rke2-etcd-restic-backup.service
+        state: started
