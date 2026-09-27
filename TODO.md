@@ -341,3 +341,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Replace OpenEBS host-path Endpoints leader election with the upstream Lease-based
   provisioner. Disable incompatible XFS quotas on the Ubuntu ext4 root filesystem.
   Existing application data uses quota-enforced ZFS PVCs.
+
+- [ ] Create and restore-verify a fresh restic-encrypted etcd recovery point before maintenance.
+- [ ] Migrate scheduled native etcd S3 uploads to client-side encryption, preserving
+  history, retention and freshness alerts. See [encrypted etcd backups](docs/rke2-restic-backup.md).

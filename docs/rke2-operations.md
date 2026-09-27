@@ -319,7 +319,9 @@ When bundled Cilium changes, follow its
 
 The upgrade first rejects unhealthy nodes, pre-existing cordons, unexpected cluster
 members and installed/running version mismatches. It downloads and verifies the
-release before saving and checking a new S3 etcd snapshot, then cordons and restarts.
+release before creating and restore-verifying a fresh
+[restic-encrypted etcd backup](rke2-restic-backup.md), then cordons and restarts.
+This requires working local kubectl and SSH access, and the Flux-managed backup Secret.
 Node readiness and the requested kubelet version permit uncordoning so RKE2's Helm
 jobs and operator can schedule. The playbook then checks the embedded target chart in both RKE2 and the Helm
 controller ConfigMap, a completed Helm job created after chart-content publication (and a replacement

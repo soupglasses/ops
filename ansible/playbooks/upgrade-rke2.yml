@@ -206,25 +206,22 @@
         mode: "0640"
         checksum: "sha256:{{ rke2_tarball_sha256 }}"
 
-    - name: Name the pre-upgrade recovery point
-      ansible.builtin.set_fact:
-        upgrade_snapshot: "pre-upgrade-{{ ansible_facts.date_time.epoch }}"
-
-    - name: Create an off-cluster etcd recovery point
+    - name: Create and restore-verify a client-encrypted off-cluster recovery point
       ansible.builtin.command:
-        argv: [/usr/local/bin/rke2, etcd-snapshot, save, --name, "{{ upgrade_snapshot }}"]
+        argv:
+          - "{{ ansible_playbook_python }}"
+          - "{{ playbook_dir }}/../../scripts/rke2-restic-backup.py"
+          - --ssh-host
+          - "{{ hostvars[inventory_hostname].ansible_host }}"
+          - --ssh-user
+          - "{{ hostvars[inventory_hostname].ansible_user }}"
+          - --identity-file
+          - "{{ hostvars[inventory_hostname].ansible_ssh_private_key_file }}"
+      delegate_to: localhost
+      become: false
       changed_when: true
-      no_log: true
-
-    - name: Confirm the new snapshot is listed in S3
-      ansible.builtin.command: /usr/local/bin/rke2 etcd-snapshot ls
-      register: upgrade_snapshots
-      changed_when: false
-      # The listing also contains local copies, which cannot prove off-node survival.
-      failed_when: >-
-        upgrade_snapshots.rc != 0 or (upgrade_snapshots.stdout_lines | select('match', '^' + upgrade_snapshot
-        + '-nas-[0-9]+(?:\\.zip)?\\s+s3://') | list | length) == 0
-      no_log: true
+      # The helper prints only recovery IDs, hashes and native database metadata.
+      # Any encryption, transfer or restore failure stops before the cordon.
 
   tasks:
     - name: Preserve Flux-managed ingress ownership before restarting
