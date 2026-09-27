@@ -54,7 +54,7 @@ data on completion. It checks:
 - Certificate replacement with local socket reload, without restarting the server.
 - Persistence across container replacement and restoration into empty config/db
   directories using native exports.
-- Export from the current pinned image and import into the new configuration,
+- Export from the legacy pinned image and import into the new configuration,
   preserving entryUUID, stored hashes, authentication, groups, OTP, and OAuth data.
 - The restricted non-root runtime and rejection of unrelated configuration writes
   by the certificate reloader.
@@ -72,6 +72,29 @@ docker compose -f examples/openldap-nfrastack/compose.yaml down
 Remove the retained directory when finished; its database files belong to UID 389.
 The retained fixture includes synthetic credential files and private keys: keep it
 local, do not commit it, and never substitute production data into this test.
+
+## Kubernetes preparation
+
+[render-preparation.py](render-preparation.py) renders the one-time staging PVC,
+restricted preparation Pod, configuration, and deny-all NetworkPolicy:
+
+```sh
+python3 examples/openldap-nfrastack/render-preparation.py > /tmp/ldap-preparation.json
+kubectl apply --dry-run=server -f /tmp/ldap-preparation.json
+```
+
+This renderer is specific to the repository's `identity` namespace, storage class,
+and existing admin/TLS Secrets. The staging PVC is now a retained rollback copy:
+**do not reuse it for a new migration**. A new rehearsal needs distinct resource
+names and empty storage. Supply the legacy native export as
+`/data/source/directory.ldif`, then run `/bin/sh /source/prepare.sh` inside the
+preparation container. Preparation refuses existing configuration or data.
+
+[verify-live.sh](verify-live.sh) validates an isolated running candidate using its
+mounted admin credential. It briefly creates a disposable reader account, checks
+binds, searches, ACL denials, and TLS, then removes the probe. It is a migration
+test, not a production health check. See the [migration record](../../docs/openldap-nfrastack-migration.md)
+for backup, restore, and cutover ordering.
 
 ## Kubernetes runtime and TLS
 
@@ -118,7 +141,8 @@ these allowed user/group attributes. Service accounts use the existing
 `cn=system,ou=policies,dc=finnes,dc=dev` password policy; they cannot change their own
 password. RootDN still has administrative access for existing Canaille/Terraform.
 
-The test creates its reader account and reader group as fixtures. Migrating real
+Production delegates these reads to the existing `uid=auth,ou=system,dc=finnes,dc=dev`
+account through `ldap-readers`. The test creates separate synthetic fixtures. Migrating real
 data does not create them automatically: provision the group, service account,
 policy reference, and membership through the chosen account-management workflow
 before switching an application's bind DN. That workflow and the Terraform admin
@@ -184,7 +208,13 @@ alone is not an image recovery plan.
 
 ## Validation status
 
-The Docker drill has exercised migration and restore with synthetic directory data;
-it is not evidence of a restored production backup. Kubernetes server-side dry-run
-accepts the restricted runtime. Production remains on the existing image until the
-cutover and real-data restore requirements above are completed.
+Production migrated on **2026-09-27** after a real off-cluster backup was restored
+into `openldap-directory` and its directory/configuration contents validated.
+The Docker drill separately passed synthetic migration, authentication, restricted
+runtime, restore, and automatic certificate-reload tests. Flux and Canaille are
+healthy, and the first backup from the production volume succeeded. Original and
+staging PVCs remain available as rollback copies.
+
+The [production Deployment](../../kubernetes/apps/identity/openldap/app/deployment.yaml)
+and [migration/recovery record](../../docs/openldap-nfrastack-migration.md) describe
+the deployed configuration and exact verification evidence.

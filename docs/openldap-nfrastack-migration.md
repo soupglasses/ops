@@ -88,8 +88,20 @@ was `bcfd00c8e614c72f84809a6c0853912430f1331b8dc8c3af9cdd056bbaad8895`.
   renewal through Kubernetes-style projected-Secret symlink rotation.
 - Independent security and resilience reviewers approved cutover after these checks.
 
-Production cutover and its first production-volume backup are verified separately
-below when completed. No end-user plaintext password was requested or inspected;
+Production cutover deployed commit `6212278abd19cf7c2c8267473bf025cd1acaf515`.
+The OpenLDAP, Canaille, and LDAP Terraform Flux Kustomizations became Ready; the
+Terraform plan reported no changes. Canaille's existing bind authenticated with
+certificate verification and found all three `inetOrgPerson` entries under
+`ou=users`. Its public login and OpenID discovery endpoints returned HTTP 200.
+
+The first backup from the production `openldap-directory` PVC completed at
+**09:35:58 UTC**. The manual trigger was removed and the normal daily schedule
+restored. The native-export hook completed before the copy trigger was released.
+Temporary migration Pods, ConfigMaps, NetworkPolicies, seed ReplicationSource,
+and repository bootstrap Kustomization were removed; the two rollback PVCs remain
+Flux-managed with pruning disabled. No permanent resource uses a `v2` name.
+
+No end-user plaintext password was requested or inspected;
 real user-password/OTP contents were compared by aggregate directory digest, while
 password-bind behavior was exercised with synthetic/disposable accounts.
 
