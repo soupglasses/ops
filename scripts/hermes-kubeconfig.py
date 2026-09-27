@@ -98,8 +98,8 @@ def main():
     if args.duration_seconds <= 0:
         parser.error('--duration-seconds must be positive')
     nas = ['ssh', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-           '-i', os.path.expanduser('~/.ssh/ansible'), '-o', 'StrictHostKeyChecking=yes',
-           '-o', 'HostKeyAlias=nas.home.finnes.dev', 'ansible@172.21.71.10']
+           '-i', os.path.expanduser('~/.ssh/gpg.pub'), '-o', 'StrictHostKeyChecking=yes',
+           '-o', 'HostKeyAlias=nas.home.finnes.dev', 'sofie@172.21.71.10']
     destination = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
                  '-o', 'StrictHostKeyChecking=yes', args.host]
     version = tomllib.loads((Path(__file__).resolve().parents[1] / '.mise.toml').read_text())['tools']['aqua:kubernetes/kubectl']

@@ -34,7 +34,7 @@
           - ConnectTimeout=10
           - -o
           - HostKeyAlias=nas.home.finnes.dev
-          - "{{ automation_user }}@{{ item.address }}"
+          - "{{ ansible_user }}@{{ item.address }}"
           - /bin/true
       loop: "{{ firewall_addresses }}"
       loop_control:

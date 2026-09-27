@@ -14,7 +14,6 @@
           - ansible_distribution_version is version('26.04', '>=')
         fail_msg: This playbook supports Ubuntu 26.04 or newer only.
   roles:
-    - accounts
     - os_hardening
     - zfs
     - nvidia

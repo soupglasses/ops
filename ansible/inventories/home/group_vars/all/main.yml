@@ -2,18 +2,6 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-automation_user: ansible
-# Only the public half is read here. Back up the private key in the controller credential store.
-automation_authorized_key: >-
-  {{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.ssh/ansible.pub') | trim
-  }}
-# Exact stable controller sources used by the SSH key restriction and host firewall policy.
-automation_controller_sources:
-  - 172.21.69.10/32
-  - 2a13:e745:1ee8:69:1911:3b22:c2d8:819d/128
-automation_controller_allowed_ipv4_subnet: 172.21.69.0/24
-automation_controller_allowed_ipv6_subnet: 2a13:e745:1ee8:69::/64
-
 network_interface: "{{ ansible_default_ipv4.interface }}"
 network_ipv4_address: 172.21.71.10/24
 network_ipv4_gateway: 172.21.71.1

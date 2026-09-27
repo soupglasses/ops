@@ -27,7 +27,6 @@ task ansible:test
 | `rke2:uninstall NODE=nas` | Hold completed backups, then invoke RKE2's supplied uninstaller |
 | `volsync:resume NODE=nas` | Resume a held surviving cluster after checking application storage |
 | `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
-| `ansible:bootstrap -- -u sofie -e initial_ansible_host=172.21.71.254` | Create the automation account |
 | `ansible:network -- -e initial_ansible_host=172.21.71.254` | Explicit initial network handoff |
 | `ansible:check` | Preview host configuration |
 | `ansible:apply` | Maintain the host at its pinned RKE2 version |
@@ -59,7 +58,7 @@ existing age identity. `rke2:bootstrap` checks service state before loading cred
 on a running cluster it exits without changes. On the cold path it explicitly loads
 the encrypted host inventory, then uses protected operator-only lookups for Flux
 credentials. Upgrade uses the configuration already installed on the host and explicitly
-disables that plugin. Syntax/lint, account-only bootstrap, network and verification do not enable
+disables that plugin. Syntax/lint, network and verification do not enable
 decryption. Direct operator invocations of
 `site.yml` also need `ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops`.
 Never pass credentials as command arguments or print rendered secret configuration.
@@ -69,16 +68,13 @@ The host adapter maintains `cilium-bgp-ipv4-auth` and `cilium-bgp-ipv6-auth` in
 passwords unchanged. Rotation uses the procedure in
 [RouterOS operations](../docs/routeros-bgp-config.md).
 
-The controller key is `~/.ssh/ansible`; its public half supplies the managed login.
-Preserve its independent recovery copy and the hardware-backed human login. Source
-restrictions are in the inventory. To revoke the automation account from the console:
+Host tasks use the existing `sofie` administrator account and `~/.ssh/gpg.pub`.
+The public key selects the hardware-backed SSH identity provided by the GPG agent;
+keep that agent available and unlock the key when needed. The account must already
+have sudo access. Ansible does not create another login or manage Sofie's keys.
 
-```bash
-sudo chmod 000 /home/ansible/.ssh/authorized_keys
-sudo pkill -KILL -u ansible
-```
-
-Rotate through the human login, restore mode `0600`, and rerun bootstrap.
+On a replacement OS, establish this login through the installer or console before
+running host setup. Keep its public key and recovery access independently available.
 
 ## Storage and recovery
 

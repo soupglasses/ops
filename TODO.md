@@ -384,3 +384,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   returned changed=0 before facts, credentials or cleanup. Add explicit old-OpenEBS
   deletion prompt and scope checks; read-only plan covers current/legacy ZFS PVCs and
   one hostpath volume. OS/network setup and pool creation remain separate.
+
+- [x] Use Sofie’s hardware-backed SSH identity for host operations and remove the
+  separate automation-account provisioning path. Deleted the obsolete NAS account,
+  home and sudo rule; fresh Sofie SSH/sudo and the unchanged bootstrap path passed.

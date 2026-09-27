@@ -19,11 +19,6 @@ tasks:
       - for playbook in playbooks/*.yml; do ansible-playbook "$playbook" --syntax-check || exit; done
       - ansible-lint
 
-  bootstrap:
-    desc: Create the automation account through the human administrator login
-    cmds:
-      - ansible-playbook playbooks/bootstrap.yml {{.CLI_ARGS}}
-
   bootstrap-flux:
     desc: Resume the GitOps handoff on an already running control plane
     cmds:

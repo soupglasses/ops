@@ -27,14 +27,14 @@ tasks:
           kubernetes/clusters/home/secret.sops.yaml \
           kubernetes/components/common/sops/secret.sops.yaml; do
           sops --decrypt "$secret" |
-            ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/ansible" \
+            ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/gpg.pub" \
               -o StrictHostKeyChecking=yes -o HostKeyAlias=nas.home.finnes.dev \
-              ansible@172.21.71.10 \
+              sofie@172.21.71.10 \
               'sudo -n /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml apply -n flux-system -f -' || exit
         done
       - >-
-        ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/ansible" -o StrictHostKeyChecking=yes -o HostKeyAlias=nas.home.finnes.dev
-        ansible@172.21.71.10 'sudo -n /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
+        ssh -F /dev/null -o BatchMode=yes -i "$HOME/.ssh/gpg.pub" -o StrictHostKeyChecking=yes -o HostKeyAlias=nas.home.finnes.dev
+        sofie@172.21.71.10 'sudo -n /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
         -n flux-system get secret flux-system sops-age'
 
   bootstrap:
