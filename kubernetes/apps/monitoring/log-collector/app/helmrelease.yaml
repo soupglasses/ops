@@ -94,7 +94,7 @@ spec:
       sources:
         k8s:
           type: kubernetes_logs
-          self_node_name: $${VECTOR_SELF_NODE_NAME}
+          # Vector reads VECTOR_SELF_NODE_NAME from the chart's downward API env.
         journald:
           type: journald
           # The collector's systemd 257 cannot read all boots through Vector.
