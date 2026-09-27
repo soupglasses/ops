@@ -271,6 +271,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Audit migration dependencies with Renovate extraction and update fixtures.
   Couple RKE2 checksums, Gateway CRDs and runtime/restore image pins. Derive the
   Cilium validation schema from the selected RKE2 release.
+- [x] Remove legacy task aliases and instructions after checking Flate coverage;
+  preserve rendered resource counts with `flate:count`.
 - [x] Replace Flux Local with Flate validation and rendered PR diffs, including
   complete text and HTML artifacts for large changes.
 - [x] Add rendered resource and line-count overviews to all Flate diff comments,
@@ -281,7 +283,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   Rotate both by 2027-08-27, keeping the credentials separate and least-privileged.
 
 - [ ] Renovate automerges only GitHub Actions and mise tools, so chart/container PRs
-  pile up. Automerge patch-level helm/docker updates gated on the flux-local CI check.
+  pile up. Automerge patch-level helm/docker updates gated on the flate CI check.
 - [ ] Majors needing human review: prometheus-operator-crds 30 (#76, CRD changes),
   actions/checkout v7 (#75, runner node version), error-pages 4 (#66, default
   backend), terraform ldap 0.13 (#74, provider under the data_json workaround),

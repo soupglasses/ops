@@ -38,6 +38,11 @@ tasks:
     cmds:
       - flate build all
 
+  count:
+    desc: Count rendered Flux-managed resources by kind, excluding Secrets
+    cmds:
+      - flate build all | kustomize cfg count
+
   get-ks:
     desc: List Flux Kustomizations
     cmds:

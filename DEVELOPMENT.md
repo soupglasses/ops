@@ -195,15 +195,16 @@ Every stateful app gets the volsync component; a PVC without a backup is a bug.
 
 ## Validation
 
-Validate Flux configurations locally with [flux-local](https://github.com/allenporter/flux-local):
+Validate Flux configurations locally with [flate](https://github.com/home-operations/flate):
 
 ```bash
-task flux-local:test    # Validate all Kustomizations and HelmReleases
-task flux-local:diff    # Show rendered manifest diff against HEAD
-task flux-local:build   # Build and count resources
+task flate:test    # Validate all Kustomizations and HelmReleases
+task flate:diff    # Show rendered manifest diff against HEAD
+task flate:build   # Render all managed manifests, excluding Secrets
+task flate:count   # Count rendered resources by kind
 ```
 
-Pull requests automatically run `flux-local test` and `flux-local diff` in CI.
+Pull requests automatically run `task flate:test` and `task flate:diff` in CI.
 
 ## Important Notes
 
@@ -212,4 +213,4 @@ Pull requests automatically run `flux-local test` and `flux-local diff` in CI.
 - **Use cluster-secrets for shared credentials** to avoid duplication
 - **Reference ks.yaml not app/ folder** in parent kustomizations
 - **Components use ${APP} variable** substituted from Kustomization name
-- **Run `task flux-local:test` before committing** to catch validation errors early
+- **Run `task flate:test` before committing** to catch validation errors early

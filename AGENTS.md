@@ -14,7 +14,7 @@ Hermes reviews or delegation.
 Commits and pushes to `main` are how changes deploy; you are expected to do both and
 then verify the result live. The loop:
 
-1. Edit manifests, then `task flux-local:test` (must pass).
+1. Edit manifests, then `task flate:test` (must pass).
 2. Commit with `mise exec -- git commit ...` (pre-commit hooks need mise's PATH to find
    `ec` and friends). Small logical commits, conventional style (`feat(scope):`,
    `fix(scope):`), written in a human voice.
@@ -142,19 +142,18 @@ Use the user's identity for new SPDX copyright notices. Preserve existing notice
 
 ### Kubernetes Manifest Validation
 
-Run `flux-local test` to validate Flux Kustomizations and HelmReleases:
+Run `flate test` to validate Flux Kustomizations and HelmReleases:
 ```bash
-task flux-local:test
+task flate:test
 ```
 
-Run `flux-local diff` to see rendered manifest changes:
+Run `flate diff` to see rendered manifest changes:
 ```bash
-task flux-local:diff
+task flate:diff
 ```
 
-**Important**: flux-local emits `SubstituteReference` warnings due to a traversal order limitation. These are cosmetic — do not attempt to fix them. They are filtered from task command output.
-
-**Do NOT use** `--path-orig` or `--branch-orig` flags with flux-local in task commands. These bypass flux-local's internal git worktree creation and break ConfigMap resolution for `substituteFrom` references.
+Use `task flate:diff BASE=origin/main` to compare against another revision. Task commands
+keep local and CI rendering settings aligned, including CRDs and the RKE2 Kubernetes version.
 
 ## CI/CD (GitHub Actions)
 

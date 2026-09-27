@@ -75,13 +75,14 @@ before committing. Mise and CI use the same pinned release and render settings.
 | `flate:test` | Validate all Kustomizations and HelmReleases |
 | `flate:diff` | Show diff of rendered manifests against HEAD |
 | `flate:build` | Render all managed manifests, excluding Secrets |
+| `flate:count` | Count rendered resources by kind |
 | `flate:get-ks` | List all Kustomizations |
 | `flate:get-hr` | List all HelmReleases |
 
 Use `task flate:diff BASE=origin/main` to compare against another revision, or add
 `OUTPUT=html` to save a browsable diff. CI attaches both text and HTML diffs to each
 pull request. Rendering includes CRDs, excludes Secret objects and uses the pinned
-RKE2 Kubernetes version. Existing `flux-local:*` task names remain aliases.
+RKE2 Kubernetes version.
 
 ### Kubernetes
 

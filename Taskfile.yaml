@@ -18,9 +18,6 @@ includes:
   flate:
     taskfile: .taskfiles/flate.yaml
     dir: .
-  flux-local:
-    taskfile: .taskfiles/flate.yaml
-    dir: .
   kube:
     taskfile: .taskfiles/kubernetes.yaml
     dir: .

@@ -22,7 +22,7 @@ managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
 - Backups are the one thing that must never silently rot. Anything touching
   `kubernetes/components/volsync*`, storage classes, snapshot classes, or
   `cluster-secrets` is high-risk; slow down and double-check.
-- Validate before handing over: `task flux-local:test` must pass, and pre-commit gates
+- Validate before handing over: `task flate:test` must pass, and pre-commit gates
   formatting, schemas, and SPDX headers.
 - Secrets are sops-encrypted with age. New secrets: write plaintext as `*.sops.yaml`,
   encrypt in place exactly once. Existing secrets: never decrypt, edit, or rotate; stop
