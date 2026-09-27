@@ -48,7 +48,8 @@ spec:
       retentionPeriod: 1y
       initContainers:
         - name: require-restored-logs
-          image: victoriametrics/victoria-logs:v1.52.0@sha256:47b820890d64c4575a2a0a46415dcd8a4fd59a0f1fcd6a377693d7aea639442e
+          # The server is distroless; the restore guard needs a separate shell image.
+          image: docker.io/library/alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
           command: [/bin/sh, -ec]
           args:
             - test -d /storage/partitions && test -n "$(ls -A /storage/partitions)"
