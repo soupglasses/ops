@@ -2,11 +2,32 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-- name: Bootstrap a replacement control plane and hand applications to Flux
+- name: Bootstrap a clean control plane and hand applications to Flux
   hosts: rke2_servers
   become: true
-  gather_facts: true
+  gather_facts: false
   pre_tasks:
+
+    # Raw avoids uploading modules or gathering facts on an existing cluster.
+    # Transitional services are also left alone: bootstrap must not race startup
+    # or shutdown and accidentally treat live storage as abandoned.
+    - name: Inspect RKE2 service state without changing the node
+      ansible.builtin.raw: >-
+        systemctl show --property=ActiveState --value rke2-server.service rke2-agent.service
+      register: bootstrap_service_state
+      changed_when: false
+      failed_when: bootstrap_service_state.rc != 0 or bootstrap_service_state.stdout.split() | length
+        != 2
+      check_mode: false
+      tags: [always]
+
+    - name: Leave an existing or transitioning RKE2 cluster untouched
+      ansible.builtin.meta: end_host
+      when: bootstrap_service_state.stdout.split() | difference(['inactive', 'failed']) | length > 0
+      tags: [always]
+
+    - name: Gather facts only for a stopped cluster
+      ansible.builtin.setup:
 
     - name: Require a supported host without obsolete restore options
       ansible.builtin.assert:
@@ -19,15 +40,6 @@
         fail_msg: Use a supported Ubuntu host. Bootstrap always rebuilds cleanly; remove obsolete etcd
           restore options.
 
-    - name: Inspect host services without starting them
-      ansible.builtin.service_facts:
-
-    - name: Refuse a running RKE2 service
-      ansible.builtin.assert:
-        that:
-          - ansible_facts.services.get('rke2-server.service', {}).get('state', '') != 'running'
-        fail_msg: Bootstrap requires a replacement host with RKE2 stopped.
-
     - name: Inspect existing control-plane state before changing the host
       ansible.builtin.stat:
         path: /var/lib/rancher/rke2/server
@@ -37,8 +49,18 @@
       ansible.builtin.assert:
         that:
           - not bootstrap_existing_server.stat.exists
-        fail_msg: "This task is for a replacement host. Preserve existing state and use ansible:apply
-          for convergence; bootstrap never deletes or adopts existing server state."
+        fail_msg: "Stopped RKE2 server state still exists. Complete rke2:uninstall before bootstrap; bootstrap
+          never deletes or adopts existing server state."
+
+    - name: Load recovery credentials only when creating a new cluster
+      community.sops.load_vars:
+        file: "{{ inventory_dir }}/group_vars/all/secrets.sops.yaml"
+        expressions: ignore
+      no_log: true
+      diff: false
+
+    - name: Clear abandoned OpenEBS volumes before creating a new cluster
+      ansible.builtin.include_tasks: tasks/bootstrap-storage.yml
 
     - name: Remove a previous cluster's uninstall journal only after the clean-host checks
       ansible.builtin.file:
@@ -46,11 +68,6 @@
         state: absent
 
   roles:
-    - accounts
-    - networkd
-    - os_hardening
-    - zfs
-    - nvidia
     - rke2
 
   post_tasks:

@@ -23,7 +23,7 @@ task ansible:test
 
 | Task | Purpose |
 | --- | --- |
-| `rke2:bootstrap` | Create a fresh control plane and restore applications from S3 |
+| `rke2:bootstrap` | Cluster-only bootstrap; running clusters are unchanged, stopped hosts prompt for OpenEBS cleanup |
 | `rke2:uninstall NODE=nas` | Hold completed backups, then invoke RKE2's supplied uninstaller |
 | `volsync:resume NODE=nas` | Resume a held surviving cluster after checking application storage |
 | `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
@@ -54,9 +54,11 @@ Keep the existing encrypted inventory at
 Legacy `rke2_etcd_s3_*` keys are no longer consumed. Application backup credentials
 come from the encrypted cluster configuration, independently of etcd.
 
-`ansible:check`, `ansible:apply` and `rke2:bootstrap` enable the SOPS vars plugin and
-require the existing age identity. The control-plane and Flux bootstrap tasks also
-read the existing encrypted Flux credentials through a protected operator-only lookup. Upgrade uses the configuration already installed on the host and explicitly
+`ansible:check` and `ansible:apply` enable the SOPS vars plugin and require the
+existing age identity. `rke2:bootstrap` checks service state before loading credentials;
+on a running cluster it exits without changes. On the cold path it explicitly loads
+the encrypted host inventory, then uses protected operator-only lookups for Flux
+credentials. Upgrade uses the configuration already installed on the host and explicitly
 disables that plugin. Syntax/lint, account-only bootstrap, network and verification do not enable
 decryption. Direct operator invocations of
 `site.yml` also need `ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops`.

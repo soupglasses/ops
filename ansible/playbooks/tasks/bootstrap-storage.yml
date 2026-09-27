@@ -1,0 +1,86 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Create a temporary directory for the reviewed OpenEBS cleanup plan
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: rke2-storage-cleanup-
+  register: bootstrap_storage_directory
+
+- name: Confirm and remove old OpenEBS volumes before starting the new cluster
+  block:
+    - name: Install the scoped cleanup helper for this invocation
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../scripts/rke2-clean-storage.py"
+        dest: "{{ bootstrap_storage_directory.path }}/cleanup.py"
+        mode: '0700'
+
+    - name: Inventory OpenEBS volumes, snapshots and clone dependencies
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ bootstrap_storage_directory.path }}/cleanup.py"
+          - --pool
+          - "{{ zfs_pool_name }}"
+          - --parent
+          - "{{ zfs_dataset_name }}"
+      register: bootstrap_storage_inventory
+      changed_when: false
+
+    - name: Parse the storage cleanup plan
+      ansible.builtin.set_fact:
+        bootstrap_storage_plan: "{{ bootstrap_storage_inventory.stdout | from_json }}"
+
+    - name: Show the exact OpenEBS volume roots selected for deletion
+      ansible.builtin.debug:
+        msg:
+          - "Delete {{ bootstrap_storage_plan.roots | length }} OpenEBS volumes and their snapshots."
+          - "Volume roots: {{ bootstrap_storage_plan.roots }}"
+          - "Hostpath volumes: {{ bootstrap_storage_plan.hostpaths.keys() | list }}"
+          - "Total filesystems, volumes and snapshots: {{ bootstrap_storage_plan.objects | length }}"
+          - "The pool {{ zfs_pool_name }} and parent {{ zfs_dataset_name }} will be preserved."
+          - Application contents will be restored from off-cluster backups.
+
+    - name: Ask before deleting all old OpenEBS ZFS volumes
+      ansible.builtin.pause:
+        prompt: >-
+          On {{ inventory_hostname }}, type DELETE {{ zfs_dataset_name }} to permanently remove the listed
+          OpenEBS volumes before rebuilding the cluster
+      register: bootstrap_storage_confirmation
+      when: ((bootstrap_storage_plan.roots | length) + (bootstrap_storage_plan.hostpaths | length)) >
+        0
+
+    - name: Require the exact storage deletion confirmation
+      ansible.builtin.assert:
+        that:
+          - bootstrap_storage_confirmation.user_input | default('') == 'DELETE ' ~ zfs_dataset_name
+        fail_msg: Storage deletion was not confirmed. No volumes have been deleted.
+      when: ((bootstrap_storage_plan.roots | length) + (bootstrap_storage_plan.hostpaths | length)) >
+        0
+
+    - name: Store the reviewed volume identities for the final race check
+      ansible.builtin.copy:
+        content: "{{ bootstrap_storage_plan | to_json }}"
+        dest: "{{ bootstrap_storage_directory.path }}/plan.json"
+        mode: '0600'
+
+    - name: Remove the confirmed OpenEBS volumes and verify empty storage
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ bootstrap_storage_directory.path }}/cleanup.py"
+          - --pool
+          - "{{ zfs_pool_name }}"
+          - --parent
+          - "{{ zfs_dataset_name }}"
+          - --apply-plan
+          - "{{ bootstrap_storage_directory.path }}/plan.json"
+      changed_when: ((bootstrap_storage_plan.roots | length) + (bootstrap_storage_plan.hostpaths | length))
+        > 0
+
+  always:
+    - name: Remove the temporary storage cleanup helper and inventory
+      ansible.builtin.file:
+        path: "{{ bootstrap_storage_directory.path }}"
+        state: absent

@@ -48,7 +48,7 @@ Kubernetes editor schema comments. The checks reject stale versions.
 |---|---|
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
-| `rke2:bootstrap` | Create a fresh control plane and restore applications from S3 |
+| `rke2:bootstrap` | Bootstrap on a prepared host; confirm old volume deletion; running clusters are unchanged |
 | `rke2:uninstall NODE=nas` | Finish and hold backups, then run RKE2's supplied node uninstaller |
 | `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
 | `ansible:check` | Preview host changes |
@@ -148,9 +148,10 @@ Follow the [step-by-step bootstrap guide](docs/cluster-bootstrap.md) for prerequ
 inventory, recovery keys and post-bootstrap checks.
 
 1. Install a supported Ubuntu release with OpenSSH and temporary passwordless sudo access.
-2. Review the Ansible inventory and run `task rke2:bootstrap`. It always creates a
-   fresh control plane; Flux and VolSync recover applications into new volumes from
-   S3. Existing server state is refused, and missing application data blocks startup.
+2. Review the inventory and recovery keys. For an existing cluster, run
+   `task rke2:uninstall NODE=nas`, then `task rke2:bootstrap`. Bootstrap asks before
+   deleting old OpenEBS volumes and restores new ones from S3. Running clusters are
+   unchanged; host setup is separate. Missing application data blocks startup.
 3. Fetch access with `task kube:kubeconfig`, then watch `flux get kustomizations -A --watch`
    and `kubectl get pods -A --watch` as applications recover.
 4. Validate restored application contents before removing rollback copies. The guide

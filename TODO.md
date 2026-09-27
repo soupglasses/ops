@@ -357,9 +357,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   prefixes verified empty, including multipart uploads. Host backup services and
   local snapshots removed; the live datastore and application backups remain intact.
   Historical etcd work is preserved in Git history.
-- [ ] Run the complete replacement-host Ansible bootstrap in a disposable host drill.
-  Application-level restores are proven independently, but full provisioning and
-  recovery ordering still need an end-to-end drill. Do not reset production to test it.
+- [ ] Complete the operator-run clean cluster rebuild and validate recovered contents.
+  Application-level restores are proven independently; the full uninstall, old-volume
+  deletion and fresh bootstrap sequence remains to be exercised by the operator.
 
 - [x] Validate `task volsync:replication-sync` live: trigger all scheduled restic
   sources, show progress, require fresh completion, and preserve schedules/hooks.
@@ -379,3 +379,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   tests and Ansible syntax/lint checks passed.
 - [x] Reconstruct Grafana LDAP provisioning state through imports after clean recovery,
   and stop recreating obsolete LDAP migration volumes on new clusters.
+
+- [x] Make bootstrap cluster-only and unchanged on running RKE2. Live NAS invocation
+  returned changed=0 before facts, credentials or cleanup. Add explicit old-OpenEBS
+  deletion prompt and scope checks; read-only plan covers current/legacy ZFS PVCs and
+  one hostpath volume. OS/network setup and pool creation remain separate.

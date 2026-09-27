@@ -31,9 +31,11 @@ includes:
 tasks:
   rke2:bootstrap:
     dir: ansible
-    desc: Build a fresh control plane and restore applications from S3 through Flux/VolSync
+    desc: Bootstrap RKE2 on a prepared host; prompt to erase old OpenEBS volumes (running cluster is unchanged)
+    interactive: true
     env:
-      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
+      # Running clusters exit before the playbook explicitly loads recovery credentials.
+      ANSIBLE_VARS_ENABLED: host_group_vars
     preconditions:
       - sh: test -z {{.RESTORE | default "" | shellQuote}} && test -z {{.SNAPSHOT | default "" | shellQuote}}
           && test -z {{.MODE | default "" | shellQuote}}
