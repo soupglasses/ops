@@ -141,6 +141,13 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   Maintenance requires recovery and release review, rejects interrupted upgrades and
   unsupported Cilium transitions, and checks the bundled network rollout. See
   [RKE2 operations](docs/rke2-operations.md) for Cilium preflight and recovery.
+- [x] **Preserve Cilium ingress ownership across RKE2 upgrades.** The host role and
+  upgrade playbook install an explicit `ingress-controller: [none]` drop-in.
+  RKE2 1.36 otherwise chooses Traefik when no ingress-nginx chart exists. Syntax,
+  lint, manifest validation and independent review passed before maintenance.
+- [ ] **Repair the documented automation SSH login.** The `ansible` account rejected
+  its configured key on 2026-09-27. The hardware-backed `sofie` login and sudo work;
+  do not broaden source restrictions or replace credentials without diagnosing it.
 - [ ] **Apply the prepared RKE2 1.36 maintenance stage.** Complete the documented
   recovery preconditions and upgrade verification before advancing the desired
   version again. [PR #53](https://github.com/soupglasses/ops/pull/53) remains blocked

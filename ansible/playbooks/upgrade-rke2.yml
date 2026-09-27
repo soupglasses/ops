@@ -227,6 +227,9 @@
       no_log: true
 
   tasks:
+    - name: Preserve Flux-managed ingress ownership before restarting
+      ansible.builtin.import_tasks: ../roles/rke2/tasks/ingress.yml
+
     - name: Cordon the node before changing RKE2
       ansible.builtin.command:
         argv: "{{ kubectl_argv + ['cordon', 'nas'] }}"

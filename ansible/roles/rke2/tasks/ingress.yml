@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Create the public RKE2 configuration drop-in directory
+  ansible.builtin.file:
+    path: /etc/rancher/rke2/config.yaml.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Keep Cilium as the sole ingress controller
+  ansible.builtin.copy:
+    dest: /etc/rancher/rke2/config.yaml.d/20-cilium-ingress.yaml
+    owner: root
+    group: root
+    mode: "0600"
+    # RKE2 1.36 otherwise installs Traefik when no ingress-nginx chart exists.
+    content: |
+      ingress-controller:
+        - none

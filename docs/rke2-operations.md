@@ -15,6 +15,13 @@ The home cluster is one Ubuntu 26.04 server. Maintenance and reboot cause downti
 | Flux | Applications, OpenEBS, VolSync, BGP advertisements and network policies |
 | RouterOS | VLANs, routing, BGP peers, perimeter firewall and WireGuard |
 
+The host role and upgrade playbook maintain a non-secret
+`/etc/rancher/rke2/config.yaml.d/20-cilium-ingress.yaml` drop-in with
+`ingress-controller: [none]`. RKE2 1.36 otherwise selects Traefik when no
+ingress-nginx HelmChart exists, including clusters already using Cilium Gateway.
+This preserves Flux-managed ingress without rereading or rewriting credentials
+during maintenance. See [RKE2 ingress selection](https://github.com/rancher/rke2/blob/v1.36.4%2Brke2r1/pkg/bootstrap/bootstrap.go).
+
 Do not install a second Cilium, CoreDNS or snapshot-controller release through Flux.
 RKE2 already installs Cilium through Helm. Keeping its bundled chart gives a single
 owner and restores networking before Flux starts. Independent Cilium releases are

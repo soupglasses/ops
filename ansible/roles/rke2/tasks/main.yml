@@ -133,6 +133,10 @@
   notify: Restart RKE2
   when: rke2_version != rke2_installed_release
 
+- name: Preserve Flux-managed ingress ownership
+  ansible.builtin.import_tasks: ingress.yml
+  notify: Restart RKE2
+
 - name: Install the RKE2 server configuration
   ansible.builtin.template:
     src: config.yaml.j2
