@@ -345,5 +345,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Create and restore-verify a fresh restic-encrypted etcd recovery point before maintenance.
   Snapshot `35c8df15` restored with matching SHA-256 and native etcd validation
   (2,214 keys, revision 2,184,007) on 2026-09-27; temporary pod removed.
-- [ ] Migrate scheduled native etcd S3 uploads to client-side encryption, preserving
-  history, retention and freshness alerts. See [encrypted etcd backups](docs/rke2-restic-backup.md).
+- [x] Replace scheduled native etcd uploads with client-side restic encryption.
+  Same-version restart and encrypted restore checks passed before/after cutover;
+  six-hour timer and verified-backup alerts are active. Historical S3 migration is
+  tracked separately. See [encrypted etcd backups](docs/rke2-restic-backup.md).
+
+- [ ] Encrypt and restore-verify every historical native S3 object/version and companion
+  metadata, then delete verified plaintext originals under the approved migration.

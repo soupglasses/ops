@@ -148,3 +148,56 @@ After plaintext cleanup, Gitleaks 8.30.1 scanned the two backup commits
 (`cbdedf9..66548ac`) and reported no leaks. The encrypted etcd backup necessarily
 contains Kubernetes Secrets when decrypted; this check concerns exposed secrets in
 Git, not removal of required recovery data from the encrypted backup.
+
+## Scheduled cutover — 2026-09-27
+
+The host service passed restore validation before and after a same-version RKE2
+restart. The timer is enabled, the old native metric timer is disabled, and the
+non-secret drop-in disables both native S3 upload and native automatic snapshots.
+The immediate timer run restored snapshot
+`69c693a5c71799217a13fdb9d389f610043d68755e62faf527ee116d223719a5` at
+`2026-09-27T11:24:48Z`: source/restored SHA-256
+`99a6fd2b38e328adbfaa0e8209604e4fb67dd1e91e07df84e0dfde770320a7b3`,
+revision `2194034`, `1925` keys. Its local plaintext file and temporary pod were
+removed. VictoriaMetrics ingested `rke2_etcd_restic_backup_success=1`.
+The node remained Ready on `v1.35.8+rke2r1`; Cilium rollout completed.
+
+## Migrating historical native S3 recovery points
+
+`scripts/rke2-encrypt-history.py` is a one-time root host tool. It consumes the existing
+RKE2 base configuration internally; retain those old S3 settings until the migration
+finishes. The overriding drop-in keeps native uploads disabled throughout migration.
+Its default `--migrate` stage preserves all source objects. A separate `--delete`
+stage requires the unchanged source inventory and a restored encrypted coverage index,
+then revalidates every object before deleting exact versions. Source changes or
+unsupported enumeration/conditional deletion stop the operation.
+
+The inventory covers snapshot objects, companion `.metadata` objects, historical
+versions and delete markers. Incomplete multipart uploads block completion and require
+separate inspection. Object bytes and metadata go into the encrypted restic repository;
+only sanitized digests, restic IDs and validation results appear in the local receipt.
+The source SDK consumes credentials without exporting them to files or log output.
+Original and restored bytes are streamed through memory-backed storage, including
+root-only `/run` storage for native validation. No plaintext is written to the
+operator's workspace.
+
+For historical recovery on a trusted machine, supply the same independent restic
+credentials as above and run as root:
+
+```bash
+restic snapshots --tag rke2-etcd-history
+restic restore SNAPSHOT_ID --target /protected/history
+```
+
+An object recovery point contains `work/source/original` and encrypted
+`work/source/recovery.json`; the latter records its original key, version, timestamp,
+checksum and object metadata. Coverage-index recovery points contain
+`work/index/coverage.json`, mapping source digests to all verified object snapshots.
+The index itself is also stored in restic, so local migration receipts are not needed
+for disaster recovery. Select a database object rather than its metadata companion.
+For a ZIP snapshot, validate and extract its single database member to a protected
+path; keep the original archive and compare its SHA-256 with `recovery.json` first.
+Validate the extracted database with the recorded native tool, then follow the local
+RKE2 restore procedure with the original token and matching RKE2 release. Historical
+objects retain their original bytes; they are not silently converted to the current
+scheduled-backup layout.
