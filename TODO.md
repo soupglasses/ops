@@ -342,6 +342,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   provisioner. Disable incompatible XFS quotas on the Ubuntu ext4 root filesystem.
   Existing application data uses quota-enforced ZFS PVCs.
 
-- [ ] Create and restore-verify a fresh restic-encrypted etcd recovery point before maintenance.
+- [x] Create and restore-verify a fresh restic-encrypted etcd recovery point before maintenance.
+  Snapshot `35c8df15` restored with matching SHA-256 and native etcd validation
+  (2,214 keys, revision 2,184,007) on 2026-09-27; temporary pod removed.
 - [ ] Migrate scheduled native etcd S3 uploads to client-side encryption, preserving
   history, retention and freshness alerts. See [encrypted etcd backups](docs/rke2-restic-backup.md).
