@@ -5,11 +5,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: rke2-etcd-s3-snapshot-dashboard
+  name: rke2-etcd-restic-backup-dashboard
   labels:
     grafana_dashboard: "1"
 data:
-  rke2-etcd-s3-snapshots.json: |-
+  rke2-etcd-restic-backups.json: |-
     {
       "annotations": {"list": []},
       "editable": false,
@@ -21,8 +21,8 @@ data:
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
           "id": 1,
           "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-          "targets": [{"expr": "rke2_etcd_s3_snapshot_list_success", "legendFormat": "{{instance}}", "refId": "A"}],
-          "title": "S3 listing succeeds",
+          "targets": [{"expr": "rke2_etcd_restic_backup_success", "legendFormat": "{{instance}}", "refId": "A"}],
+          "title": "Last encrypted backup and restore verification succeeded",
           "type": "stat"
         },
         {
@@ -31,8 +31,8 @@ data:
           "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
           "id": 2,
           "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single", "sort": "none"}},
-          "targets": [{"expr": "rke2_etcd_s3_snapshot_count", "legendFormat": "available"}, {"expr": "rke2_etcd_s3_snapshot_retention_target", "legendFormat": "target"}],
-          "title": "Scheduled snapshots",
+          "targets": [{"expr": "rke2_etcd_restic_snapshot_count", "legendFormat": "available"}, {"expr": "vector(28)", "legendFormat": "target"}],
+          "title": "Encrypted repository snapshots",
           "type": "timeseries"
         },
         {
@@ -41,18 +41,18 @@ data:
           "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
           "id": 3,
           "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-          "targets": [{"expr": "time() - rke2_etcd_s3_snapshot_latest_timestamp_seconds", "legendFormat": "{{instance}}", "refId": "A"}],
-          "title": "Newest scheduled snapshot age",
+          "targets": [{"expr": "time() - rke2_etcd_restic_backup_last_verified_timestamp_seconds", "legendFormat": "{{instance}}", "refId": "A"}],
+          "title": "Last verified encrypted backup age",
           "type": "stat"
         }
       ],
       "refresh": "1m",
       "schemaVersion": 41,
-      "tags": ["rke2", "backup", "s3"],
+      "tags": ["rke2", "backup", "restic", "encrypted"],
       "templating": {"list": []},
       "time": {"from": "now-24h", "to": "now"},
       "timezone": "browser",
-      "title": "RKE2 etcd S3 snapshots",
-      "uid": "rke2-etcd-s3-snapshots",
-      "version": 1
+      "title": "RKE2 etcd encrypted backups",
+      "uid": "rke2-etcd-restic-backups",
+      "version": 2
     }

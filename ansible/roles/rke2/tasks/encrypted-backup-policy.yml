@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Create the RKE2 configuration drop-in directory
+  ansible.builtin.file:
+    path: /etc/rancher/rke2/config.yaml.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Delegate all scheduled etcd uploads to encrypted restic backups
+  ansible.builtin.copy:
+    dest: /etc/rancher/rke2/config.yaml.d/30-encrypted-etcd-backups.yaml
+    owner: root
+    group: root
+    mode: "0600"
+    # Explicit on-demand saves still work; disable the built-in plaintext uploader.
+    content: |
+      etcd-s3: false
+      etcd-disable-snapshots: true

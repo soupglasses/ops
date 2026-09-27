@@ -7,14 +7,17 @@
 
 import argparse
 import datetime
+import fcntl
 import json
 import os
 import re
+import signal
 import shlex
 import subprocess
 import sys
 import time
 import uuid
+from pathlib import Path
 
 RESTIC_IMAGE = "quay.io/backube/volsync@sha256:0d03a6aad57569eba2c0eaa0848cf4a908d9744b372ff2224bb291a320f36d76"
 VALIDATOR_IMAGE = "gcr.io/etcd-development/etcd@sha256:a491baeaa0cb0c9cd89c0062ac44ece53886e3e5bddad18d2daf36678ce665b6"
@@ -60,6 +63,7 @@ def main():
     parser.add_argument('--host-key-alias', default='nas.home.finnes.dev')
     parser.add_argument('--initialize', action='store_true',
                         help='Explicitly initialize a new encrypted repository once')
+    parser.add_argument('--local', action='store_true', help='Run on the RKE2 host as root')
     args = parser.parse_args()
     for value in (args.ssh_host, args.ssh_user, args.host_key_alias):
         if not re.fullmatch(r'[A-Za-z0-9_.:-]+', value) or value.startswith('-'):
@@ -69,6 +73,40 @@ def main():
     if args.identity_file:
         ssh += ['-i', args.identity_file]
     ssh += [f'{args.ssh_user}@{args.ssh_host}']
+    if not args.local:
+        command = ['sudo', '-n', '/usr/local/libexec/rke2-restic-backup', '--local']
+        if args.initialize:
+            command.append('--initialize')
+        sys.stdout.buffer.write(run(ssh + [shlex.join(command)]))
+        return
+    if os.geteuid() != 0:
+        raise RuntimeError('Local backup requires root on the RKE2 host')
+    os.environ['KUBECONFIG'] = '/etc/rancher/rke2/rke2.yaml'
+    os.environ['PATH'] = '/var/lib/rancher/rke2/bin:/usr/local/bin:/usr/bin:/bin'
+    # Every entry point shares the host lock, including manual and upgrade runs.
+    lock = open('/var/lib/rke2-restic-backup/backup.lock', 'a')
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(
+        RuntimeError('Backup service stopped before completion')))
+    status_path = Path('/var/lib/rke2-restic-backup/status.json')
+    metrics_path = Path('/var/lib/prometheus/node-exporter/rke2-etcd-restic.prom')
+    status = json.loads(status_path.read_text()) if status_path.exists() else {}
+    status.update(success=0, last_attempt=time.time())
+
+    def persist():
+        for path, content, mode in (
+            (status_path, json.dumps(status, indent=2), 0o600),
+            (metrics_path, '\n'.join([
+                '# Only verified encrypted restores advance the success timestamp.',
+                f"rke2_etcd_restic_backup_success {status['success']}",
+                f"rke2_etcd_restic_backup_last_attempt_timestamp_seconds {status['last_attempt']}",
+                f"rke2_etcd_restic_backup_last_verified_timestamp_seconds {status.get('last_verified', 0)}",
+                f"rke2_etcd_restic_snapshot_count {status.get('snapshot_count', 0)}", '']), 0o644)):
+            temporary = path.with_suffix('.tmp')
+            temporary.write_text(content)
+            temporary.chmod(mode)
+            temporary.replace(path)
+    persist()
     env = dict(os.environ, KUBECTL_REMOTE_COMMAND_WEBSOCKETS='false')
     kube = ['kubectl', '-n', NS]
     pod_name = 'etcd-restic-' + uuid.uuid4().hex[:12]
@@ -102,7 +140,7 @@ def main():
     pod = {'apiVersion': 'v1', 'kind': 'Pod', 'metadata': {
         'name': pod_name, 'namespace': NS,
         'labels': {'app.kubernetes.io/name': 'etcd-restic-verification'}}, 'spec': {
-        'restartPolicy': 'Never', 'activeDeadlineSeconds': 1800,
+        'restartPolicy': 'Never', 'activeDeadlineSeconds': 1500,
         'automountServiceAccountToken': False,
         'securityContext': {'runAsNonRoot': True, 'runAsUser': 1000,
                             'runAsGroup': 1000, 'fsGroup': 1000,
@@ -128,6 +166,15 @@ def main():
                           'limits': {'memory': '1Gi'}}}],
         'volumes': [{'name': 'work', 'emptyDir': {'medium': 'Memory',
                                                'sizeLimit': '1Gi'}}]}}
+    # Recover cleanup after a host reboot or forced termination. The host lock
+    # excludes another supported run; only terminal/expired labeled pods qualify.
+    previous = json.loads(run(kube + ['get', 'pods', '-l',
+        'app.kubernetes.io/name=etcd-restic-verification', '-o', 'json']))
+    for item in previous['items']:
+        created_at = datetime.datetime.fromisoformat(
+            item['metadata']['creationTimestamp'].replace('Z', '+00:00')).timestamp()
+        if item.get('status', {}).get('phase') in ('Succeeded', 'Failed') or time.time() - created_at > 1800:
+            run(kube + ['delete', 'pod', item['metadata']['name'], '--wait=true', '--timeout=90s'])
     created = False
     try:
         run(kube + ['create', '-f', '-'], input=json.dumps(pod).encode())
@@ -141,16 +188,15 @@ def main():
         execute('/bin/sh', '-ec',
                 'if RESTIC_PASSWORD=wrong-verification-password restic cat config '
                 '>/dev/null 2>&1; then exit 1; fi')
-        source = json.loads(run(ssh + [shlex.join(
-            ['sudo', '-n', 'python3', '-c', CAPTURE, prefix])]))
-        print('Local-only snapshot created; original retained on nas.', flush=True)
+        source = json.loads(run(['/usr/bin/python3', '-c', CAPTURE, prefix]))
+        print('Local-only snapshot created; removed after verified encrypted restore.', flush=True)
         path = source['path']
         if not re.fullmatch('/var/lib/rancher/rke2/server/db/snapshots/'
                             + re.escape(prefix) + r'-[A-Za-z0-9_.-]+', path):
             raise RuntimeError('Unexpected source path')
-        # Pipe bytes directly between SSH and the Kubernetes TLS connection.
+        # Stream directly into the Kubernetes TLS connection without another disk copy.
         # A failed source must never be mistaken for a complete backup.
-        sender = subprocess.Popen(ssh + [shlex.join(['sudo', '-n', 'cat', path])],
+        sender = subprocess.Popen(['/usr/bin/cat', path],
                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         receiver = subprocess.Popen(kube + ['exec', '-i', pod_name, '-c', 'backup',
             '--', '/bin/sh', '-ec', 'umask 077; cat > /work/source/snapshot.db'],
@@ -186,16 +232,28 @@ def main():
         restored = execute('sha256sum', '/work/restored/work/source/snapshot.db').decode().split()[0]
         if restored != source['sha256']:
             raise RuntimeError('Restored snapshot checksum mismatch')
+        snapshots = json.loads(execute('restic', 'snapshots', '--json', '--tag', 'rke2-etcd'))
         execute('touch', '/work/validate-ready')
         wait_for(lambda d: d.get('status', {}).get('phase') == 'Succeeded')
         native = json.loads(run(kube + ['logs', pod_name, '-c', 'validate']))
         if native.get('totalKey', 0) <= 0 or native.get('revision', 0) <= 0:
             raise RuntimeError('Restored etcd database contains no usable state')
-        print(json.dumps({'repository_secret': SECRET, 'restic_snapshot': snapshot,
-                          'source_sha256': source['sha256'], 'restored_sha256': restored,
-                          'local_snapshot': source['path'], 'rke2_version': source['rke2_version'],
-                          'etcd': native, 'verified_at': datetime.datetime.now(
-                              datetime.timezone.utc).isoformat()}, indent=2))
+        receipt = {'repository_secret': SECRET, 'restic_snapshot': snapshot,
+                   'source_sha256': source['sha256'], 'restored_sha256': restored,
+                   'rke2_version': source['rke2_version'], 'etcd': native,
+                   'verified_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        # Persist recovery identity before unlinking the exact newly captured file.
+        # Failed uploads/validation preserve the source; no old history is touched.
+        status['receipt'] = receipt
+        persist()
+        Path(path).unlink()
+        if Path(path).exists():
+            raise RuntimeError('Verified snapshot plaintext cleanup failed')
+        run(kube + ['delete', 'pod', pod_name, '--wait=true', '--timeout=90s'])
+        created = False
+        status.update(success=1, last_verified=time.time(), snapshot_count=len(snapshots))
+        persist()
+        print(json.dumps(receipt, indent=2))
     finally:
         if created:
             run(kube + ['delete', 'pod', pod_name, '--wait=true', '--timeout=90s'])
@@ -204,6 +262,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (RuntimeError, subprocess.TimeoutExpired, KeyError, ValueError) as exc:
+    except (RuntimeError, subprocess.TimeoutExpired, KeyError, ValueError, OSError) as exc:
         print(f'Encrypted etcd backup failed: {exc}', file=sys.stderr)
         sys.exit(1)

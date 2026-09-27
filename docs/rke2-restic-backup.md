@@ -9,7 +9,10 @@ SPDX-License-Identifier: 0BSD
 `scripts/rke2-restic-backup.py` creates a fresh local RKE2 snapshot with native S3
 upload explicitly disabled, then encrypts it with restic before uploading to the
 existing off-cluster application backup endpoint under `rke2-etcd-restic`.
-The upgrade playbook requires this backup and its restore verification before cordon.
+The host's `rke2-etcd-restic-backup.timer` runs the same helper every six hours
+(00:05, 06:05, 12:05 and 18:05 UTC, plus up to two minutes of jitter). It catches up
+after downtime and runs ten minutes after boot. Manual, scheduled and pre-upgrade
+backups share a host lock. The upgrade requires a verified backup before cordon.
 
 Flux creates `flux-system/rke2-etcd-restic` from existing cluster substitutions.
 No credential values belong in this runbook, shell arguments, or backup receipts.
@@ -20,21 +23,24 @@ mise exec -- python3 scripts/rke2-restic-backup.py --initialize
 ```
 
 Subsequent runs omit `--initialize`. A missing or inaccessible repository is an
-error, never a reason to initialize automatically. The helper needs working kubectl,
-verified SSH access to nas and passwordless sudo. It defaults to the human `sofie`
+error, never a reason to initialize automatically. The installed helper uses the host's existing Kubernetes configuration. Manual runs
+need verified SSH access to nas and passwordless sudo. It defaults to the human `sofie`
 account; host, user and identity file can be overridden with its CLI options.
 
-The root-only original remains on nas. Transfer goes directly from SSH into a
+The root-only original is deleted after a successful encrypted restore. Failed runs
+preserve their source for diagnosis and retry; no old recovery points are deleted.
+Transfer goes directly from the node into a
 restricted pod's memory-backed volume; no plaintext snapshot is saved to the operator's
 workspace. Only the restic container receives backup credentials. A separate native
 validator receives neither credentials nor a Kubernetes service-account token.
-The temporary pod is removed on success or failure.
+The temporary pod is removed on success or failure. Terminal or expired pods left
+by a forced interruption are cleaned up by the next serialized run.
 
 Verification checks the transfer SHA-256, rejection of an incorrect restic password,
 `restic check --read-data`, restoration of the exact new snapshot ID, matching restored
 SHA-256, and `etcdutl snapshot status` with nonzero revision and key count. This proves
 retrieval, integrity and native database readability; it does not prove a replacement
-control plane boots. The JSON receipt identifies the retained local file, restic ID,
+control plane boots. The JSON receipt identifies the restic ID,
 checksums, source RKE2 version and native validation results.
 
 ## Recovery without a surviving cluster
@@ -76,18 +82,34 @@ and [etcd releases](https://github.com/etcd-io/etcd/releases/tag/v3.6.14), so it
 require these container registries or a working Kubernetes cluster. Preserve release
 artifacts and checksums alongside the independent recovery material.
 
-## Retention and remaining work
+## Schedule, monitoring and retention
 
-This repository retains every manually created/pre-upgrade recovery point; the helper
-never runs forget or prune. Backend lifecycle rules must retain its objects, and
-independent versioned history must survive writer credential compromise.
-Failures exit nonzero and block the upgrade. This is an on-demand backup, without a
-separate scheduled freshness alert.
+`ansible/playbooks/encrypt-etcd-backups.yml` installs and tests the service before
+cutover, disables RKE2's built-in S3 uploader and automatic snapshots through a
+non-secret configuration drop-in, restarts the same RKE2 version, and proves explicit
+snapshot creation still works. It then enables the timer and retires native-S3
+freshness metrics. Ordinary host convergence declares the same final configuration.
+A clean cluster must restore Flux and its existing backup Secret before the timer can
+succeed; recovery itself uses standalone restic and does not require the lost cluster.
 
-Existing six-hourly native RKE2 S3 backups and their alerts remain unchanged. Those
-uploads are not protected by restic client-side encryption. Moving their schedule,
-retention and freshness monitoring to encrypted backups remains a separate change;
-retain historical recovery points throughout that migration.
+```bash
+cd ansible
+ansible-playbook playbooks/encrypt-etcd-backups.yml
+```
+
+The service has a 30-minute timeout; its pod has a shorter lifetime. Root-only
+`/var/lib/rke2-restic-backup/status.json` contains sanitized receipts. Atomic node
+exporter metrics record attempts, outcome, repository count, and the last fully
+verified encrypted restore. Alerts cover missing metrics, failure, a verified backup
+older than ten hours, and fewer than 28 recovery points for eight days. Grafana shows
+these encrypted-backup metrics. Failed attempts never refresh the verified timestamp.
+
+Every encrypted recovery point is retained: the helper never forgets or prunes.
+This preserves at least the former 28-point history as the repository fills; review
+storage growth before introducing deletion. Backend lifecycle rules must preserve
+restic objects, and independent versioned history must survive writer compromise.
+Historical native S3 points must be encrypted, restored and validated individually
+before their plaintext originals can be deleted. New backups use only restic uploads.
 
 ## Verified recovery point — 2026-09-27
 

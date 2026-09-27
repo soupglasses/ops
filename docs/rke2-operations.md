@@ -354,7 +354,10 @@ platform proposal. The validation schema follows bundled Cilium automatically. C
 API compatibility before merging. See [dependency updates](dependency-updates.md).
 A changed inventory pin does not upgrade an installed node through normal convergence.
 
-Etcd snapshots run every six hours, retaining 28 locally and in S3. Independent S3
+Etcd backups run every six hours through the host restic timer, with client-side
+encryption and exact restore verification. Native RKE2 S3 uploads and automatic
+snapshots are disabled. Encrypted points are retained without pruning; monitoring
+checks freshness and a minimum history of 28 points. See [the backup runbook](rke2-restic-backup.md). Independent S3
 history must preserve deleted/noncurrent objects for at least 30 days and prevent the
 writer from permanently erasing the only copy. Application retention remains unchanged.
 The host exports aggregate backup freshness metrics; prove both firing and resolved

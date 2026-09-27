@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Create encrypted backup status directory
+  ansible.builtin.file:
+    path: /var/lib/rke2-restic-backup
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the verified encrypted backup helper
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../scripts/rke2-restic-backup.py"
+    dest: /usr/local/libexec/rke2-restic-backup
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install encrypted etcd backup service and timer
+  ansible.builtin.template:
+    src: "etcd-restic-backup.{{ item }}.j2"
+    dest: "/etc/systemd/system/rke2-etcd-restic-backup.{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - service
+    - timer
+
+- name: Reload backup service definitions
+  ansible.builtin.systemd_service:
+    daemon_reload: true

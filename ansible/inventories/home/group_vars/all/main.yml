@@ -51,5 +51,5 @@ rke2_tls_sans:
 rke2_etcd_snapshot_schedule: "0 */6 * * *"
 rke2_etcd_snapshot_retention: 28
 rke2_etcd_s3_retention: 28
-rke2_etcd_s3_enabled: true
+rke2_etcd_s3_enabled: false
 rke2_etcd_s3_folder: rke2-etcd

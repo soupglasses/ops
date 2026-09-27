@@ -19,20 +19,6 @@
     fail_msg: Define rke2_token in the encrypted SOPS inventory before starting RKE2.
   no_log: true
 
-- name: Require complete etcd S3 settings when enabled
-  ansible.builtin.assert:
-    that:
-      - rke2_etcd_s3_retention | int >= rke2_etcd_snapshot_retention | int
-      - (rke2_etcd_s3_endpoint | default('')) | length > 0
-      - (rke2_etcd_s3_region | default('')) | length > 0
-      - (rke2_etcd_s3_bucket | default('')) | length > 0
-      - (rke2_etcd_s3_access_key | default('')) | length > 0
-      - (rke2_etcd_s3_secret_key | default('')) | length > 0
-    fail_msg: >-
-      Supply all etcd S3 settings through encrypted inventory variables and retain at least as many S3
-      snapshots as local snapshots.
-  when: rke2_etcd_s3_enabled | bool
-
 - name: Require independent high-entropy BGP authentication passwords
   ansible.builtin.assert:
     that:
@@ -135,6 +121,10 @@
 
 - name: Preserve Flux-managed ingress ownership
   ansible.builtin.import_tasks: ingress.yml
+  notify: Restart RKE2
+
+- name: Disable native plaintext etcd uploads
+  ansible.builtin.import_tasks: encrypted-backup-policy.yml
   notify: Restart RKE2
 
 - name: Install the RKE2 server configuration
@@ -267,30 +257,6 @@
     mode: "0644"
   notify: Restart Prometheus node exporter
 
-- name: Install the aggregate RKE2 S3 snapshot metric collector
-  ansible.builtin.template:
-    src: etcd-snapshot-metrics.sh.j2
-    dest: /usr/local/libexec/rke2-etcd-snapshot-metrics
-    owner: root
-    group: root
-    mode: "0750"
-
-- name: Install the RKE2 S3 snapshot metric service
-  ansible.builtin.template:
-    src: etcd-snapshot-metrics.service.j2
-    dest: /etc/systemd/system/rke2-etcd-snapshot-metrics.service
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Install the RKE2 S3 snapshot metric timer
-  ansible.builtin.template:
-    src: etcd-snapshot-metrics.timer.j2
-    dest: /etc/systemd/system/rke2-etcd-snapshot-metrics.timer
-    owner: root
-    group: root
-    mode: "0644"
-
 - name: Enable the Prometheus node exporter
   ansible.builtin.systemd_service:
     name: prometheus-node-exporter
@@ -298,18 +264,14 @@
     state: started
     daemon_reload: true
 
-- name: Enable the RKE2 S3 snapshot metric timer
+- name: Install encrypted scheduled etcd backups
+  ansible.builtin.import_tasks: encrypted-backup.yml
+
+- name: Enable encrypted scheduled etcd backups
   ansible.builtin.systemd_service:
-    name: rke2-etcd-snapshot-metrics.timer
+    name: rke2-etcd-restic-backup.timer
     enabled: true
     state: started
-    daemon_reload: true
-
-- name: Seed the RKE2 S3 snapshot metrics
-  ansible.builtin.systemd_service:
-    name: rke2-etcd-snapshot-metrics.service
-    state: started
-  no_log: true
 
 - name: Report the server-token recovery requirement without exposing it
   ansible.builtin.debug:
