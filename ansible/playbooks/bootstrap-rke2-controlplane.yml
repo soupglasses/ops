@@ -6,17 +6,18 @@
   hosts: rke2_servers
   become: true
   gather_facts: true
-  vars:
-    rke2_restore_snapshot: "{{ lookup('env', 'RKE2_RESTORE_SNAPSHOT') | default('', true) }}"
   pre_tasks:
 
-    - name: Require a supported host and explicit restore selection
+    - name: Require a supported host without obsolete restore options
       ansible.builtin.assert:
         that:
           - ansible_distribution == 'Ubuntu'
           - ansible_distribution_version is version('26.04', '>=')
-          - rke2_restore_snapshot is match('^(|latest|[a-f0-9]{8,64})$')
-        fail_msg: Use a supported Ubuntu host and RESTORE=latest or a hexadecimal snapshot ID.
+          - lookup('env', 'RKE2_RESTORE_SNAPSHOT') == ''
+          - lookup('env', 'RKE2_BOOTSTRAP_MODE') == ''
+          - rke2_restore_snapshot is not defined
+        fail_msg: Use a supported Ubuntu host. Bootstrap always rebuilds cleanly; remove obsolete etcd
+          restore options.
 
     - name: Inspect host services without starting them
       ansible.builtin.service_facts:
@@ -29,15 +30,20 @@
 
     - name: Inspect existing control-plane state before changing the host
       ansible.builtin.stat:
-        path: /var/lib/rancher/rke2/server/db/etcd
-      register: bootstrap_existing_etcd
+        path: /var/lib/rancher/rke2/server
+      register: bootstrap_existing_server
 
-    - name: Refuse to bootstrap over an existing control plane
+    - name: Require an empty RKE2 server state directory
       ansible.builtin.assert:
         that:
-          - not bootstrap_existing_etcd.stat.exists
+          - not bootstrap_existing_server.stat.exists
         fail_msg: "This task is for a replacement host. Preserve existing state and use ansible:apply
-          for convergence; bootstrap never deletes or resets an existing database."
+          for convergence; bootstrap never deletes or adopts existing server state."
+
+    - name: Remove a previous cluster's uninstall journal only after the clean-host checks
+      ansible.builtin.file:
+        path: /var/lib/rke2-uninstall
+        state: absent
 
   roles:
     - accounts

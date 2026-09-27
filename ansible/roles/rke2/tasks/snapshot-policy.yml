@@ -10,13 +10,17 @@
     group: root
     mode: "0750"
 
-- name: Delegate all scheduled etcd uploads to encrypted restic backups
+- name: Disable native etcd snapshots and S3 uploads
   ansible.builtin.copy:
-    dest: /etc/rancher/rke2/config.yaml.d/30-encrypted-etcd-backups.yaml
+    dest: /etc/rancher/rke2/config.yaml.d/30-disable-etcd-backups.yaml
     owner: root
     group: root
     mode: "0600"
-    # Explicit on-demand saves still work; disable the built-in plaintext uploader.
     content: |
       etcd-s3: false
       etcd-disable-snapshots: true
+
+- name: Remove the obsolete encrypted backup policy filename
+  ansible.builtin.file:
+    path: /etc/rancher/rke2/config.yaml.d/30-encrypted-etcd-backups.yaml
+    state: absent

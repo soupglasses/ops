@@ -9,6 +9,5 @@ namespace: flux-system
 components:
   - ../../components/common
 resources:
-  - ./etcd-backup/ks.yaml
   - ./hermes-access/ks.yaml
   - ./tofu-controller/ks.yaml

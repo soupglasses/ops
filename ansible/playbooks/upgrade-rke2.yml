@@ -19,15 +19,15 @@
       ansible.builtin.assert:
         that:
           - not ansible_check_mode
-        fail_msg: This upgrade requires a verified new S3 snapshot. Use --syntax-check for offline validation.
+        fail_msg: This upgrade requires fresh application backups. Use --syntax-check for offline validation.
 
-    - name: Require independently recoverable application backups and server token
+    - name: Require independently recoverable application backups
       ansible.builtin.assert:
         that:
           - rke2_recovery_verified | default(false) | bool
           - rke2_version is match('^v[0-9]+\.[0-9]+\.[0-9]+\+rke2r[0-9]+$')
           - rke2_tarball_sha256 is match('^[0-9a-f]{64}$')
-        fail_msg: Verify application backups and off-node token custody, then set rke2_recovery_verified=true.
+        fail_msg: Verify application restore drills and independent recovery keys, then set rke2_recovery_verified=true.
 
     - name: Read the installed version
       ansible.builtin.command: /usr/local/bin/rke2 --version
@@ -52,7 +52,7 @@
           - >-
             upgrade_target != upgrade_current or (rke2_version.split('rke2r')[1] | int) >= (upgrade_installed.stdout
             | regex_search('rke2r[0-9]+') | replace('rke2r', '') | int)
-        fail_msg: Upgrade one minor at a time. Rollback requires the documented datastore restore procedure.
+        fail_msg: Upgrade one minor at a time. Disaster recovery uses the documented clean bootstrap procedure.
 
     - name: Restrict this maintenance procedure to the single server
       ansible.builtin.assert:
@@ -79,9 +79,9 @@
             ((upgrade_running_nodes.stdout | from_json)['items'][0].status.conditions | selectattr('type',
             'equalto', 'Ready') | map(attribute='status') | first | default('False')) == 'True'
         fail_msg: >-
-          Resolve node health, an existing cordon or an interrupted upgrade first. Preserve the original
-          pre-upgrade S3 snapshot. Inspect systemctl status rke2-server and kubectl get node nas; complete
-          the interrupted restart and verification, or restore the matching release and snapshot.
+          Resolve node health, an existing cordon or an interrupted upgrade first. Inspect systemctl status
+          rke2-server and kubectl get node nas; complete the interrupted restart and verification. If
+          recovery is necessary, use the documented clean rebuild with application backups.
 
     - name: Read the installed embedded Cilium chart
       ansible.builtin.shell: |
@@ -188,7 +188,7 @@
           the target Cilium preflight and compatibility checks in docs/rke2-operations.md, remove the
           temporary preflight resources, then set rke2_cilium_preflight_verified=true.
 
-    - name: Verify an already-installed release without reinstalling or taking another snapshot
+    - name: Verify an already-installed release without reinstalling or requesting new backups
       when: upgrade_installed.stdout.split()[2] == rke2_version
       block:
         - name: Verify the existing Cilium rollout
@@ -206,22 +206,20 @@
         mode: "0640"
         checksum: "sha256:{{ rke2_tarball_sha256 }}"
 
-    - name: Create and restore-verify a client-encrypted off-cluster recovery point
+    - name: Complete fresh application backups before interrupting the node
       ansible.builtin.command:
         argv:
-          - "{{ ansible_playbook_python }}"
-          - "{{ playbook_dir }}/../../scripts/rke2-restic-backup.py"
-          - --ssh-host
-          - "{{ hostvars[inventory_hostname].ansible_host }}"
-          - --ssh-user
-          - "{{ hostvars[inventory_hostname].ansible_user }}"
-          - --identity-file
-          - "{{ hostvars[inventory_hostname].ansible_ssh_private_key_file }}"
-      delegate_to: localhost
-      become: false
+          - /usr/bin/python3
+          - '-'
+          - --timeout
+          - 30m
+        stdin: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../../scripts/volsync-replication-sync.py')
+          }}"
+      environment:
+        KUBECONFIG: /etc/rancher/rke2/rke2.yaml
+        PATH: /var/lib/rancher/rke2/bin:/usr/local/bin:/usr/bin:/bin
       changed_when: true
-      # The helper prints only recovery IDs, hashes and native database metadata.
-      # Any encryption, transfer or restore failure stops before the cordon.
+      # Backup failures stop before the cordon; restore drills remain a separate prerequisite.
 
   tasks:
     - name: Preserve Flux-managed ingress ownership before restarting
@@ -289,8 +287,9 @@
         - name: Stop for operator recovery
           ansible.builtin.fail:
             msg: >-
-              Cilium verification failed. Preserve the pre-upgrade S3 snapshot and inspect RKE2 Helm jobs
-              and Cilium through the console. Do not downgrade binaries against the new datastore.
+              Cilium verification failed. Inspect RKE2 Helm jobs and Cilium through the console. Do not
+              downgrade binaries against the new datastore. Disaster recovery uses a clean rebuild and
+              the application backups completed before this upgrade.
 - name: Verify the upgraded host
   ansible.builtin.import_playbook: verify.yml
   vars:

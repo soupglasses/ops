@@ -2,6 +2,17 @@
 #
 # SPDX-License-Identifier: 0BSD
 
+# Rebuild Tofu state from the restored directory after a clean cluster bootstrap.
+import {
+  to = ldap_entry.grafana_admins
+  id = local.admin_group_dn
+}
+
+import {
+  to = ldap_entry.grafana_oidc
+  id = "oauthClientID=grafana,ou=clients,ou=oauth,${local.ldap_suffix}"
+}
+
 # Keep Grafana access separate from Canaille-wide administration. Membership is
 # bootstrapped with the recovery admin, then owned by Canaille rather than Tofu.
 resource "ldap_entry" "grafana_admins" {

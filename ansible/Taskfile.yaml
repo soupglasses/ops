@@ -48,13 +48,6 @@ tasks:
     cmds:
       - ansible-playbook playbooks/site.yml
 
-  backup-etcd:
-    desc: Install the managed backup job and verify a fresh encrypted etcd recovery point
-    env:
-      ANSIBLE_VARS_ENABLED: host_group_vars
-    cmds:
-      - ansible-playbook playbooks/backup-etcd.yml {{.CLI_ARGS}}
-
   upgrade:
     desc: Upgrade pinned RKE2 and bundled Cilium after recovery and release preflight
     env:

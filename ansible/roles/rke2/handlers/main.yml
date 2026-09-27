@@ -7,9 +7,6 @@
     name: rke2-server
     state: restarted
     daemon_reload: true
-  # Even --force-handlers must not start an empty or partially restored control plane.
-  when: >-
-    (rke2_restore_snapshot | default('')) | length == 0 or (rke2_restore_complete | default(false) | bool)
   listen: Restart RKE2
 
 - name: Wait for Cilium Helm values to reach the effective ConfigMap

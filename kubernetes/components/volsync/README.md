@@ -64,8 +64,8 @@ owned by the existing controllers.
 
 This command confirms backup execution, not restorability. Before a destructive
 recovery drill, verify application restores and independently preserved recovery keys,
-then run `task ansible:backup-etcd` for Kubernetes state. See the
-[bootstrap guide](../../../docs/cluster-bootstrap.md). These commands do not reset RKE2.
+then follow the [clean bootstrap guide](../../../docs/cluster-bootstrap.md).
+Etcd snapshots are not part of recovery. The backup command does not reset RKE2.
 
 ## Restore before first start
 

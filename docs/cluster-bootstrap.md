@@ -16,18 +16,16 @@ leaves version selection there.
 
 ## Before a planned recovery drill
 
-Create fresh application backups and then a separate encrypted etcd backup:
+Create fresh application backups:
 
 ```bash
 task volsync:replication-sync
-task ansible:backup-etcd
 ```
 
 The VolSync task shows per-app progress, waits for all new backups, and returns
 nonzero if any source fails or times out. `TIMEOUT=1h` extends the default batch
 limit; normal backup schedules and application preparation hooks remain in place.
-The etcd task also restores and validates its encrypted backup before succeeding.
-Neither command deletes data or resets the cluster.
+This command does not delete data or reset the cluster.
 
 A completed upload alone is insufficient preparation for destruction. Validate
 application restores, preserve the recovery keys independently, and keep rollback
@@ -46,7 +44,7 @@ On the workstation, obtain:
 - this repository, including its encrypted inventory and Kubernetes Secrets;
 - the independent SOPS recovery identity and the administrator/automation SSH keys;
 - access to the encrypted S3 backup repositories;
-- the original RKE2 token in encrypted inventory when restoring etcd.
+- the encrypted host inventory, including the configured RKE2 join token.
 
 The repository contains encrypted credentials, not the key needed to decrypt them.
 Do not rely on a surviving Kubernetes Secret, the failed node, or an agent workspace
@@ -74,26 +72,26 @@ Review these files before running the bootstrap:
 Verify the replacement host's SSH fingerprint through the console before updating
 `known_hosts` for the inventory's host-key alias. Keep host-key checking enabled.
 
-## 2. Choose the recovery path
+## 2. Understand the recovery boundary
 
-**For a clean rebuild or lost application storage, use the default bootstrap.** It
-creates a new Kubernetes control plane from Git. New PVCs reference VolSync restore
-destinations, so application data comes from backups before applications start.
-Preserved old ZFS datasets are not adopted or deleted.
+Bootstrap always creates a fresh Kubernetes control plane from Git. New application
+PVCs reference VolSync restore destinations and download their S3 recovery points.
+Startup checks reject missing directory, world or database contents. Preserved old ZFS
+datasets are not adopted or deleted; allow capacity for the restored copies.
 
-**To recover Kubernetes state with its existing application storage, select an encrypted
-etcd snapshot.** Before normal RKE2 startup, the restore helper downloads that snapshot
-using standalone restic, verifies its checksum and native etcd contents, checks version
-compatibility, and verifies the recorded application dataset identities against ZFS.
-Missing or mismatched datasets stop the restore. Snapshots without the required volume
-inventory are not accepted by this automatic path.
+Etcd backups and restoration are retired. There is no restore mode, old PVC binding
+reuse, or fallback that initializes empty application data. Kubernetes credentials
+come from encrypted Git sources and independent recovery keys. Controllers recreate
+runtime state; applications recover their own data from backups.
 
-An etcd snapshot contains Kubernetes objects and Secrets, **not application volume
-contents**. Restoring an old Bound PVC does not make VolSync populate it again. Use
-the clean rebuild path for storage loss; do not bypass a storage-identity failure.
-For corruption recovery, select an older known-good etcd snapshot and assess application
-recovery points separately. Dataset identity does not prove application contents are
-uncorrupted.
+For corruption recovery, select the application's older known-good point before
+letting it start, using the [application recovery procedure](rke2-operations.md#application-recovery).
+A successful download or Bound PVC alone is not acceptance: validate application
+contents after restoration.
+
+The current inventory and ZFS storage target one node. Multiple nodes require explicit
+storage placement and backup access; rebuilding the control plane does not make
+node-local ZFS replicated storage.
 
 ## 3. Run the bootstrap
 
@@ -117,30 +115,18 @@ Use `initial_ansible_host`, not `ansible_host`: the network role reconnects at t
 inventory address. The administrator connection remains in use throughout this run.
 An alternative inventory can be passed after `--` with `-i /path/to/inventory.yml`.
 
-To restore etcd as part of the same process, add one of these selectors before `--`:
-
-```bash
-task rke2:bootstrap RESTORE=latest
-task rke2:bootstrap RESTORE=RESTIC_SNAPSHOT_ID
-```
-
-`latest` selects a normal encrypted etcd backup for this node, then resolves its exact
-ID. It does not select the imported historical archives. Prefer a known-good snapshot
-ID when corruption may predate the latest backup.
-
 The task runs `ansible/playbooks/bootstrap-rke2-controlplane.yml`: accounts, networking,
-host hardening, storage, configured GPU support, RKE2, optional encrypted restore, then
-Flux installation and credential import. The restore happens **before the first normal
-RKE2 start**. Native plaintext S3 uploads remain disabled. After a successful etcd reset,
-the temporary plaintext snapshot is deleted; the protected recovery receipt remains.
+host hardening, storage, configured GPU support, a fresh RKE2 control plane, then Flux
+installation and credential import. Native etcd snapshots and S3 uploads stay disabled.
+There are no `RESTORE`, `SNAPSHOT` or `MODE` options.
 
 After Flux reconciliation, bootstrap runs the same cleanup as `task kube:clean-pods`
 through the host connection. It deletes only Failed and Succeeded pods; Pending pods
 remain available for ongoing storage restores. The resumed Flux handoff also runs this
 cleanup. For an interactive node debugging shell, use `task kube:shell NODE=nas`.
 
-Bootstrap refuses an existing etcd database. It never deletes one or falls back to an
-empty cluster when a requested restore fails. Use `task ansible:apply` for routine host
+Bootstrap refuses existing RKE2 server state, including a stopped or partially
+initialized server. It does not wipe or adopt that state. Use `task ansible:apply` for routine host
 convergence. If host setup completed but the Flux handoff failed, fix the reported cause
 and resume only that phase:
 
@@ -148,8 +134,9 @@ and resume only that phase:
 task ansible:bootstrap-flux
 ```
 
-Do not remove etcd directories or reset markers to get past a failed restore. Preserve
-the failed host's state for diagnosis and retry recovery on a clean replacement.
+If host setup stopped partway through, inspect the failure and use normal convergence
+to finish that host, or start again on a clean replacement. Do not delete state simply
+to bypass the bootstrap preflight.
 
 ## 4. Watch the cluster rebuild
 
@@ -218,27 +205,64 @@ tokens. Use the [Hermes access guide](hermes-cluster-access.md) for compromise r
 container prerequisites and first-time configuration. Record the actual expiry printed
 by the command and renew before then.
 
-Request a fresh encrypted backup and restore verification from the workstation:
+After validating recovered application contents, request fresh backups:
 
 ```bash
-task ansible:backup-etcd
+task volsync:replication-sync
+kubectl get replicationsources -A
 ```
 
-On the server, inspect the encrypted backup timer and service without printing Secrets:
-
-```bash
-sudo systemctl list-timers rke2-etcd-restic-backup.timer
-sudo systemctl status rke2-etcd-restic-backup.service
-sudo cat /var/lib/rke2-restic-backup/status.json
-```
-
-Check Flux's backup alerts and the verified-backup timestamp. The scheduled job must
-complete a fresh backup and restore verification after recovery. See
-[encrypted etcd backups](rke2-restic-backup.md) for repository layout, restore evidence
-and retention. Keep recovery keys and off-cluster backups independent of this cluster.
+Check application backup alerts and completion timestamps. Keep recovery keys and
+S3 application backups independent of the cluster. See the
+[recorded application restore evidence](rke2-recovery-verification.md) and
+[LDAP restore validation](../kubernetes/components/volsync/README.md#manual-backup-validation).
+A complete replacement-host Ansible run remains a separate drill; individual restore
+checks do not establish that the whole rebuild is proven.
 
 ## References
 
-- [RKE2 snapshot restore and original-token requirements](https://docs.rke2.io/datastore/backup_restore)
 - [Restic recovery](https://restic.readthedocs.io/en/stable/050_restore.html)
 - [VolSync PVC population](https://volsync.readthedocs.io/en/latest/usage/volume-populator/index.html)
+
+## Uninstall a node before a planned rebuild
+
+After checking recovery keys, available storage capacity and application restore
+results, use the inventory node name:
+
+```bash
+task rke2:uninstall NODE=nas
+```
+
+Ansible uses the inventory's SSH connection and sudo. The task first holds Flux's
+writers, lets existing backups finish, requests fresh application backups and waits
+for successful uploads and mover cleanup. It retains the acknowledged manual triggers
+so scheduled backups cannot race teardown. A preparation failure aborts uninstall
+and attempts to restore normal schedules and reconciliation.
+
+Only then does it run RKE2's supplied `/usr/local/bin/rke2-uninstall.sh` on the selected
+node. [RKE2 calls this operation uninstall](https://docs.rke2.io/install/uninstall).
+The upstream script has no last-control-plane guard or force flag: it can remove the
+last server. The task adds backup ordering, not a replacement node-removal algorithm.
+It does not destroy the ZFS pool or the S3 application repositories.
+
+The backup hold covers the cluster. With multiple inventory servers, preparation
+prefers another server as its coordinator. On a surviving cluster, keep backups held
+until affected applications have healthy restored storage, then explicitly resume on
+that coordinator:
+
+```bash
+task volsync:resume NODE=nas
+```
+
+If uninstall fails after preparation, the hold remains because RKE2 may already be
+partially removed. Inspect the failure before resuming. A clean bootstrap reconstructs
+schedules and Flux from Git and removes the previous cluster's local hold journal;
+it never applies the old journal to a new cluster. Writes after the completed backup
+are outside that recovery point.
+
+The hold and resume sequence was exercised on the running cluster on 2026-09-27
+without invoking uninstall. All four application backups completed, their manual
+triggers blocked further runs during the hold, and schedules plus Flux resumed.
+LDAP recovery point `429e7903` then passed an isolated native restore: its export
+matched the paired backup export (89 entries). The test Pod and plaintext were
+removed. This verifies backup preparation, not a full replacement-host rebuild.

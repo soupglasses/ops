@@ -192,6 +192,26 @@ class TriggerTests(unittest.TestCase):
         with patch.object(SYNC, 'kubectl', side_effect=replies):
             self.assertEqual(SYNC.progress(obj), 'restic backup mover running')
 
+    def test_hold_retains_only_successfully_acknowledged_manual_requests(self):
+        api = API()
+        recorded = []
+        with patch.object(SYNC, 'kubectl', api), patch.object(SYNC.time, 'monotonic', lambda: api.clock), \
+                patch.object(SYNC.time, 'sleep', api.sleep), patch('sys.stdout', io.StringIO()):
+            result = SYNC.synchronize(20, hold=True, on_request=lambda s, t: recorded.append((s, t)))
+        self.assertEqual(len(recorded), 2)
+        for obj in api.sources.values():
+            self.assertEqual(obj['spec']['trigger']['manual'], result['token'])
+            self.assertEqual(obj['status']['lastManualSync'], result['token'])
+            self.assertEqual(obj['spec']['trigger']['schedule'], '0 * * * *')
+
+    def test_hold_failure_restores_schedules(self):
+        api = API({'one': 'failure'})
+        with patch.object(SYNC, 'kubectl', api), patch.object(SYNC.time, 'monotonic', lambda: api.clock), \
+                patch.object(SYNC.time, 'sleep', api.sleep), patch('sys.stdout', io.StringIO()):
+            with self.assertRaises(SYNC.SyncError):
+                SYNC.synchronize(20, hold=True)
+        self.assert_schedule_preserved(api)
+
     def test_empty_selection_is_an_error(self):
         api = API()
         api.sources = {}

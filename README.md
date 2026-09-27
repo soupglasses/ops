@@ -15,13 +15,13 @@ physical host, native systemd-networkd configuration, CIS-oriented baseline, ZFS
 RKE2, and its day-zero Cilium configuration. Flux owns applications and post-bootstrap
 cluster policy.
 
-The former Talos configuration is retained temporarily as a rollback and migration
-reference. Remove it only after the documented S3 restore drills pass on the final
-storage layout.
+The former Talos configuration remains as a historical migration reference. Current
+recovery uses the [RKE2 bootstrap guide](docs/cluster-bootstrap.md).
 
 ### Network layout
 
-Mikrotik RB5009 Router handling forwarded connections from a VPS through Wireguard.
+The MikroTik RB5009 routes the home WAN directly to Kubernetes services. WireGuard
+provides remote access; the former public VPS tunnel is retired.
 
 Load balancing is BGP based: Cilium's BGP control plane peers with the router and
 announces the LoadBalancer IP, which the router DNATs public traffic to. Details in
@@ -48,10 +48,9 @@ Kubernetes editor schema comments. The checks reject stale versions.
 |---|---|
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
-| `rke2:bootstrap` | Configure a replacement host and hand recovery to Flux |
-| `rke2:bootstrap RESTORE=latest` | Restore encrypted etcd first, requiring preserved application datasets |
+| `rke2:bootstrap` | Create a fresh control plane and restore applications from S3 |
+| `rke2:uninstall NODE=nas` | Finish and hold backups, then run RKE2's supplied node uninstaller |
 | `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
-| `ansible:backup-etcd` | Run and restore-verify an encrypted etcd backup |
 | `ansible:check` | Preview host changes |
 | `ansible:apply` | Maintain Ubuntu and the pinned RKE2 version |
 | `ansible:network` | Explicit network setup or maintenance |
@@ -105,10 +104,15 @@ reconciliation, using the host connection without requiring a local kubeconfig.
 Run `task volsync:replication-sync` to trigger fresh backups for all scheduled restic
 sources, display progress, and wait for every backup to complete. Use `TIMEOUT=1h`
 for a longer wait or `-- --namespace identity` to limit the selection. Existing
-schedules remain intact. This is separate from the encrypted etcd backup above;
-backup completion alone does not prove restorability.
+schedules remain intact. Backup completion alone does not prove restorability; validate restored application
+contents before accepting recovery.
 
 See the [VolSync guide](kubernetes/components/volsync/README.md) for details.
+
+Uninstall holds backups and Flux reconciliation before stopping the node. If keeping
+the existing cluster, verify its application storage before `task volsync:resume NODE=nas`
+(select the inventory node that coordinated the hold).
+A fresh bootstrap reconstructs normal schedules from Git.
 
 ### License
 
@@ -144,10 +148,9 @@ Follow the [step-by-step bootstrap guide](docs/cluster-bootstrap.md) for prerequ
 inventory, recovery keys and post-bootstrap checks.
 
 1. Install a supported Ubuntu release with OpenSSH and temporary passwordless sudo access.
-2. Review the Ansible inventory and choose recovery mode. Run `task rke2:bootstrap`
-   for a fresh control plane with Flux/VolSync recovery. Use `RESTORE=latest` or a
-   known-good snapshot ID only when preserving the application datasets required by
-   the encrypted etcd backup.
+2. Review the Ansible inventory and run `task rke2:bootstrap`. It always creates a
+   fresh control plane; Flux and VolSync recover applications into new volumes from
+   S3. Existing server state is refused, and missing application data blocks startup.
 3. Fetch access with `task kube:kubeconfig`, then watch `flux get kustomizations -A --watch`
    and `kubectl get pods -A --watch` as applications recover.
 4. Validate restored application contents before removing rollback copies. The guide

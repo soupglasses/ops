@@ -37,7 +37,7 @@ installed as an RKE2 `HelmChartConfig` by the host role.
 ## Installation and recovery prerequisites
 
 Use the [step-by-step bootstrap guide](cluster-bootstrap.md) for a replacement
-host, encrypted etcd recovery, Flux/VolSync progress and access renewal.
+host, clean Flux/VolSync recovery and access renewal.
 [The Ansible commands](../ansible/README.md) also expose individual maintenance phases. Preserve these addresses:
 
 | Purpose | IPv4 | IPv6 |
@@ -106,7 +106,7 @@ at operator startup, so the restart is required on a clean cluster where Cilium
 starts before Flux. Subsequent CRD management belongs to Flux. Ordinary
 `task flux:reconcile` does not restart the operator.
 
-For recovery from an etcd snapshot, follow [etcd recovery](cluster-bootstrap.md).
+For a fresh control plane with application backups, follow [clean recovery](cluster-bootstrap.md).
 
 ## Application recovery
 
@@ -272,7 +272,7 @@ Inspect `task ansible:check` before applying host configuration. Kernel reboots 
 explicit maintenance; automatic security updates do not automatically reboot.
 
 For RKE2, change `rke2_version` and `rke2_tarball_sha256` together. Verify application
-backups and independent token custody, then run:
+backups and independent recovery-key custody, then run:
 
 ```bash
 task ansible:upgrade -- -e rke2_recovery_verified=true -e rke2_upgrade_reviewed=true
@@ -320,9 +320,9 @@ When bundled Cilium changes, follow its
 
 The upgrade first rejects unhealthy nodes, pre-existing cordons, unexpected cluster
 members and installed/running version mismatches. It downloads and verifies the
-release before creating and restore-verifying a fresh
-[restic-encrypted etcd backup](rke2-restic-backup.md), then cordons and restarts.
-This requires working local kubectl and SSH access, and the Flux-managed backup Secret.
+release before running fresh application backups through VolSync, then cordons and
+restarts. The backup step uses the host Kubernetes client and waits for every source
+to complete successfully; existing restore-validation evidence remains required.
 Node readiness and the requested kubelet version permit uncordoning so RKE2's Helm
 jobs and operator can schedule. The playbook then checks the embedded target chart in both RKE2 and the Helm
 controller ConfigMap, a completed Helm job created after chart-content publication (and a replacement
@@ -334,12 +334,11 @@ occur after uncordoning and require operator inspection. There is no automatic r
 
 The task does not load encrypted inventory or reconverge host and Cilium configuration.
 An already-installed release still gets Cilium and host verification without another
-snapshot or restart. If an upgrade was interrupted, preserve its original pre-upgrade
-snapshot; inspect `systemctl status rke2-server` and `kubectl get node nas`, complete
-the restart and verification, then uncordon deliberately. Follow
-[RKE2 rollback guidance](https://docs.rke2.io/upgrades/roll-back) and the recovery
-runbook to restore the matching old release and snapshot with the original token;
-never downgrade binaries against an upgraded datastore.
+backup or restart. If an upgrade was interrupted, inspect `systemctl status rke2-server`
+and `kubectl get node nas`, complete the restart and verification, then uncordon
+deliberately. Never downgrade binaries against an upgraded datastore. If recovery is
+needed, use the [clean rebuild](cluster-bootstrap.md) with compatible declared
+versions and validated application backups; there is no etcd rollback path.
 
 Verify Cilium/BGP, DNS, application contents and public TCP/UDP after maintenance.
 The 2026-09-26 upgrade validated [RKE2 v1.35.8+rke2r1](https://github.com/rancher/rke2/releases/tag/v1.35.8%2Brke2r1),
@@ -355,19 +354,15 @@ platform proposal. The validation schema follows bundled Cilium automatically. C
 API compatibility before merging. See [dependency updates](dependency-updates.md).
 A changed inventory pin does not upgrade an installed node through normal convergence.
 
-Etcd backups run every six hours through the host restic timer, with client-side
-encryption and exact restore verification. Native RKE2 S3 uploads and automatic
-snapshots are disabled. Encrypted points are retained without pruning; monitoring
-checks freshness and a minimum history of 28 points. See [the backup runbook](rke2-restic-backup.md). Independent S3
-history must preserve deleted/noncurrent objects for at least 30 days and prevent the
-writer from permanently erasing the only copy. Application retention remains unchanged.
-The host exports aggregate backup freshness metrics; prove both firing and resolved
-notifications reach the off-cluster recipient. A Ready pod or successful backup job
-alone is not restore evidence.
+Etcd backup and restore infrastructure is retired. Native snapshots and uploads are
+disabled. Application data remains protected by encrypted off-cluster VolSync backups,
+retention, startup guards and periodic application-level restore drills. Monitor those
+backups for failure and staleness; a Ready pod or successful backup job alone does not
+prove restorability.
 
-Recovery procedures: [etcd](cluster-bootstrap.md), [ZFS and application data](zfs-s3-recovery.md),
-[LDAP contents](openldap-volsync-migration.md). RAIDZ2 reformatting remains separate.
+Recovery procedures: [clean bootstrap](cluster-bootstrap.md),
+[ZFS and application data](zfs-s3-recovery.md), [LDAP contents](openldap-volsync-migration.md).
+RAIDZ2 reformatting remains separate.
 
 References: [RKE2 upgrades](https://docs.rke2.io/upgrades/manual),
-[RKE2 restore](https://docs.rke2.io/datastore/backup_restore),
 [Cilium host firewall](https://docs.cilium.io/en/stable/security/host-firewall/).

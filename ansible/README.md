@@ -23,8 +23,9 @@ task ansible:test
 
 | Task | Purpose |
 | --- | --- |
-| `rke2:bootstrap` | Configure a replacement host and start Flux/VolSync recovery |
-| `rke2:bootstrap RESTORE=latest` | Restore encrypted etcd first, requiring preserved application dataset identities |
+| `rke2:bootstrap` | Create a fresh control plane and restore applications from S3 |
+| `rke2:uninstall NODE=nas` | Hold completed backups, then invoke RKE2's supplied uninstaller |
+| `volsync:resume NODE=nas` | Resume a held surviving cluster after checking application storage |
 | `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
 | `ansible:bootstrap -- -u sofie -e initial_ansible_host=172.21.71.254` | Create the automation account |
 | `ansible:network -- -e initial_ansible_host=172.21.71.254` | Explicit initial network handoff |
@@ -48,9 +49,10 @@ Keep the existing encrypted inventory at
 `inventories/home/group_vars/all/secrets.sops.yaml`. Its keys are:
 
 - `rke2_token`;
-- `rke2_etcd_s3_endpoint`, `rke2_etcd_s3_region`, `rke2_etcd_s3_bucket`;
-- `rke2_etcd_s3_access_key`, `rke2_etcd_s3_secret_key`;
 - `cilium_bgp_ipv4_password`, `cilium_bgp_ipv6_password`.
+
+Legacy `rke2_etcd_s3_*` keys are no longer consumed. Application backup credentials
+come from the encrypted cluster configuration, independently of etcd.
 
 `ansible:check`, `ansible:apply` and `rke2:bootstrap` enable the SOPS vars plugin and
 require the existing age identity. The control-plane and Flux bootstrap tasks also

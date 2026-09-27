@@ -8,7 +8,6 @@ kind: Kustomization
 resources:
   - ./alertmanager-smtp.sops.yaml
   - ./grafana-auth.sops.yaml
-  - ./grafana-dashboard.yaml
   - ./app-dashboard.yaml
   - ./node-dashboard.yaml
   - ./app-recording-rules.yaml

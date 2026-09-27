@@ -153,7 +153,7 @@ def duration(value):
     return int(match[1]) * {'': 1, 's': 1, 'm': 60, 'h': 3600}[match[2]]
 
 
-def synchronize(timeout, namespace=None, interval=3):
+def synchronize(timeout, namespace=None, interval=3, hold=False, on_request=None):
     scope = ['-n', namespace] if namespace else ['-A']
     sources = kubectl('get', RESOURCE, *scope, '-o', 'json')['items']
     if not sources:
@@ -176,6 +176,7 @@ def synchronize(timeout, namespace=None, interval=3):
 
     print(f'Triggering {len(sources)} backups; timeout {timeout}s. Request {token}', flush=True)
     heartbeat = started
+    successful = False
     try:
         while pending and time.monotonic() < deadline:
             for key, original in list(pending.items()):
@@ -196,6 +197,8 @@ def synchronize(timeout, namespace=None, interval=3):
                             operations.append({'op': 'add', 'path': '/spec/trigger', 'value': {}})
                         operations.append({'op': 'add', 'path': '/spec/trigger/manual', 'value': token})
                         requested[key] = current  # Also clean up an ambiguous patch response.
+                        if on_request:
+                            on_request(current, token)
                         patch(current, operations)
                         show(key, 'fresh backup requested')
                         continue
@@ -233,8 +236,11 @@ def synchronize(timeout, namespace=None, interval=3):
         for key in pending:
             failed[key] = 'timed out'
             show(key, 'TIMED OUT; any active controller job continues')
+        successful = not failed
     finally:
         for key, original in requested.items():
+            if hold and successful:
+                continue
             try:
                 restore_trigger(original, token)
             except (SyncError, subprocess.TimeoutExpired) as error:
@@ -243,7 +249,10 @@ def synchronize(timeout, namespace=None, interval=3):
     print(f'{len(completed)}/{len(sources)} fresh backups completed; {len(failed)} failed.', flush=True)
     if failed:
         raise SyncError('Not all backups completed successfully; do not proceed with recovery testing')
-    print('Backup jobs completed. Restore validation and the separate etcd backup are still required.', flush=True)
+    if hold:
+        print('Backups held at their completed manual triggers; schedules cannot start another run.', flush=True)
+    print('Backup jobs completed. Restore validation is still required.', flush=True)
+    return {'token': token, 'sources': list(requested.values())}
 
 
 def main():

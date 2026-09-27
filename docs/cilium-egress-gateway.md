@@ -4,43 +4,23 @@ SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 SPDX-License-Identifier: 0BSD
 -->
 
-# Cilium egress gateway (idea, not implemented)
+# Cilium outbound routing
 
-Goal: route selected pods (label `egress.home.arpa/gateway: public`) out through a
-dedicated egress IP instead of the node's default SNAT, so their traffic can be matched
-by RouterOS rules (e.g. sent out the public VPS path).
+The cluster does not configure a dedicated Cilium egress gateway. There are no
+`CiliumEgressGatewayPolicy` resources in the managed manifests. Cilium uses eBPF
+masquerading for pod traffic leaving the cluster, with RouterOS providing the
+upstream route through the home WAN.
 
-A draft policy existed as an untracked file in `kubernetes/apps/`; preserved here because
-it cannot work as written. What is missing before this is real:
+Cilium's installed configuration comes from the Ansible-managed
+[`rke2-cilium` HelmChartConfig](../ansible/roles/rke2/templates/rke2-cilium-config.yaml.j2).
+RKE2 owns the Cilium installation; Flux owns the post-bootstrap network resources.
 
-1. Cilium must be installed with `egressGateway.enabled=true` (and `bpf.masquerade=true`).
-   Today Cilium is installed by the inline manifest job in `talos/patches/cilium.yaml`,
-   so this is a machine-config change until Cilium moves into Flux.
-2. The node selector label was wrong: use `kubernetes.io/hostname: nas`.
-3. The egress IP (draft used `172.43.1.10`) must exist on an interface of the node and be
-   covered by RouterOS routing/filters. Pick it deliberately alongside the addressing in
-   `docs/network-topology.md`.
+The deployed [public Cilium Gateway](../kubernetes/apps/network/cilium-gateway/README.md)
+handles incoming HTTP and HTTPS traffic. It is separate from selecting an outbound
+source address for application pods. See [network topology](network-topology.md)
+for WAN routing, service VIPs and the retired VPS tunnel.
 
-Corrected shape of the policy:
-
-```yaml
-apiVersion: cilium.io/v2
-kind: CiliumEgressGatewayPolicy
-metadata:
-  name: public
-spec:
-  selectors:
-    - podSelector:
-        matchLabels:
-          egress.home.arpa/gateway: public
-  destinationCIDRs:
-    - "0.0.0.0/0"
-  egressGateway:
-    nodeSelector:
-      matchLabels:
-        kubernetes.io/hostname: nas
-    egressIP: 172.43.1.10
-```
-
-When implemented, this belongs as a proper app under `kubernetes/apps/network/`
-(same pattern as `cilium-bgp`).
+The earlier dedicated-egress proposal targeted that retired VPS path. Its sample
+address and Talos configuration instructions are no longer applicable. If dedicated
+application egress becomes necessary, define the required destination routes, source
+address, node ownership and RouterOS policy before adding an egress gateway.

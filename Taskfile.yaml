@@ -31,16 +31,30 @@ includes:
 tasks:
   rke2:bootstrap:
     dir: ansible
-    desc: Bootstrap a replacement host, optionally restore encrypted etcd, then start Flux
+    desc: Build a fresh control plane and restore applications from S3 through Flux/VolSync
     env:
       ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
-      RKE2_RESTORE_SNAPSHOT: '{{.RESTORE | default ""}}'
+    preconditions:
+      - sh: test -z {{.RESTORE | default "" | shellQuote}} && test -z {{.SNAPSHOT | default "" | shellQuote}}
+          && test -z {{.MODE | default "" | shellQuote}}
+        msg: Bootstrap always rebuilds cleanly. Etcd restore selectors are no longer supported.
     cmds:
       - ansible-playbook playbooks/bootstrap-rke2-controlplane.yml {{.CLI_ARGS}}
 
   check:
     desc: Run all configured pre-commit checks on tracked files
     cmd: pre-commit run --all-files --hook-stage pre-commit {{.CLI_ARGS}}
+
+  rke2:uninstall:
+    dir: ansible
+    desc: Finish and hold backups, then run RKE2's uninstaller on a node [NODE=required]
+    requires:
+      vars: [NODE]
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/uninstall-rke2.yml -e {{printf "rke2_uninstall_node=%s" .NODE | shellQuote}}
+        {{.CLI_ARGS}}
 
   schemas:update:
     desc: Align Kubernetes editor schema comments with the RKE2 inventory

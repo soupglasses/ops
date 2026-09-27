@@ -352,34 +352,14 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   provisioner. Disable incompatible XFS quotas on the Ubuntu ext4 root filesystem.
   Existing application data uses quota-enforced ZFS PVCs.
 
-- [x] Create and restore-verify a fresh restic-encrypted etcd recovery point before maintenance.
-  Snapshot `35c8df15` restored with matching SHA-256 and native etcd validation
-  (2,214 keys, revision 2,184,007) on 2026-09-27; temporary pod removed.
-- [x] Replace scheduled native etcd uploads with client-side restic encryption.
-  Same-version restart and encrypted restore checks passed before/after cutover;
-  six-hour timer and verified-backup alerts are active. Historical S3 migration is
-  tracked separately. See [encrypted etcd backups](docs/rke2-restic-backup.md).
-
-- [x] Encrypt and restore-verify every historical native S3 object/version and companion
-  metadata, then delete verified plaintext originals under the approved migration.
-  All 27 database objects passed two restore/native-validation rounds; source prefix
-  is empty, including historical versions and multipart uploads. Encrypted coverage
-  index `5730c7da` is retained off-cluster.
-
-- [x] Add a single replacement-control-plane bootstrap task with optional encrypted
-  etcd restore before normal startup, followed by the Flux handoff. Document inventory,
-  recovery choices, application checks and Hermes credential renewal in the
-  [bootstrap guide](docs/cluster-bootstrap.md).
-- [x] Gate automatic etcd recovery on preserved PVC dataset identities. Fresh GitOps
-  recovery uses new VolSync destinations/PVCs; stale Bound PVCs from etcd do not
-  automatically repopulate missing storage. Local encrypted/native restore drills and
-  failure-path tests passed; live dataset inventory and restricted ZFS queries passed.
+- [x] Retire etcd backup/restore in favor of clean GitOps control-plane rebuilds and
+  application S3 recovery. Removed 147 etcd S3 objects/versions; both dedicated
+  prefixes verified empty, including multipart uploads. Host backup services and
+  local snapshots removed; the live datastore and application backups remain intact.
+  Historical etcd work is preserved in Git history.
 - [ ] Run the complete replacement-host Ansible bootstrap in a disposable host drill.
-  Local etcd/restic recovery tests do not prove network handoff, host provisioning and
-  all application recovery together. Do not reset the production node to test this.
-- [x] Deploy volume-aware encrypted etcd backups and repeat the live restore drill.
-  Recovery point `7917b209` passed matching SHA-256 and native validation; temporary
-  plaintext and verification Pod were removed. Backup timer and Flux remain healthy.
+  Application-level restores are proven independently, but full provisioning and
+  recovery ordering still need an end-to-end drill. Do not reset production to test it.
 
 - [x] Validate `task volsync:replication-sync` live: trigger all scheduled restic
   sources, show progress, require fresh completion, and preserve schedules/hooks.
@@ -389,3 +369,13 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 - [x] Run shared terminal-pod cleanup after bootstrap's Flux handoff, preserving
   Pending restores. Confirm the node shell is `kube:shell` and add `license:apache2`.
+
+- [x] Replace the obsolete Talos/VPS egress proposal with current routing ownership
+  and correct README/network topology references to the deployed Cilium Gateway.
+- [x] Add `rke2:uninstall NODE=nas` using the upstream uninstaller, preceded by fresh
+  backups and a maintenance hold. Live prepare/resume passed for all four sources;
+  no uninstall was executed. LDAP snapshot `429e7903` passed native restore/export
+  comparison (89 entries); temporary Pod/plaintext removed. Twenty-three behavior
+  tests and Ansible syntax/lint checks passed.
+- [x] Reconstruct Grafana LDAP provisioning state through imports after clean recovery,
+  and stop recreating obsolete LDAP migration volumes on new clusters.

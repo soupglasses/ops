@@ -26,10 +26,7 @@ tls-san:
 {% for san in rke2_tls_sans %}
   - {{ san }}
 {% endfor %}
-etcd-snapshot-schedule-cron: "{{ rke2_etcd_snapshot_schedule }}"
-etcd-snapshot-retention: {{ rke2_etcd_snapshot_retention }}
-etcd-snapshot-compress: true
-# Backups are encrypted and restore-verified by the host restic timer.
+# Recovery rebuilds the control plane from Git and application data from backups.
 etcd-s3: false
 etcd-disable-snapshots: true
 {% if rke2_token | length > 0 %}

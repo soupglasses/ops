@@ -98,8 +98,10 @@ The first backup from the production `openldap-directory` PVC completed at
 **09:35:58 UTC**. The manual trigger was removed and the normal daily schedule
 restored. The native-export hook completed before the copy trigger was released.
 Temporary migration Pods, ConfigMaps, NetworkPolicies, seed ReplicationSource,
-and repository bootstrap Kustomization were removed; the two rollback PVCs remain
-Flux-managed with pruning disabled. No permanent resource uses a `v2` name.
+and repository bootstrap Kustomization were removed. The two rollback PVCs were
+initially retained with pruning disabled. Their declarations have since been removed
+so clean rebuilds do not recreate migration artifacts; the existing protected copies
+remain on the original cluster. No permanent resource uses a `v2` name.
 
 No end-user plaintext password was requested or inspected;
 real user-password/OTP contents were compared by aggregate directory digest, while

@@ -12,7 +12,7 @@
       - "':' in rke2_cluster_cidrs[1]"
       - "':' in rke2_service_cidrs[1]"
 
-- name: Require a stable recovery token before first boot
+- name: Require a stable cluster token before first boot
   ansible.builtin.assert:
     that:
       - (rke2_token | default('')) | length >= 32
@@ -92,8 +92,8 @@
 - name: Explain the fresh-host RKE2 check-mode boundary
   ansible.builtin.debug:
     msg: >-
-      RKE2 configuration, recovery, S3, and BGP inputs are valid. Check mode will not create the artifact
-      cache or install RKE2, so installation-dependent checks continue after the first convergence.
+      RKE2 configuration and BGP inputs are valid. Check mode will not create the artifact cache or install
+      RKE2, so installation-dependent checks continue after the first convergence.
   when: ansible_check_mode and rke2_version != rke2_installed_release
 
 - name: Stop installation-dependent RKE2 checks on a fresh host
@@ -123,8 +123,8 @@
   ansible.builtin.import_tasks: ingress.yml
   notify: Restart RKE2
 
-- name: Disable native plaintext etcd uploads
-  ansible.builtin.import_tasks: encrypted-backup-policy.yml
+- name: Disable etcd snapshots and uploads
+  ansible.builtin.import_tasks: snapshot-policy.yml
   notify: Restart RKE2
 
 - name: Install the RKE2 server configuration
@@ -134,7 +134,7 @@
     owner: root
     group: root
     mode: "0600"
-  no_log: "{{ (rke2_etcd_s3_enabled | bool) or ((rke2_token | default('')) | length > 0) }}"
+  no_log: true
   notify: Restart RKE2
 
 - name: Install the bootstrap Cilium configuration
@@ -156,17 +156,6 @@
     owner: root
     group: root
     mode: "0640"
-
-# Restore before the first service start; failures must never initialize an empty API.
-- name: Restore an explicitly selected encrypted control-plane backup
-  ansible.builtin.include_tasks: bootstrap-restore.yml
-  when: (rke2_restore_snapshot | default('')) | length > 0
-
-- name: Require completed recovery before normal startup
-  ansible.builtin.assert:
-    that:
-      - "(rke2_restore_snapshot | default('')) | length == 0 or (rke2_restore_complete | default(false)
-        | bool)"
 
 - name: Enable and start RKE2
   ansible.builtin.systemd_service:
@@ -275,20 +264,5 @@
     state: started
     daemon_reload: true
 
-- name: Install tools for independent etcd recovery
-  ansible.builtin.import_tasks: recovery-tools.yml
-
-- name: Install encrypted scheduled etcd backups
-  ansible.builtin.import_tasks: encrypted-backup.yml
-
-- name: Enable encrypted scheduled etcd backups
-  ansible.builtin.systemd_service:
-    name: rke2-etcd-restic-backup.timer
-    enabled: true
-    state: started
-
-- name: Report the server-token recovery requirement without exposing it
-  ansible.builtin.debug:
-    msg: >-
-      Preserve /var/lib/rancher/rke2/server/token independently; it is required with an etcd snapshot
-      for disaster recovery. This role deliberately does not read or print it.
+- name: Retire obsolete etcd backup and restore infrastructure
+  ansible.builtin.import_tasks: retire-etcd-backups.yml

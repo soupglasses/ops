@@ -95,7 +95,7 @@ current hairpin source masquerade is retained for simplicity.
 
 Current public listeners sharing the VIP are:
 
-- ingress-nginx-public: TCP `80` and `443`;
+- [Cilium public Gateway](../kubernetes/apps/network/cilium-gateway/README.md): TCP `80` and `443`;
 - Minecraft: TCP `25565`;
 - Minecraft voice chat: UDP `24454`.
 
