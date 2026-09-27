@@ -87,7 +87,7 @@ service, and follow the [RKE2 recovery procedure](https://docs.rke2.io/datastore
 using the restored local file with `--etcd-s3=false` and
 `--cluster-reset --cluster-reset-restore-path=/protected/recovery/work/source/snapshot.db`.
 Preserve existing data first; never reset a healthy live cluster as a verification step.
-See the [existing recovery runbook](rke2-s3-etcd-restore.md) for host and service ordering;
+See the [existing recovery runbook](cluster-bootstrap.md) for host and service ordering;
 it restores a local database obtained through restic, with native S3 access disabled.
 
 The helper pins restic 0.18.1 through the VolSync image and etcdutl 3.6.14 through the
@@ -234,7 +234,7 @@ commits passed Gitleaks 8.30.1 without exposed secrets.
 
 ## Automated bootstrap validation
 
-Use the [bootstrap guide](rke2-s3-etcd-restore.md) for the supported operator commands.
+Use the [bootstrap guide](cluster-bootstrap.md) for the supported operator commands.
 Normal backups now include each Bound PVC's actual OpenEBS ZFS dataset and GUID.
 The collector checks identities before and after snapshot capture; the standalone
 bootstrap restore requires those same datasets before permitting RKE2 startup.

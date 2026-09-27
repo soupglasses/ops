@@ -36,7 +36,7 @@ installed as an RKE2 `HelmChartConfig` by the host role.
 
 ## Installation and recovery prerequisites
 
-Use the [step-by-step bootstrap guide](rke2-s3-etcd-restore.md) for a replacement
+Use the [step-by-step bootstrap guide](cluster-bootstrap.md) for a replacement
 host, encrypted etcd recovery, Flux/VolSync progress and access renewal.
 [The Ansible commands](../ansible/README.md) also expose individual maintenance phases. Preserve these addresses:
 
@@ -106,7 +106,7 @@ at operator startup, so the restart is required on a clean cluster where Cilium
 starts before Flux. Subsequent CRD management belongs to Flux. Ordinary
 `task flux:reconcile` does not restart the operator.
 
-For recovery from an etcd snapshot, follow [etcd recovery](rke2-s3-etcd-restore.md).
+For recovery from an etcd snapshot, follow [etcd recovery](cluster-bootstrap.md).
 
 ## Application recovery
 
@@ -365,7 +365,7 @@ The host exports aggregate backup freshness metrics; prove both firing and resol
 notifications reach the off-cluster recipient. A Ready pod or successful backup job
 alone is not restore evidence.
 
-Recovery procedures: [etcd](rke2-s3-etcd-restore.md), [ZFS and application data](zfs-s3-recovery.md),
+Recovery procedures: [etcd](cluster-bootstrap.md), [ZFS and application data](zfs-s3-recovery.md),
 [LDAP contents](openldap-volsync-migration.md). RAIDZ2 reformatting remains separate.
 
 References: [RKE2 upgrades](https://docs.rke2.io/upgrades/manual),

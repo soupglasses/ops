@@ -29,6 +29,15 @@ includes:
     dir: .
 
 tasks:
+  rke2:bootstrap:
+    dir: ansible
+    desc: Bootstrap a replacement host, optionally restore encrypted etcd, then start Flux
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars,community.sops.sops
+      RKE2_RESTORE_SNAPSHOT: '{{.RESTORE | default ""}}'
+    cmds:
+      - ansible-playbook playbooks/bootstrap-rke2-controlplane.yml {{.CLI_ARGS}}
+
   check:
     desc: Run all configured pre-commit checks on tracked files
     cmd: pre-commit run --all-files --hook-stage pre-commit {{.CLI_ARGS}}

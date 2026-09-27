@@ -80,14 +80,14 @@ uncorrupted.
 From the repository root, using the inventory's existing SSH connection:
 
 ```bash
-task ansible:bootstrap-rke2-controlplane
+task rke2:bootstrap
 ```
 
 For a newly installed host, pass its temporary address and administrator login. Replace
 these example values with the installer address and a usable SSH key:
 
 ```bash
-task ansible:bootstrap-rke2-controlplane -- \
+task rke2:bootstrap -- \
   -e initial_ansible_host=INSTALLER_ADDRESS \
   -e ansible_user=sofie \
   -e ansible_ssh_private_key_file="$HOME/.ssh/gpg.pub"
@@ -100,8 +100,8 @@ An alternative inventory can be passed after `--` with `-i /path/to/inventory.ym
 To restore etcd as part of the same process, add one of these selectors before `--`:
 
 ```bash
-task ansible:bootstrap-rke2-controlplane RESTORE=latest
-task ansible:bootstrap-rke2-controlplane RESTORE=RESTIC_SNAPSHOT_ID
+task rke2:bootstrap RESTORE=latest
+task rke2:bootstrap RESTORE=RESTIC_SNAPSHOT_ID
 ```
 
 `latest` selects a normal encrypted etcd backup for this node, then resolves its exact
