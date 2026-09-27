@@ -33,7 +33,7 @@ jobs:
         with:
           version: 2026.9.12
           install_args: >-
-            aqua:go-task/task aqua:pre-commit/pre-commit aqua:editorconfig-checker/editorconfig-checker
+            python aqua:go-task/task aqua:pre-commit/pre-commit aqua:editorconfig-checker/editorconfig-checker
             aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2 aqua:mikefarah/yq pipx:reuse
 
       - name: Run pre-commit checks
