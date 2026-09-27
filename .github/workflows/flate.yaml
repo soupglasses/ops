@@ -34,18 +34,21 @@ jobs:
           version: 2026.9.12
           install_args: github:home-operations/flate aqua:go-task/task
 
+      - name: Test diff summary
+        run: python3 -m unittest discover -s scripts -p test_flate_diff_summary.py
+
       - name: Test
         run: task flate:test
 
       - name: Diff
         id: render-diff
         if: always() && github.event_name == 'pull_request'
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          BASE_SHA="$(git merge-base HEAD "$PR_BASE_SHA")"
+          # Compare the tested merge result with the main commit it was built on.
+          BASE_SHA="$(git rev-parse HEAD^1)"
           task flate:diff BASE="$BASE_SHA" OUTPUT=github > diff.txt
           task flate:diff BASE="$BASE_SHA" OUTPUT=html > diff.html
+          task flate:diff BASE="$BASE_SHA" OUTPUT=diff > diff-unified.txt
 
       - name: Upload rendered diff
         if: always() && github.event_name == 'pull_request'
@@ -56,6 +59,7 @@ jobs:
           path: |
             diff.txt
             diff.html
+            diff-unified.txt
           if-no-files-found: ignore
 
       - name: Prepare diff summary
@@ -74,25 +78,8 @@ jobs:
           fi
           test -n "$DIFF_ARTIFACT_URL"
 
-          {
-            echo "## Rendered Flux Diff"
-            echo
-            echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
-            echo
-            echo '```diff'
-            cat diff.txt
-            echo '```'
-          } > body.md
-
-          # Keep the comment and summary below GitHub's comment size limit.
-          if [ "$(wc -c < body.md)" -gt 60000 ]; then
-            {
-              echo "## Rendered Flux Diff"
-              echo
-              echo "The rendered diff exceeds the inline size limit."
-              echo "[Download the complete rendered diff]($DIFF_ARTIFACT_URL)."
-            } > body.md
-          fi
+          python3 scripts/flate-diff-summary.py \
+            diff.txt diff-unified.txt "$DIFF_ARTIFACT_URL" > body.md
           cat body.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on pull request

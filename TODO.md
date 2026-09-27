@@ -267,6 +267,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   Cilium validation schema from the selected RKE2 release.
 - [x] Replace Flux Local with Flate validation and rendered PR diffs, including
   complete text and HTML artifacts for large changes.
+- [x] Add rendered resource and line-count overviews to all Flate diff comments,
+  retain them for oversized diffs, and compare merge renders with their main parent.
 
 - [ ] **Rotate GitHub automation tokens annually.** The `soupbot` Flux source token
   (`public_repo`) and commit-status token (`repo:status`) have no provider expiry.
