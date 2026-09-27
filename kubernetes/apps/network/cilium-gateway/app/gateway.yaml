@@ -68,7 +68,7 @@ metadata:
   name: public
   namespace: network
   annotations:
-    external-dns.alpha.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
+    external-dns.kubernetes.io/target: ${IP_ADDRESS},${IPV6_ADDRESS}
 spec:
   gatewayClassName: cilium-public
   infrastructure:
