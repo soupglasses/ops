@@ -8,6 +8,21 @@ SPDX-License-Identifier: 0BSD
 
 Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
+## Copyright attribution
+
+- [x] **Attribute generated files to Sofie Finnes.** Replaced 69 Soup Bot SPDX
+  notices across 66 files, including embedded Ansible-generated file headers. No
+  OpenAI or GPT copyright notices were found in tracked non-secret files.
+- [ ] **Update the remaining encrypted-file copyright header manually.**
+  `ansible/inventories/home/group_vars/all/secrets.sops.yaml` still credits Soup Bot.
+  All SOPS files were left unchanged so the operator can preserve their integrity
+  metadata when updating the header.
+- [ ] **Confirm upstream copyright exceptions.** Preserved onedr0p in
+  `.renovaterc.json5`, Yaal Coop in
+  `kubernetes/apps/identity/openldap/app/oauth.schema.conf`, and Ales Lerch in
+  `kubernetes/apps/volsync-system/volsync/app/prometheusrule.yaml`; these appear to
+  credit upstream work and need provenance review before changing attribution.
+
 ## Backups / disaster recovery
 
 - [x] **Refresh local access after the RKE2 rebuild.** `task kube:kubeconfig` fetches

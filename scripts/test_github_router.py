@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
 # SPDX-License-Identifier: 0BSD
 
