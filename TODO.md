@@ -135,11 +135,25 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Pin day-zero Cilium and align native routing.** RKE2 and its bundled Cilium are
   pinned in Ansible; the cluster and Cilium both use `10.42.0.0/16` plus the documented
   IPv6 pod CIDR. Flux owns the post-bootstrap Cilium policy resources.
-- [x] **Keep RKE2 upgrades deliberate.** RKE2 is pinned to `v1.35.8+rke2r1`.
+- [x] **Keep RKE2 upgrades deliberate.** The live node runs `v1.35.8+rke2r1`;
+  Ansible now prepares the next supported minor, `v1.36.4+rke2r1`.
   Renovate can propose coupled release/checksum updates without dashboard approval.
   Maintenance requires recovery and release review, rejects interrupted upgrades and
   unsupported Cilium transitions, and checks the bundled network rollout. See
   [RKE2 operations](docs/rke2-operations.md) for Cilium preflight and recovery.
+- [ ] **Apply the prepared RKE2 1.36 maintenance stage.** Complete the documented
+  recovery preconditions and upgrade verification before advancing the desired
+  version again. [PR #53](https://github.com/soupglasses/ops/pull/53) remains blocked
+  on this ordering and Gateway API compatibility with Cilium 1.19.6.
+- [x] **Review and deploy the dependency backlog (2026-09-27).** Merged 24 reviewed
+  PRs, including the new Alpine guard update; closed two obsolete Talos updates.
+  Fixed DNS annotation rollout, distroless log-server guard, Vector node lookup,
+  and the editorconfig executable rename. Final manifest validation passed;
+  controllers, recent log ingestion and metric targets were healthy. LDAP's
+  provider upgrade produced a no-change plan. OpenEBS snapshot/clone and VolSync
+  RS/RD/PVC population restored verified synthetic contents; cross-version restic
+  older/latest recovery passed. Evidence is in [PR #9](https://github.com/soupglasses/ops/pull/9)
+  and [PR #46](https://github.com/soupglasses/ops/pull/46). Temporary resources were removed.
 - [x] **Use static node addresses.** Ansible configures native systemd-networkd with
   `172.21.71.10/24` and `2a13:e745:1ee8:71::10/64`; the DHCP reservation remains only
   as collision protection.
