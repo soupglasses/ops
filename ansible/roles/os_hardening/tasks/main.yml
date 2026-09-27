@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
 # SPDX-License-Identifier: 0BSD
 
@@ -262,7 +262,7 @@
     group: root
     mode: "0644"
     content: |
-      # SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+      # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
       #
       # SPDX-License-Identifier: 0BSD
 
@@ -280,7 +280,7 @@
     group: root
     mode: "0644"
     content: |
-      # SPDX-FileCopyrightText: 2026 Soup Bot <bot+ops@finnes.dev>
+      # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
       #
       # SPDX-License-Identifier: 0BSD
 
