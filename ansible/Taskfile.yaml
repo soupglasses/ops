@@ -12,6 +12,9 @@ tasks:
 
   test:
     desc: Check all playbooks without loading encrypted variables
+    env:
+      # Use the pinned linter's bundled schemas; its HTTP 304 refresh leaks a response.
+      ANSIBLE_LINT_SKIP_SCHEMA_UPDATE: "1"
     cmds:
       - for playbook in playbooks/*.yml; do ansible-playbook "$playbook" --syntax-check || exit; done
       - ansible-lint

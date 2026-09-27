@@ -229,6 +229,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Tooling
 
+- [x] Fix Ansible test warnings: update `ansible.posix` to 2.2.0 for its
+  [deprecated-import fixes](https://github.com/ansible-collections/ansible.posix/issues/686),
+  and use the pinned linter's bundled schemas to avoid its unclosed HTTP 304 response.
+  Correct the literal `~` in the workstation's Elixir PATH entry in Bash dotfiles.
+
 - [x] Provide `task hermes:deploy-keys HOST=<ssh-host>` for scoped Kubernetes
   credentials in the existing Hermes container. Verify profile identities, native
   terminal configuration and operational permissions without exposing credentials.
