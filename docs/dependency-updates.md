@@ -22,8 +22,9 @@ changes. Node upgrades remain explicit maintenance through `task ansible:upgrade
 | Ansible and ordinary workloads | Native pip, Ansible Galaxy, Flux, Helm-values and Kubernetes managers track requirements, charts and images, including both OpenLDAP container references. |
 | Grafana VictoriaLogs plugin | Its installed plugin version follows the upstream datasource release in the VictoriaMetrics proposal. |
 
-The RKE2/Gateway API group requires Dependency Dashboard approval before a proposal
-is created, and never automerges. Review the selected RKE2 release's bundled
+Renovate creates RKE2/Gateway API proposals without Dependency Dashboard approval;
+the group never automerges. Cilium updates arrive through the RKE2 proposal because
+RKE2 owns its chart, rather than through a separate Cilium Helm upgrade. Review the selected RKE2 release's bundled
 Cilium against the proposed Gateway API version, including optional TLSRoute CRDs.
 Grouping keeps changes visible together, but cannot establish upstream compatibility.
 Keep Kubernetes upgrades sequential and follow the backup and recovery checks in

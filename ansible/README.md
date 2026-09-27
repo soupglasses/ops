@@ -27,7 +27,7 @@ task ansible:test
 | `ansible:network -- -e initial_ansible_host=172.21.71.254` | Explicit initial network handoff |
 | `ansible:check` | Preview host configuration |
 | `ansible:apply` | Maintain the host at its pinned RKE2 version |
-| `ansible:upgrade -- -e rke2_recovery_verified=true` | Upgrade after verifying recovery material |
+| `ansible:upgrade -- -e rke2_recovery_verified=true -e rke2_upgrade_reviewed=true` | Upgrade after recovery and release review |
 | `ansible:verify` | Read-only host and platform checks |
 | `ansible:firewall:verify` | Fresh dual-stack connections and enforced policy checks |
 
@@ -49,9 +49,10 @@ Keep the existing encrypted inventory at
 - `rke2_etcd_s3_access_key`, `rke2_etcd_s3_secret_key`;
 - `cilium_bgp_ipv4_password`, `cilium_bgp_ipv6_password`.
 
-Only `check`, `apply` and `upgrade` enable the SOPS vars plugin. These are operator
-commands requiring access to the existing age identity. Syntax/lint, bootstrap,
-network and verification do not enable decryption. Direct operator invocations of
+Only `check` and `apply` enable the SOPS vars plugin and require the existing age
+identity. Upgrade uses the configuration already installed on the host and explicitly
+disables that plugin. Syntax/lint, bootstrap, network and verification do not enable
+decryption. Direct operator invocations of
 `site.yml` also need `ANSIBLE_VARS_ENABLED=host_group_vars,community.sops.sops`.
 Never pass credentials as command arguments or print rendered secret configuration.
 

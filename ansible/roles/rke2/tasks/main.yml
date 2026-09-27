@@ -85,8 +85,7 @@
   ansible.builtin.assert:
     that:
       - >-
-        rke2_installed_version.rc != 0 or rke2_version == rke2_installed_release or (rke2_upgrade_allowed
-        | default(false) | bool)
+        rke2_installed_version.rc != 0 or rke2_version == rke2_installed_release
     fail_msg: Update the version and checksum together, then run task ansible:upgrade.
 
 - name: Select the immutable RKE2 release URL
