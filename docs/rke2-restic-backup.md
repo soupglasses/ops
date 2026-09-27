@@ -88,7 +88,7 @@ using the restored local file with `--etcd-s3=false` and
 `--cluster-reset --cluster-reset-restore-path=/protected/recovery/work/source/snapshot.db`.
 Preserve existing data first; never reset a healthy live cluster as a verification step.
 See the [existing recovery runbook](rke2-s3-etcd-restore.md) for host and service ordering;
-its native S3 download instructions apply only to historical native backups.
+it restores a local database obtained through restic, with native S3 access disabled.
 
 The helper pins restic 0.18.1 through the VolSync image and etcdutl 3.6.14 through the
 official etcd image; their full digests are recorded in `recovery.json`. It refuses a
@@ -201,3 +201,33 @@ Validate the extracted database with the recorded native tool, then follow the l
 RKE2 restore procedure with the original token and matching RKE2 release. Historical
 objects retain their original bytes; they are not silently converted to the current
 scheduled-backup layout.
+
+## Historical migration evidence — 2026-09-27
+
+All 27 native S3 database objects were encrypted and restored with matching SHA-256,
+then validated using etcdutl 3.6.14. Native results ranged from 493 to 3,361 keys
+and revisions 13,500 to 2,067,702. No separate companion objects were present; original
+object metadata was preserved inside each encrypted recovery point. Full repository
+data verification passed. The coverage index was backed up and read back successfully:
+
+- Coverage restic ID:
+  `5730c7da16efe7d384edd68f9c56b123cf4b8fc01d6cdc9affbb75d8aa584714`.
+- Source inventory SHA-256:
+  `cb9de1ab4bb87cf0a4a4d4b94103dbec4e956fa8f32566d7afdca628578a0c1a`.
+
+After independent security and resilience approval, the deletion stage restored and
+validated all 27 objects again, required unchanged source inventory, and deleted the
+exact original versions. Final enumeration found no current objects, historical data
+versions, delete markers or multipart uploads under the configured native etcd prefix.
+Encrypted history and the coverage index remain retained. This proves API-visible
+cleanup of the scoped native backup history, not erasure of a provider's internal copies.
+
+After historical cleanup, the normal systemd service completed another encrypted
+backup and exact restore at `2026-09-27T11:40:56Z`:
+`b582260129c2042551fbe238f130d9120d4408082ed49cb19f37bdbb9ab3622b`,
+SHA-256 `e5bb268d6780f5931239cd5307946ae58b9bf87743c020ec20fec9c627abd4f0`,
+revision `2200197`, `1955` keys. Temporary pods, host tmpfs validation directories,
+and newly generated local plaintext snapshots were absent afterward. The one-time
+host migration executable was removed; its reviewed source remains in Git.
+Standalone restic `0.18.1` and etcdutl `3.6.14` were verified on the host. Implementation
+commits passed Gitleaks 8.30.1 without exposed secrets.

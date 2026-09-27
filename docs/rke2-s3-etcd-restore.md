@@ -4,11 +4,13 @@ SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 SPDX-License-Identifier: 0BSD
 -->
 
-# RKE2 S3 etcd disaster recovery
+# RKE2 encrypted etcd disaster recovery
 
-This runbook restores the single-node `home` control plane onto a clean Ubuntu host from an RKE2
-snapshot in S3. It is version-matched to `v1.34.11+rke2r1`. It restores Kubernetes state, not the
-contents of application volumes; those come from VolSync only after the control plane is stable.
+This runbook restores the single-node `home` control plane onto a clean Ubuntu host
+from a client-encrypted restic recovery point in S3. Use the RKE2 release recorded
+for that recovery point. It restores Kubernetes state, not application volumes;
+those come from VolSync after the control plane is stable. Native plaintext S3
+uploads have been retired; do not enable them to perform recovery.
 
 Use this procedure only when the selected etcd snapshot is known-good and the original RKE2 token is
 available. If no trustworthy etcd snapshot exists, stop and use a clean GitOps bootstrap followed by
@@ -16,31 +18,27 @@ VolSync restores instead. Never mix the two control-plane recovery paths.
 
 ## Recovery objectives and retention
 
-RKE2 takes compressed snapshots every six hours and retains 28 locally and 28 in S3. Successful,
-uninterrupted runs therefore provide an RPO of at most six hours and seven days of directly selectable
-history. Failed or stale uploads invalidate that RPO.
+The host restic timer creates and restore-verifies a backup every six hours.
+Successful uninterrupted runs provide an RPO of at most six hours. Failed or stale
+verification invalidates that RPO. All encrypted recovery points are currently
+retained without pruning, including imported native snapshot history.
 
-The S3 bucket must:
-
-- have versioning, object lock, or an equivalent independent history mechanism enabled;
-- retain noncurrent or deleted objects for at least 30 days, longer than RKE2's rolling seven days;
-- survive loss of the node and ZFS pool;
-- prevent the RKE2 writer credential from permanently erasing the only copy;
-- have enough lifecycle headroom that its policy never expires a current object before RKE2's
-  `etcd-s3-retention: 28` policy does.
-
-RKE2 deletion of an older current object may create a noncurrent version. Recovering one of those
-older versions requires an S3 administrator to copy it back under a new current object name before
-running this procedure. Record that provider-specific operation outside the cluster.
+Backups must survive loss of the node and ZFS pool. Preserve independent recovery
+credentials and an off-cluster repository copy, and retain independent object history
+that the normal writer cannot permanently erase. The existing SOPS recovery identity,
+original RKE2 token and restic/S3 credentials are required. See the
+[encrypted backup runbook](rke2-restic-backup.md) for tool bootstrap, artifact checksums,
+repository selection, metadata layouts and verified recovery evidence.
 
 ## Stop conditions
 
 Do not run `--cluster-reset` unless all of these are true:
 
 - the host is disposable or the current database has an independently preserved rollback copy;
-- the installed binary reports exactly `v1.34.11+rke2r1`;
-- `/etc/rancher/rke2/config.yaml` contains the original stable token and mode-`0600` S3 settings;
-- `rke2 etcd-snapshot ls` lists the selected object by filename;
+- the installed binary matches the selected recovery point's RKE2 release;
+- `/etc/rancher/rke2/config.yaml` contains the original stable token and is mode `0600`;
+- standalone restic has restored the chosen recovery point, its SHA-256 matches the
+  encrypted metadata, and the matching native etcd utility validates the database;
 - the selected snapshot predates the incident and is compatible with the intended VolSync recovery
   points;
 - the off-cluster SOPS identities, RKE2 token, S3 credentials, and repository are independently
@@ -60,7 +58,13 @@ set the exact controller `/32` and `/128` in the non-secret Ansible inventory. D
 the old application datasets and do not bootstrap Flux. The ZFS role imports the existing pool with
 `-N` so it can inventory it, but that is not strong enough isolation for restored OpenEBS objects.
 
-From `ansible/`, bootstrap and converge the clean host with the original encrypted inventory:
+First install the [standalone recovery tools](rke2-restic-backup.md#recovery-without-a-surviving-cluster).
+Download and validate the selected backup before starting Kubernetes. This needs
+only the independent S3/restic credentials, not a surviving API or Flux Secret.
+
+From `ansible/`, bootstrap and converge the clean host with the original encrypted
+inventory. Set the RKE2 version and matching artifact checksum to the selected backup's
+release before convergence; the current inventory pin is not necessarily that release:
 
 ```bash
 ansible-playbook playbooks/bootstrap.yml \
@@ -76,7 +80,7 @@ configuration. It must not contain a new Flux bootstrap. On the server, verify t
 file permissions without printing their contents:
 
 ```bash
-sudo /usr/local/bin/rke2 --version | grep -F 'v1.34.11+rke2r1'
+sudo /usr/local/bin/rke2 --version
 sudo stat -c '%a %U:%G' /etc/rancher/rke2/config.yaml
 sudo awk -F: '$1 == "token" { found=1 } END { exit !found }' \
   /etc/rancher/rke2/config.yaml
@@ -102,22 +106,50 @@ Do not export if any dataset is mounted or any process is using the pool. Preser
 unchanged as the local rollback point. Boot without them and confirm `zpool list zfspool` fails before
 continuing. If physical isolation is impossible, stop and use the clean GitOps-plus-VolSync path.
 
-## 2. Select the S3 snapshot
+## 2. Select and restore the encrypted snapshot
 
-List S3 snapshots using the credentials already held in the mode-`0600` RKE2 config:
-
-```bash
-sudo /usr/local/bin/rke2 etcd-snapshot ls
-```
-
-Record the exact filename, creation time, incident time, and reason it is considered known-good in the
-recovery issue. Select an older point if corruption may predate the latest backup. Set only the base
-filename, never an S3 URL or local path:
+On the trusted recovery host, supply restic/S3 credentials through protected
+credential handling, with shell tracing disabled. As root:
 
 ```bash
-SNAPSHOT_NAME='REPLACE_WITH_EXACT_S3_SNAPSHOT_FILENAME'
-test -n "$SNAPSHOT_NAME"
+umask 077
+restic snapshots --tag rke2-etcd
+restic snapshots --tag rke2-etcd-history
+restic check --read-data
+restic restore SELECTED_RESTIC_SNAPSHOT_ID --target /protected/recovery
 ```
+
+Record the exact restic ID, original snapshot time, incident time and selection
+reason. Imported history has a new import timestamp: use `recovery.json` to identify
+the original recovery time, not the date of the restic import. Select an older point
+if corruption could predate the latest backup.
+
+New backups record their RKE2 release in `recovery.json`. Imported history preserves
+original S3 metadata, which may omit the RKE2 release. In that case, correlate the
+original snapshot timestamp with the recorded upgrade timeline: this cluster used
+`v1.34.11+rke2r1` before the 2026-09-26 upgrade to `v1.35.8+rke2r1`.
+Establish the exact upgrade boundary from retained change records for snapshots
+near that date. Stop if a compatible RKE2 release cannot be established; neither the
+import timestamp nor the current inventory pin proves the original version.
+
+New backups contain `work/source/snapshot.db`. Imported history contains
+`work/source/original` and its `recovery.json`; select a database object, not a metadata
+companion or coverage index. Validate the original SHA-256 against encrypted metadata.
+For a compressed historical object, extract its single validated ZIP member to a
+protected database file before the native check. The historical migration preserved
+original bytes and object metadata. See the backup runbook for the complete layouts.
+
+Set `SNAPSHOT_PATH` to the absolute local database path, and validate it:
+
+```bash
+SNAPSHOT_PATH=/protected/recovery/work/source/snapshot.db
+/opt/etcd-recovery/etcd-v3.6.14-linux-amd64/etcdutl snapshot status \
+  "$SNAPSHOT_PATH" --write-out=json
+```
+
+Use the validator version recorded for the selected snapshot. Do not continue on a
+checksum, archive, version or native validation failure. The local file contains
+sensitive cluster state; retain root-only permissions throughout recovery.
 
 ## 3. Restore and reset the single-member cluster
 
@@ -128,13 +160,15 @@ sudo systemctl stop rke2-server
 if sudo systemctl is-active --quiet rke2-server; then exit 1; fi
 ```
 
-Run the restore in the foreground. RKE2 reads the original token and all S3 settings from
-`/etc/rancher/rke2/config.yaml`; because S3 is enabled, the restore path is the filename only:
+Run the restore in the foreground. RKE2 reads the original token from its root-only
+configuration. Explicitly disable native S3 access: restic already downloaded and
+decrypted the selected database, and the restore path is an absolute local path:
 
 ```bash
 sudo /usr/local/bin/rke2 server \
+  --etcd-s3=false \
   --cluster-reset \
-  --cluster-reset-restore-path="$SNAPSHOT_NAME"
+  --cluster-reset-restore-path="$SNAPSHOT_PATH"
 ```
 
 Proceed only after the command reports:
@@ -143,7 +177,7 @@ Proceed only after the command reports:
 Managed etcd cluster membership has been reset, restart without --cluster-reset flag now.
 ```
 
-RKE2 downloads and verifies the snapshot, moves any current database to an `etcd-old-*` directory,
+RKE2 verifies the local snapshot, moves any current database to an `etcd-old-*` directory,
 extracts the datastore, reduces membership to this server, and restores the snapshot CAs. Do not
 delete the old directory or `/var/lib/rancher/rke2/server/db/reset-flag`; a normal successful start
 removes the reset flag.
@@ -157,8 +191,8 @@ sudo /var/lib/rancher/rke2/bin/kubectl \
 ```
 
 If normal startup fails, stop RKE2 and preserve the entire data directory and journal. On this clean
-single-node replacement, rollback means reprovisioning the node and repeating from a known-good S3
-object; it does not mean deleting RKE2's safety files or overwriting the preserved database in place.
+single-node replacement, rollback means reprovisioning the node and repeating from a known-good encrypted
+recovery point; it does not mean deleting RKE2's safety files or overwriting the preserved database in place.
 
 ## 4. Freeze reconciliation before storage recovery
 
@@ -215,7 +249,9 @@ Also require:
 
 - the API and SSH work through new IPv4 and IPv6 connections;
 - both authenticated Cilium BGP sessions are established and only the `/32` and `/128` VIPs appear;
-- `rke2 etcd-snapshot ls` succeeds and a new post-recovery snapshot uploads;
+- `systemctl start rke2-etcd-restic-backup.service` succeeds after Flux restores its
+  credential reference, with a new verified restore receipt, enabled timer and
+  ingested success/freshness metrics;
 - every restored application passes a content or login test;
 - VolSync restores are proven from off-cluster data;
 - Flux resumes without pruning a recovery resource or recreating a stale volume;

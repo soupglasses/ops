@@ -350,5 +350,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   six-hour timer and verified-backup alerts are active. Historical S3 migration is
   tracked separately. See [encrypted etcd backups](docs/rke2-restic-backup.md).
 
-- [ ] Encrypt and restore-verify every historical native S3 object/version and companion
+- [x] Encrypt and restore-verify every historical native S3 object/version and companion
   metadata, then delete verified plaintext originals under the approved migration.
+  All 27 database objects passed two restore/native-validation rounds; source prefix
+  is empty, including historical versions and multipart uploads. Encrypted coverage
+  index `5730c7da` is retained off-cluster.
