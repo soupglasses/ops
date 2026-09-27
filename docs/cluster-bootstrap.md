@@ -134,6 +134,11 @@ Flux installation and credential import. The restore happens **before the first 
 RKE2 start**. Native plaintext S3 uploads remain disabled. After a successful etcd reset,
 the temporary plaintext snapshot is deleted; the protected recovery receipt remains.
 
+After Flux reconciliation, bootstrap runs the same cleanup as `task kube:clean-pods`
+through the host connection. It deletes only Failed and Succeeded pods; Pending pods
+remain available for ongoing storage restores. The resumed Flux handoff also runs this
+cleanup. For an interactive node debugging shell, use `task kube:shell NODE=nas`.
+
 Bootstrap refuses an existing etcd database. It never deletes one or falls back to an
 empty cluster when a requested restore fails. Use `task ansible:apply` for routine host
 convergence. If host setup completed but the Flux handoff failed, fix the reported cause

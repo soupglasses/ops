@@ -194,3 +194,14 @@
             raise SystemExit('Flux did not apply its current ready Git source within 300 seconds')
   tags: [bootstrap-reconcile]
   changed_when: true
+
+- name: Clean terminal pods after the Flux handoff
+  ansible.builtin.command:
+    argv: [/bin/bash, -s]
+    stdin: "{{ lookup('ansible.builtin.file', playbook_dir + '/../../scripts/kube-clean-pods.sh') }}"
+  environment:
+    KUBECONFIG: /etc/rancher/rke2/rke2.yaml
+    PATH: /var/lib/rancher/rke2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  register: bootstrap_pod_cleanup
+  changed_when: "'deleted' in bootstrap_pod_cleanup.stdout"
+  tags: [bootstrap-clean-pods]

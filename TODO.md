@@ -386,3 +386,6 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   All four sources completed with schedules preserved; a scoped run verified mover
   progress. Fresh LDAP snapshot `e9a1c0ff` passed isolated native restore/export
   comparison (89 entries); temporary Pod and plaintext were removed.
+
+- [x] Run shared terminal-pod cleanup after bootstrap's Flux handoff, preserving
+  Pending restores. Confirm the node shell is `kube:shell` and add `license:apache2`.

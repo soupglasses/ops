@@ -5,6 +5,11 @@
 version: "3"
 
 tasks:
+  apache2:
+    desc: License files as Apache-2.0
+    cmd: >
+      reuse annotate --copyright="$(git config get user.name) <$(git config get user.email)>" --license=Apache-2.0
+      --merge-copyrights {{.CLI_ARGS}}
   mit:
     desc: License files as MIT
     cmd: >
