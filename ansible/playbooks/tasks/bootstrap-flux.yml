@@ -140,24 +140,57 @@
     stdin: "{{ bootstrap_flux_manifests.results[1].stdout }}"
   changed_when: true
 
-- name: Reconcile the Git source and then the Flux root
+- name: Reconcile Flux and wait for the current Git revision to be applied
   ansible.builtin.command:
     argv:
-      - /bin/sh
-      - -ec
+      - /usr/bin/python3
+      - -c
       - |
-        kube() {
-          /var/lib/rancher/rke2/bin/kubectl \
-            --kubeconfig=/etc/rancher/rke2/rke2.yaml -n flux-system "$@"
-        }
-        requested=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
-        kube annotate --overwrite "$1" "reconcile.fluxcd.io/requestedAt=$requested"
-        kube wait "$1" --timeout=300s \
-          "--for=jsonpath={.status.lastHandledReconcileAt}=$requested"
-        kube wait "$1" --for=condition=Ready --timeout=300s
-      - bootstrap-flux
-      - "{{ item }}"
-  loop:
-    - gitrepository.source.toolkit.fluxcd.io/flux-system
-    - kustomization.kustomize.toolkit.fluxcd.io/flux-system
+        import datetime
+        import json
+        import subprocess
+        import time
+
+        kube = ['/var/lib/rancher/rke2/bin/kubectl',
+                '--kubeconfig=/etc/rancher/rke2/rke2.yaml',
+                '--request-timeout=15s', '-n', 'flux-system']
+        source = 'gitrepository.source.toolkit.fluxcd.io/flux-system'
+        root = 'kustomization.kustomize.toolkit.fluxcd.io/flux-system'
+
+        def command(*args):
+            return subprocess.check_output(kube + list(args), text=True, timeout=20)
+
+        def read(resource):
+            return json.loads(command('get', resource, '-o', 'json'))
+
+        def ready(resource):
+            generation = resource['metadata']['generation']
+            return any(c.get('type') == 'Ready' and c.get('status') == 'True'
+                       and c.get('observedGeneration') == generation
+                       for c in resource.get('status', {}).get('conditions', []))
+
+        # Requests are hints, not completion tokens: concurrent reconciliation or
+        # the root applying its own metadata can supersede the annotation.
+        requested = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        for resource in (source, root):
+            command('annotate', '--overwrite', resource,
+                    'reconcile.fluxcd.io/requestedAt=' + requested)
+        deadline = time.monotonic() + 300
+        while time.monotonic() < deadline:
+            git = read(source)
+            revision = git.get('status', {}).get('artifact', {}).get('revision')
+            applied = read(root)
+            if (revision and ready(git) and ready(applied)
+                    and applied.get('status', {}).get('lastAppliedRevision') == revision):
+                # Follow a concurrently published commit instead of waiting for
+                # an obsolete fixed revision that may never be applied again.
+                current = read(source)
+                if (ready(current)
+                        and current.get('status', {}).get('artifact', {}).get('revision') == revision):
+                    print('Flux applied current Git revision: ' + revision)
+                    break
+            time.sleep(3)
+        else:
+            raise SystemExit('Flux did not apply its current ready Git source within 300 seconds')
+  tags: [bootstrap-reconcile]
   changed_when: true

@@ -257,3 +257,9 @@ revision 2,234,622 and 2,401 keys. The inventory collector successfully resolved
 ten Bound PVCs on the node, including retained migration and cache volumes. The
 verification Pod and new plaintext snapshot were removed; the timer remained active.
 The node and all non-suspended Flux Kustomizations were Ready after the reboot.
+
+The Flux handoff's reconciliation task was exercised separately against the running
+cluster without importing credentials or restarting controllers. It passed after
+replacing annotation-acknowledgement waits with current-generation readiness and
+matching Git/applied revisions: the root can remove its own request annotation while
+successfully reconciling itself.
