@@ -27,10 +27,10 @@ spec:
   values:
     image:
       repository: itzg/minecraft-server
-      tag: latest@sha256:8d0500eb1df76328fb2c2cd0350d5d456c1be45c7a92d6363ad35b680bdbcecf
+      tag: latest@sha256:e94acca02886fdbaad61f9c72935784ac2228a69068179f7b97ea1cac165f24e
     initContainers:
       - name: require-restored-world
-        image: itzg/minecraft-server:latest@sha256:8d0500eb1df76328fb2c2cd0350d5d456c1be45c7a92d6363ad35b680bdbcecf
+        image: itzg/minecraft-server:latest@sha256:e94acca02886fdbaad61f9c72935784ac2228a69068179f7b97ea1cac165f24e
         command: [/bin/sh, -ec]
         args:
           - test -s /data/world/level.dat || { echo 'Minecraft world missing; restore a verified backup.'
