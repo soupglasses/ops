@@ -152,6 +152,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   recovery preconditions and upgrade verification before advancing the desired
   version again. [PR #53](https://github.com/soupglasses/ops/pull/53) remains blocked
   on this ordering and Gateway API compatibility with Cilium 1.19.6.
+  Reconfirmed on 2026-10-12: the node still runs 1.35.8, and the task workspace
+  has read-only cluster access without the SSH identity/host trust required to run
+  maintenance. Keep #53 open until that stage and network preflight are verified.
 - [x] **Review and deploy the dependency backlog (2026-09-27).** Merged 24 reviewed
   PRs, including the new Alpine guard update; closed two obsolete Talos updates.
   Fixed DNS annotation rollout, distroless log-server guard, Vector node lookup,
@@ -261,6 +264,23 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **README still says BGP is "planned"**; it is implemented. Refresh the intro.
 
 ## Renovate / PR hygiene
+
+- [x] **Review and deploy the dependency backlog (2026-10-12).** Merged PRs
+  #54, #56, #58, #62, #63, #64, #67, #68, #71, #72, #74, #75, #77, #80 and #84.
+  Independent native Codex reviews approved the VictoriaMetrics RBAC/CRD changes,
+  mise-action major update and OpenEBS ZFS driver patch; Hermes routing was unavailable.
+  Observed automatic Flux application and active Kustomization/HelmRelease health
+  after each controlled merge; the existing suspended host policy remains excluded.
+  All ten PVC identities remained unchanged. Vector sink health, DNS provider
+  reconciliation, both backup watchers, public Minecraft 1.21.10 status, and Grafana
+  13.2.3 database health passed. VictoriaLogs and VictoriaMetrics opened approximately
+  2.6 million and 963 million existing rows respectively. Main CI and local Flate
+  validation passed; merged branches were confirmed absent from origin. Runtime
+  evidence and specialist verdicts are recorded on the affected PRs.
+- [x] **Verify the updated local tools.** Python 3.15.0 and pv-mounter 26.41.0
+  installed successfully. The first pv-mounter install used an outdated local Krew
+  registry; refreshing its public origin/master resolved the version without changing
+  the repository pin. The plugin launches through `mise exec -- kubectl pv-mounter`.
 
 - [x] Run every configured pre-commit check through `task check` and a separate
   GitHub workflow on pull requests and pushes to main.
