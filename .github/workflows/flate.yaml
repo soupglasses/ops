@@ -31,7 +31,7 @@ jobs:
       - name: Install validation tools
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          version: 2026.10.5
+          version: 2026.10.7
           install_args: github:home-operations/flate aqua:go-task/task
 
       - name: Test diff summary
