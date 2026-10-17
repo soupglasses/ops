@@ -109,6 +109,12 @@ Helm integration hook; production Helm tests remain read-only smoke checks.
 Temporary test and restore resources were deleted, and scheduled backups remain
 configured.
 
+Final inventory confirmed the controller, runners, Terraform CRD, active state and
+plan Secrets, generated runner RBAC and unused Tofu package source were removed.
+The tracked and working-tree `tofu/` directory is gone. Untracked unused draft
+modules were archived and moved outside the repository before removing the folder.
+No bootstrap credential Secret or generated provider file was changed.
+
 After adoption, Flux removed the Terraform manifest. The terminating CR's exact
 UID, deletion timestamp, disabled destruction and absent output Secret were
 checked before clearing suspension to let its finalizer finish. The controller
