@@ -129,7 +129,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: configuration
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:7591ed3a83ca8e0c5b782d9e99d23a0c17eb7cb8375ac8ca08303bf44e7a4fcb
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:f3304e67f1e4be14bc458f1d70a5e7b5c46b65d2fbb7df004c48740b42426fca
           command: [python3, /usr/local/lib/jellyfin/configuration.py]
           args: [--config, /desired/configuration.json, --credentials, /credentials]
           readinessProbe:
