@@ -19,7 +19,7 @@ SOURCE = Path(__file__).resolve().parents[1] / "kubernetes/apps/identity/openlda
 BASE = "dc=finnes,dc=dev"
 ADMIN = "cn=fixture-admin," + BASE
 SERVICE = "uid=media.jellyfin,ou=system," + BASE
-GROUP = "cn=media.jellyfin-users,ou=groups," + BASE
+GROUP = "cn=jellyfin.user,ou=groups," + BASE
 PASSWORD = "disposable-native-ldap-fixture"
 URI = "ldap://127.0.0.1:1389"
 PHOTO = base64.b64decode(
@@ -172,6 +172,7 @@ overlay memberof
         for username, ou in (
             ("alice", "users"),
             ("bob", "users"),
+            ("charlie", "users"),
             ("media.jellyfin", "system"),
         ):
             entries += f"""dn: uid={username},ou={ou},{BASE}
@@ -190,8 +191,13 @@ member: uid=bob,ou=users,{BASE}
 
 dn: {GROUP}
 objectClass: groupOfNames
-cn: media.jellyfin-users
+cn: jellyfin.user
 member: uid=alice,ou=users,{BASE}
+
+dn: cn=jellyfin.admin,ou=groups,{BASE}
+objectClass: groupOfNames
+cn: jellyfin.admin
+member: uid=charlie,ou=users,{BASE}
 
 """
         self.exec(
@@ -389,10 +395,26 @@ member: uid=alice,ou=users,{BASE}
             PASSWORD,
             "-b",
             "ou=users," + BASE,
-            f"(memberOf={GROUP})",
+            f"(|(memberOf={GROUP})(memberOf=cn=jellyfin.admin,ou=groups,{BASE}))",
             "uid",
         ).stdout
-        self.assertEqual(attributes(found, "uid"), [b"alice"])
+        self.assertCountEqual(attributes(found, "uid"), [b"alice", b"charlie"])
+        administrators = self.exec(
+            "ldapsearch",
+            "-LLL",
+            "-x",
+            "-H",
+            URI,
+            "-D",
+            SERVICE,
+            "-w",
+            PASSWORD,
+            "-b",
+            "ou=users," + BASE,
+            f"(memberOf=cn=jellyfin.admin,ou=groups,{BASE})",
+            "uid",
+        ).stdout
+        self.assertEqual(attributes(administrators, "uid"), [b"charlie"])
 
 
 if __name__ == "__main__":
