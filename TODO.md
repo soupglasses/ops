@@ -15,6 +15,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   password login, configuration drift and recovery tests pass in CI.
 - [x] Create the isolated compressed ZFS media dataset with a 1 TiB quota and private
   NFSv4 export. Preserve existing datasets; retain the stable media directory on PVC recreation.
+- [x] Restore the initial off-cluster media backup into isolated storage and verify
+  its canary and manifest; evidence is recorded in `docs/media-storage.md`.
 - [x] Remove Cilium L2 announcements; advertise the private Gateway through the existing
   BGP service range, with an exact router prefix and private-only forwarding rules.
 - [ ] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration

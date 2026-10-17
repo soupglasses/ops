@@ -51,11 +51,25 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
   serviceAccountName: {{ .Release.Name }}-tests
   containers:
     - name: tests
       image: "{{ .Values.tests.image.repository }}{{ if .Values.tests.image.digest }}@{{ .Values.tests.image.digest }}{{ else }}:{{ .Values.tests.image.tag }}{{ end }}"
       imagePullPolicy: {{ .Values.tests.image.pullPolicy }}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+      volumeMounts:
+        - name: temporary
+          mountPath: /tmp
       args:
         - -test.v
         - -test.timeout=8m
@@ -83,4 +97,7 @@ spec:
           memory: 128Mi
         limits:
           memory: 512Mi
+  volumes:
+    - name: temporary
+      emptyDir: {}
 {{- end }}

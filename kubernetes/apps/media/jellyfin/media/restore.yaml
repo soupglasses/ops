@@ -4,7 +4,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: jellyfin-media-restore-v1
+  name: jellyfin-media-restore-v2
   namespace: media
 spec:
   backoffLimit: 3
@@ -26,7 +26,7 @@ spec:
         - name: restore
           image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
           command: [python3, /usr/local/lib/jellyfin/media_restore.py]
-          args: [--root, /media, --allow-initialize, --initialize-repository]
+          args: [--root, /media]
           envFrom:
             - secretRef:
                 name: volsync-jellyfin-media

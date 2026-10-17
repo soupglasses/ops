@@ -136,3 +136,22 @@ the backup/recovery wiring and canary only; repeat with real media after importi
 Keep a rollback copy during migrations and delete temporary drill resources afterward.
 Recovery requires the repository, off-cluster endpoint, restic password, S3 access
 credentials, host administrator access and the normal Flux recovery prerequisites.
+
+### Initial off-cluster restore evidence
+
+On 2026-10-17, the initial media backup was restored from the off-cluster repository
+into an isolated `emptyDir` by a restricted, non-root Job. It mounted no NAS or live
+media PVC. Runtime image digest
+`54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820`
+ran the normal recovery helper without either initialization flag.
+
+The restore completed at 17:17:16 UTC with restic content verification and recovery
+manifest validation:
+
+- Snapshot: `e42a5ba16304ac248feda473320c57d49572a4e574c8d519739ac7cdf97a0192`.
+- Canary SHA-256: `762c19c80ead377ef8c5253e2616a3b5ccb100904ef55080252a0dbe8bb8e4c2`.
+- Two regular files: the persistent canary and its manifest.
+
+The temporary Job and pod were deleted after validation. This proves initial
+off-cluster recovery and the expected snapshot layout; the empty library contained no
+real media. Repeat the drill with representative media hashes after importing files.

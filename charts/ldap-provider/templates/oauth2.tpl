@@ -95,12 +95,38 @@ spec:
                       type: string
                       minLength: 1
 ---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-function-restricted
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: package-runtime
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop: [ALL]
+---
 apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-go-templating
 spec:
   package: {{ .Values.oauth2.functionPackage | quote }}
+  runtimeConfigRef:
+    name: {{ .Release.Namespace }}-{{ .Release.Name }}-function-restricted
 ---
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
