@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -30,7 +31,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
     "set GRAFANA_TEST_IMAGE for real Grafana OAuth tests",
 )
 class GrafanaOIDC(unittest.TestCase):
-    def test_member_admin_nonmember_denial_pkce_and_local_recovery(self):
+    def test_pictures_signed_tokens_group_access_pkce_and_local_recovery(self):
         values = yaml.safe_load(
             Path(
                 "kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"
@@ -40,7 +41,19 @@ class GrafanaOIDC(unittest.TestCase):
         provider = settings["auth.generic_oauth"]
         self.assertFalse(provider["auto_login"])
         self.assertFalse(settings["users"]["allow_sign_up"])
-        state = {"member": True, "challenges": {}, "exchanges": 0}
+        state = {
+            "member": True,
+            "challenges": {},
+            "exchanges": 0,
+            "picture": "https://idp.example/photo/alice",
+        }
+
+        def navigation_avatar(response):
+            match = re.search(
+                r"user:\s*(\{.*?\}),\s*settings:", response.read().decode(), re.S
+            )
+            self.assertIsNotNone(match)
+            return json.loads(match.group(1))["gravatarUrl"]
 
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         public_key = private_key.public_key().public_numbers()
@@ -127,6 +140,7 @@ class GrafanaOIDC(unittest.TestCase):
                     body = json.dumps(
                         {
                             "sub": "member" if member else "outsider",
+                            "picture": state["picture"],
                             "name": "Fixture",
                             "email": (
                                 "member@example.invalid"
@@ -271,20 +285,37 @@ class GrafanaOIDC(unittest.TestCase):
             urllib.request.ProxyHandler({}),
             urllib.request.HTTPCookieProcessor(CookieJar()),
         )
-        for _ in range(120):
+        for _ in range(480):
             try:
                 with opener.open(base + "/api/health", timeout=2):
                     break
             except OSError:
                 time.sleep(0.25)
         else:
-            self.fail("Grafana fixture did not start")
+            logs = subprocess.check_output(
+                ["docker", "logs", container], stderr=subprocess.STDOUT
+            ).decode()
+            self.fail("Grafana fixture did not start: " + logs[-5000:])
         with opener.open(base + "/login") as response:
             self.assertEqual(urllib.parse.urlsplit(response.url).path, "/login")
         with opener.open(base + "/login/generic_oauth"):
             pass
         with opener.open(base + "/api/user") as response:
-            self.assertTrue(json.load(response)["isGrafanaAdmin"])
+            profile = json.load(response)
+            self.assertTrue(profile["isGrafanaAdmin"])
+            self.assertEqual(profile["avatarUrl"], state["picture"])
+        with opener.open(base + "/") as response:
+            self.assertEqual(navigation_avatar(response), state["picture"])
+        for picture in ("https://idp.example/photo/updated", ""):
+            opener.open(base + "/logout").close()
+            state["picture"] = picture
+            with opener.open(base + "/login/generic_oauth"):
+                pass
+            expected = picture or "/public/img/user_profile.png"
+            with opener.open(base + "/api/user") as response:
+                self.assertEqual(json.load(response)["avatarUrl"], expected)
+            with opener.open(base + "/") as response:
+                self.assertEqual(navigation_avatar(response), expected)
         opener.open(base + "/logout").close()
         for membership in (False, None, "tampered"):
             state["member"] = membership
@@ -294,7 +325,7 @@ class GrafanaOIDC(unittest.TestCase):
                 opener.open(base + "/api/user")
             self.assertEqual(denied.exception.code, 401)
             denied.exception.close()
-        self.assertEqual(state["exchanges"], 4)
+        self.assertEqual(state["exchanges"], 6)
         body = json.dumps(
             {"user": "admin", "password": "synthetic-recovery-password"}
         ).encode()

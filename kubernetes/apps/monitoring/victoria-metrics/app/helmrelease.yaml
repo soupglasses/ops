@@ -171,6 +171,11 @@ spec:
       enabled: false
     grafana:
       enabled: true
+      image:
+        registry: ghcr.io
+        repository: soupglasses/grafana
+        tag: 13.2.4-oidc.1
+        sha: c8728c56838cb34441455ae4912806be1a19a4c81db82ab1df9aeb8a383f6bb9
       rbac:
         create: true
         namespaced: true

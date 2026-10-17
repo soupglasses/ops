@@ -17,11 +17,23 @@ its `sub` claim supplies the stable directory username. Authorization uses code
 exchange with PKCE S256 and client credentials in the token request body. ID-token
 signatures are validated against Canaille's HTTPS JWKS endpoint.
 
-Grafana Generic OAuth does not import the OIDC `picture` claim, even though
-Canaille exposes the LDAP photo. Native Grafana avatars use Gravatar, which is
-disabled here; LDAP profile photos therefore do not appear in Grafana. There is
-no native avatar-claim mapping setting. See the pinned
-[OAuth user model](https://github.com/grafana/grafana/blob/v13.2.3/pkg/login/social/connectors/generic_oauth.go#L210-L221).
+The pinned `soupglasses/grafana:13.2.4-oidc.1` build adds Generic OAuth support
+for Canaille's HTTPS `picture` claim. Profile and navigation pictures synchronize
+at login; removed or invalid pictures use the default avatar. Gravatar remains
+disabled. Pictures load directly in the browser, so Canaille's signed photo URL
+must remain accessible to the user.
+
+The build is Grafana 13.2.4 plus
+[one feature commit](https://github.com/soupglasses/grafana/commit/89c2ebbeac98fcc251b0766861cd77af425fdfbe).
+The [signed release](https://github.com/soupglasses/grafana/releases/tag/v13.2.4-oidc.1)
+contains the source archive, patch, Dockerfile, binary and checksums. The pinned
+GHCR image is anonymously pullable. The fork's `build/oidc-picture-release` branch
+publishes it from these verified artifacts. The release recipe uses
+Go 1.26.9 and the stock 13.2.4 image pinned by digest. If that base image becomes
+unavailable, build the complete image with the same source tree's Dockerfile.
+The patch adds a nullable field to Grafana's disposable authentication database;
+no directory data or credentials change. To roll back, remove the image override
+and let Flux restore the chart's stock image; users sign in again.
 
 The group initially contains `admin` and `sofie`. Subsequent membership changes
 belong to directory administrators: reconciliation owns the group's class and
@@ -38,11 +50,11 @@ See [Grafana's Generic OAuth documentation](https://grafana.com/docs/grafana/lat
 for the authentication settings.
 
 The real-server fixture exercises these Helm authentication settings with a
-synthetic provider, including group/signature rejection, PKCE, token authentication, and
-local recovery login:
+synthetic provider, including profile/navigation picture updates and removal,
+group/signature rejection, PKCE, token authentication, and local recovery login:
 
 ```sh
-GRAFANA_TEST_IMAGE=grafana/grafana:13.2.3-distroless \
+GRAFANA_TEST_IMAGE=ghcr.io/soupglasses/grafana:13.2.4-oidc.1 \
   python3 -m unittest scripts/test_grafana_oidc.py
 ```
 

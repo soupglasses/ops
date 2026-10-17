@@ -28,9 +28,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   [Migration and recovery evidence](docs/opentofu-to-crossplane-migration.md)
   records identity-preservation tests and the real off-cluster restore drill.
 
-- [ ] Support directory photos in Grafana if a maintained integration becomes
-  available. Generic OAuth ignores OIDC `picture`; native avatars use Gravatar,
-  which remains disabled. Canaille already exposes the LDAP photo claim.
+- [ ] Deploy the pinned Grafana OIDC-picture build from `soupglasses/grafana`
+  after publishing its source release and verifying anonymous image pulls.
+  Synthetic sign-in covers profile/navigation pictures, updates, removal and
+  existing access controls; verify a real Canaille photo after rollout.
+  Gravatar remains disabled.
 
 - [x] Keep Jellyfin LDAP password changes disabled; omit the redundant account-menu
   link and unusable external reset URL. Manage passwords directly in Canaille.
