@@ -64,10 +64,3 @@ tasks:
   schemas:update:
     desc: Align Kubernetes editor schema comments with the RKE2 inventory
     cmd: python3 scripts/kubernetes-schema-headers.py --write
-
-  hermes:deploy-keys:
-    desc: Install or renew Kubernetes credentials in an existing Hermes container
-    silent: true
-    requires:
-      vars: [HOST]
-    cmd: python3 scripts/hermes-kubeconfig.py --host {{.HOST | shellQuote}} {{.CLI_ARGS}}

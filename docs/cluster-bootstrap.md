@@ -190,25 +190,6 @@ Do not apply that hold journal to a new cluster. Fresh bootstrap removes it and
 reconstructs normal schedules from Git. Writes after the final completed backup are
 outside that recovery point.
 
-## 5. Renew Hermes access
-
-Once Flux has recreated Hermes ServiceAccounts, renew credentials in the existing
-container:
-
-```bash
-task hermes:deploy-keys HOST=satellite
-```
-
-For a single profile:
-
-```bash
-task hermes:deploy-keys HOST=satellite -- --profile observability --duration-seconds 604800
-```
-
-Record the expiry printed by the command. Renewal does not revoke still-valid old
-tokens; see [Hermes access](hermes-cluster-access.md) for compromise response and
-container prerequisites.
-
 ## Validation scope
 
 Application-level S3 restores and the uninstall backup hold/resume sequence have been

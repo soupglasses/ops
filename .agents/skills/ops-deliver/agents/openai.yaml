@@ -2,7 +2,5 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: hermes-system
+policy:
+  allow_implicit_invocation: false

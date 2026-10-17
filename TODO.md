@@ -354,9 +354,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   and use the pinned linter's bundled schemas to avoid its unclosed HTTP 304 response.
   Correct the literal `~` in the workstation's Elixir PATH entry in Bash dotfiles.
 
-- [x] Provide `task hermes:deploy-keys HOST=<ssh-host>` for scoped Kubernetes
-  credentials in the existing Hermes container. Verify profile identities, native
-  terminal configuration and operational permissions without exposing credentials.
+- [x] Replace Hermes routing, profile credentials, and mandatory specialist gates with
+  compact, explicitly invoked project skills and shared repository guidance.
+- [ ] Retire the external Hermes runtime and GitHub webhook/App subscription on
+  satellite. These are configured outside this repository; remove obsolete profile
+  credentials and routing labels after confirming no other consumer needs them.
 
 - [ ] Guard the completions in `.mise.toml` with a tool-exists check so a fresh
   `mise trust` does not spew errors for tools not yet installed.

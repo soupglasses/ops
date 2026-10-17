@@ -72,7 +72,8 @@ mise exec -- kubectl get pods -A
 
 The task fetches the RKE2 administrator configuration over verified SSH and checks
 API access before replacing `.secure/kubeconfig`. It keeps a backup of the existing
-file. Mise selects this configuration unless `HERMES_KUBECONFIG` overrides it.
+file. Mise selects this configuration. For an assigned external credential, use
+`mise exec -- env KUBECONFIG=<assigned-path> kubectl ...`.
 Repeat the task after a clean rebuild to refresh the CA and client certificate.
 
 Bootstrap SSH connects to the node IP using the verified `nas.home.finnes.dev`

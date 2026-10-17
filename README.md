@@ -155,7 +155,7 @@ inventory, recovery keys and post-bootstrap checks.
 3. Fetch access with `task kube:kubeconfig`, then watch `flux get kustomizations -A --watch`
    and `kubectl get pods -A --watch` as applications recover.
 4. Validate restored application contents before removing rollback copies. The guide
-   also covers resuming a failed Flux handoff and renewing Hermes access.
+   also covers resuming a failed Flux handoff.
 
 ## Recovery
 
