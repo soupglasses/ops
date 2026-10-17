@@ -1,0 +1,291 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-users
+  annotations:
+    crossplane.io/external-name: ou=users,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: users.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-system
+  annotations:
+    crossplane.io/external-name: ou=system,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: system.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-groups
+  annotations:
+    crossplane.io/external-name: ou=groups,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: groups.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-policies
+  annotations:
+    crossplane.io/external-name: ou=policies,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: policies.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth
+  annotations:
+    crossplane.io/external-name: ou=oauth,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: oauth.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-clients
+  annotations:
+    crossplane.io/external-name: ou=clients,ou=oauth,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: oauth-clients.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-authorizations
+  annotations:
+    crossplane.io/external-name: ou=authorizations,ou=oauth,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: oauth-authorizations.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-consents
+  annotations:
+    crossplane.io/external-name: ou=consents,ou=oauth,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: oauth-consents.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-tokens
+  annotations:
+    crossplane.io/external-name: ou=tokens,ou=oauth,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: oauth-tokens.json
+    restrictAttributes:
+      - objectClass
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-password-policy
+  annotations:
+    crossplane.io/external-name: cn=password,ou=policies,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: password-policy.json
+    restrictAttributes:
+      - objectClass
+      - sn
+      - pwdAttribute
+      - pwdMustChange
+      - pwdLockout
+      - pwdAllowUserChange
+      - pwdGraceAuthNLimit
+      - pwdMaxFailure
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-system-policy
+  annotations:
+    crossplane.io/external-name: cn=system,ou=policies,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: system-policy.json
+    restrictAttributes:
+      - objectClass
+      - sn
+      - pwdAttribute
+      - pwdMustChange
+      - pwdLockout
+      - pwdAllowUserChange
+      - pwdMaxFailure
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-admin-user
+  annotations:
+    crossplane.io/external-name: uid=admin,ou=users,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: admin-user.json
+    restrictAttributes:
+      - objectClass
+    dataJsonCreateDefaultsSecretRef:
+      name: directory-foundation-attributes
+      key: admin-user-defaults.json
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-auth-user
+  annotations:
+    crossplane.io/external-name: uid=auth,ou=system,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: auth-user.json
+    restrictAttributes:
+      - objectClass
+      - pwdPolicySubentry
+    dataJsonCreateDefaultsSecretRef:
+      name: directory-foundation-attributes
+      key: auth-user-defaults.json
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-admin-group
+  annotations:
+    crossplane.io/external-name: cn=admin,ou=groups,dc=finnes,dc=dev
+spec:
+  managementPolicies:
+    - Observe
+  providerConfigRef:
+    kind: ProviderConfig
+    name: directory-admin
+  forProvider:
+    dataJsonSecretRef:
+      name: directory-foundation-attributes
+      key: admin-group.json
+    restrictAttributes:
+      - objectClass
+    dataJsonCreateDefaultsSecretRef:
+      name: directory-foundation-attributes
+      key: admin-group-defaults.json

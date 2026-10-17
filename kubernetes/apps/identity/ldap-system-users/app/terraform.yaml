@@ -7,6 +7,8 @@ kind: Terraform
 metadata:
   name: ldap-system-users
 spec:
+  suspend: true
+  destroyResourcesOnDeletion: false
   approvePlan: auto
   interval: 1h
   path: ./tofu/ldap/base

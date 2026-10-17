@@ -1,32 +1,82 @@
 # SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
-#
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
 
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: &app ldap-system-users
-  namespace: &namespace identity
+  name: ldap-system-users
+  namespace: identity
 spec:
   path: ./kubernetes/apps/identity/ldap-system-users/app
-  targetNamespace: *namespace
+  targetNamespace: identity
   dependsOn:
-    - name: openldap
+    - name: ldap-directory
       namespace: identity
-    - name: tofu-controller
-      namespace: flux-system
   commonMetadata:
     labels:
-      app.kubernetes.io/name: *app
+      app.kubernetes.io/name: ldap-system-users
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
   healthChecks:
-    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
-      kind: Terraform
-      name: ldap-system-users
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-users
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-system
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-groups
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-policies
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-oauth
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-oauth-clients
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-oauth-authorizations
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-oauth-consents
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-oauth-tokens
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-password-policy
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-system-policy
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-admin-user
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-auth-user
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
+      name: directory-admin-group
       namespace: identity
   interval: 10m
   retryInterval: 2m

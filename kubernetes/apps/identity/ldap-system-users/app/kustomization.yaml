@@ -8,4 +8,7 @@ kind: Kustomization
 namespace: identity
 resources:
   - ./terraform.yaml
+  - ./providerconfig.yaml
+  - ./attributes.yaml
+  - ./entries.yaml
   - ./secret.sops.yaml
