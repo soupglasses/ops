@@ -40,7 +40,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: restore-media
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30
           command: [python3, /usr/local/lib/jellyfin/media_restore.py]
           args: [--root, /media]
           envFrom:
@@ -63,7 +63,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: restore
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30
           command: [python3, /usr/local/lib/jellyfin/runtime.py]
           args: [restore, --source, /config]
           securityContext:
@@ -82,7 +82,7 @@ spec:
               mountPath: /config
       containers:
         - name: jellyfin
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30
           ports:
             - name: http
               containerPort: 8096
@@ -129,7 +129,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: configuration
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30
           command: [python3, /usr/local/lib/jellyfin/configuration.py]
           args: [--config, /desired/configuration.json, --credentials, /credentials]
           readinessProbe:
