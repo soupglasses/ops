@@ -17,14 +17,16 @@ The application namespace opts in to the cluster-owned `directory` backend. Its
 central LDAP administrator credential stays in `identity/openldap`; application
 credentials stay in `media/jellyfin-identity`. A central-provider Entry must be a
 direct child of an allowed base, with an RDN prefixed by its namespace and a dot.
-The generic Entry API reconciles only explicitly owned attributes. Central
-configuration in the identity namespace manages `jellyfin.user` and `jellyfin.admin`
-through a namespaced provider using the existing directory credential. This keeps
-application group names independent of the workload namespace without relaxing the
-media namespace's provider boundary.
+The generic Entry API reconciles only explicitly owned attributes. Jellyfin's
+[GroupOfNames declarations](../kubernetes/apps/media/jellyfin/groups/groups.yaml)
+live alongside its application manifests. They reconcile in `identity` using the
+shared `directory-admin` ProviderConfig, preserving the existing group DNs without
+relaxing the media namespace's provider boundary. The generic directory platform
+contains no Jellyfin group definitions or health checks.
 
-The user group preserves the existing `admin`, `sofie` and `lcp` members; the admin
-group starts with `admin`. Subsequent membership changes belong in Canaille. Either
+For new groups, `initialMembers` seeds `admin`, `sofie` and `lcp` in the user group,
+and `admin` in the admin group. Existing memberships and owners are preserved.
+Subsequent changes belong in Canaille. Either
 group permits sign-in; only `jellyfin.admin` grants Jellyfin administrator privileges.
 The LDAP plugin updates that privilege on each successful login. The former
 `media.jellyfin-users` group and its managed Entry were removed after verifying all
@@ -67,6 +69,16 @@ defaults. OpenTofu and its state/controller are retired. Grafana uses the
 access, while retaining its local recovery login. See
 [directory recovery](opentofu-to-crossplane-migration.md) and
 [Grafana sign-in](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
+
+### Group adoption evidence
+
+On 2026-10-17, both Jellyfin groups were adopted by app-owned `GroupOfNames`
+resources. The old Entries first became Observe-only, then finalized after the
+new composed Entries were Ready/Synced. The same LDAP UUIDs and canonical member
+and owner hashes were verified before and after adoption. Only then were the
+unused `jellyfin-groups` ProviderConfig and attribute Secret removed. The real
+kind/Helm regression also verified creation, drift repair, retained LDAP groups
+and membership/owner preservation through re-adoption.
 
 ## Application settings
 

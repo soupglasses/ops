@@ -10,6 +10,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [x] Scope LDAP platform configuration independently of Jellyfin, adopt app-local
+  `GroupOfNames` declarations through the shared administrative provider, mark
+  generated files in Git, expose generation/export tasks, and split runtime CI
+  by subsystem. Real composition tests and live group identity preservation passed.
+
 - [x] Parse Jellyfin console logs into searchable message, logger, thread and time
   fields, with normalized Grafana severity; preserve unrecognized lines.
 
