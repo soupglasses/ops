@@ -10,8 +10,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
-- [x] Configure native Canaille account-menu and LDAP reset-URL links while keeping
-  Jellyfin LDAP password changes disabled; preserve stock web client settings.
+- [x] Configure the native LDAP reset URL for Canaille while keeping Jellyfin LDAP
+  password changes disabled; omit the redundant account-menu link.
 
 - [x] Accept Jellyfin LDAP username and email logins with one canonical account;
   verify email-first login, username relogin and upstream photo synchronization.
