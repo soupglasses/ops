@@ -203,6 +203,51 @@ class ConfigurationTest(unittest.TestCase):
         self.assertNotIn("/Startup/User", self.state["posts"])
         self.assertEqual(self.state["ldap"]["LdapServer"], "wrong")
 
+    def test_polling_logs_changes_but_keeps_idle_polls_silent_and_healthy(self):
+        marker = self.directory / "ready"
+        output = io.StringIO()
+        polls = 0
+
+        def next_poll(interval):
+            nonlocal polls
+            polls += 1
+            self.assertTrue(marker.exists())
+            self.assertEqual(interval, 60)
+            if polls == 1:
+                self.assertEqual(output.getvalue().count("configuration reconciled"), 1)
+                self.state["posts"].clear()
+                marker.unlink()
+            elif polls == 2:
+                self.assertEqual(self.state["posts"], [])
+                self.assertEqual(output.getvalue().count("configuration reconciled"), 1)
+                self.state["ldap"]["LdapServer"] = "drift"
+            else:
+                self.assertEqual(self.state["posts"], ["/ldap"])
+                self.assertEqual(output.getvalue().count("configuration reconciled"), 2)
+                raise StopIteration
+
+        with (
+            patch("sys.argv", ["configuration", "--health-file", str(marker)]),
+            patch("configuration.Reconciler", return_value=self.reconciler),
+            patch("configuration.time.sleep", side_effect=next_poll),
+            contextlib.redirect_stdout(output),
+            self.assertRaises(StopIteration),
+        ):
+            configuration.main()
+
+    def test_check_reports_in_sync_without_logging_a_change(self):
+        self.reconciler.run_once()
+        self.state["posts"].clear()
+        output = io.StringIO()
+        with (
+            patch("sys.argv", ["configuration", "--check"]),
+            patch("configuration.Reconciler", return_value=self.reconciler),
+            contextlib.redirect_stdout(output),
+        ):
+            self.assertEqual(configuration.main(), 0)
+        self.assertEqual(output.getvalue(), "Jellyfin configuration is in sync\n")
+        self.assertEqual(self.state["posts"], [])
+
     def test_missing_credentials_does_not_write_settings(self):
         self.reconciler.run_once()
         self.state["posts"].clear()

@@ -10,6 +10,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [x] Stop logging idle Jellyfin configuration polls as applied changes. The success
+  message was unconditional; log only successful configuration writes while keeping
+  health checks fresh. HTTP regression tests cover idle polls and drift repair.
+- [ ] Verify quiet Jellyfin polling live after deploying the updated runtime image;
+  the current kandev credentials permit logs but deny the read-only `pods/exec` check.
+
 - [x] Scope LDAP platform configuration independently of Jellyfin, adopt app-local
   `GroupOfNames` declarations through the shared administrative provider, mark
   generated files in Git, expose generation/export tasks, and split runtime CI

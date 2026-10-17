@@ -46,6 +46,7 @@ class Reconciler:
         self.config_path = Path(config_path)
         self.credentials_dir = Path(credentials_dir)
         self.token = None
+        self.changed = False
         self.opener = urllib.request.build_opener(NoRedirect())
 
     def credential(self, name):
@@ -82,6 +83,8 @@ class Reconciler:
                 timeout=15,
             ) as response:
                 content = response.read()
+                if method == "POST" and path != "/Users/AuthenticateByName":
+                    self.changed = True
                 return json.loads(content) if content else None
         except urllib.error.HTTPError as error:
             status = error.code
@@ -196,6 +199,7 @@ class Reconciler:
                     )
 
     def run_once(self, check_only=False):
+        self.changed = False
         self.load()
         info = self.request("GET", "/System/Info/Public", authenticated=False)
         if not info.get(
@@ -274,7 +278,10 @@ def main():
             if not args.once and not args.check:
                 args.health_file.parent.mkdir(parents=True, exist_ok=True)
                 args.health_file.touch()
-            print("Jellyfin configuration reconciled", flush=True)
+            if reconciler.changed:
+                print("Jellyfin configuration reconciled", flush=True)
+            elif args.once or args.check:
+                print("Jellyfin configuration is in sync", flush=True)
         except ConfigurationError as error:
             if not args.once and not args.check:
                 args.health_file.unlink(missing_ok=True)
