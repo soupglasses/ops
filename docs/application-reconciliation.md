@@ -19,7 +19,10 @@ direct child of an allowed base, with an RDN prefixed by its namespace and a dot
 The generic Entry API reconciles only explicitly owned attributes. Group membership
 is initialized with the directory administrator and subsequently managed in Canaille.
 
-Jellyfin members sign in with their normal LDAP username and password. The
+Jellyfin members sign in with their LDAP username or email address and password.
+Both lookup attributes resolve to the same `uid` account identity. Keep email
+addresses unique among members and distinct from other members' usernames; the
+upstream plugin chooses the first result when aliases collide. The
 unmodified upstream LDAP plugin links the account on login and synchronizes its
 `jpegPhoto` through its existing scheduled task. Jellyfin does not need a separate
 OIDC client or an SSO plugin for this path. The local `ops-recovery` administrator

@@ -38,7 +38,7 @@ data:
             "LdapBindUser": "uid=media.jellyfin,ou=system,dc=finnes,dc=dev",
             "LdapBaseDn": "ou=users,dc=finnes,dc=dev",
             "LdapSearchFilter": "(memberOf=cn=media.jellyfin-users,ou=groups,dc=finnes,dc=dev)",
-            "LdapSearchAttributes": "uid",
+            "LdapSearchAttributes": "uid,mail",
             "LdapUidAttribute": "uid",
             "LdapUsernameAttribute": "uid",
             "LdapAdminFilter": "_disabled_",

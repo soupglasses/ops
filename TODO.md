@@ -10,6 +10,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [x] Accept Jellyfin LDAP username and email logins with one canonical account;
+  verify email-first login, username relogin and upstream photo synchronization.
+
 - [x] Simplify Jellyfin to the unpatched upstream LDAP plugin and fold server ACLs
   into the existing stock-image OpenLDAP deployment; remove the separate ACL package.
 

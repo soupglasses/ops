@@ -157,6 +157,7 @@ objectClass: inetOrgPerson
 uid: alice
 cn: alice
 sn: Fixture
+mail: alice@example.test
 userPassword: {PASSWORD}
 jpegPhoto:: {base64.b64encode(jpeg).decode()}
 
@@ -259,7 +260,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                         "LdapBaseDn": "ou=users,dc=example,dc=test",
                         "LdapBindUser": "cn=admin,dc=example,dc=test",
                         "LdapSearchFilter": "(objectClass=inetOrgPerson)",
-                        "LdapSearchAttributes": "uid",
+                        "LdapSearchAttributes": "uid,mail",
                         "LdapUidAttribute": "uid",
                         "LdapUsernameAttribute": "uid",
                         "LdapAdminFilter": "_disabled_",
@@ -336,10 +337,11 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         result = reconciler.request(
             "POST",
             "/Users/AuthenticateByName",
-            {"Username": "alice", "Pw": PASSWORD},
+            {"Username": "alice@example.test", "Pw": PASSWORD},
             authenticated=False,
         )
         user_id = result["User"]["Id"]
+        self.assertEqual(result["User"]["Name"], "alice")
         ldap_path = f"/Plugins/{LDAP_ID}/Configuration"
         linked = reconciler.request("GET", ldap_path)["LdapUsers"]
         self.assertEqual(len(linked), 1)
@@ -384,6 +386,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             authenticated=False,
         )
         self.assertEqual(result["User"]["Id"], user_id)
+        self.assertEqual(len(reconciler.request("GET", ldap_path)["LdapUsers"]), 1)
         self.assertEqual(
             reconciler.request("GET", f"/Users/{user_id}")["Policy"][
                 "AuthenticationProviderId"
