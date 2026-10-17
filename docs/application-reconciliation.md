@@ -17,8 +17,18 @@ The application namespace opts in to the cluster-owned `directory` backend. Its
 central LDAP administrator credential stays in `identity/openldap`; application
 credentials stay in `media/jellyfin-identity`. A central-provider Entry must be a
 direct child of an allowed base, with an RDN prefixed by its namespace and a dot.
-The generic Entry API reconciles only explicitly owned attributes. Group membership
-is initialized with the directory administrator and subsequently managed in Canaille.
+The generic Entry API reconciles only explicitly owned attributes. Central
+configuration in the identity namespace manages `jellyfin.user` and `jellyfin.admin`
+through a namespaced provider using the existing directory credential. This keeps
+application group names independent of the workload namespace without relaxing the
+media namespace's provider boundary.
+
+The user group preserves the existing `admin`, `sofie` and `lcp` members; the admin
+group starts with `admin`. Subsequent membership changes belong in Canaille. Either
+group permits sign-in; only `jellyfin.admin` grants Jellyfin administrator privileges.
+The LDAP plugin updates that privilege on each successful login. The former
+`media.jellyfin-users` group and its managed Entry were removed after verifying all
+three members were preserved in `jellyfin.user` and the new roles worked live.
 
 Jellyfin members sign in with their LDAP username or email address and password.
 Both lookup attributes resolve to the same `uid` account identity. Keep email
@@ -46,8 +56,17 @@ required. Change server ACLs in Git; runtime ACL changes are replaced at startup
 The Upjet provider manages ordinary directory entries using the existing Terraform
 LDAP SDK. Its `OAuth2Client` composition remains available for OIDC applications
 and maps that API to the configured backend's LDAP schema. Jellyfin currently
-uses only its bind-account and group entries. Deleting an Entry deliberately
+uses its bind-account Entry; application groups are managed centrally in the identity
+namespace. Deleting an Entry deliberately
 retains the directory object; permanent deletion is an explicit administration action.
+
+The directory foundation also uses the existing Upjet provider. Its 14 entries
+are adopted by DN; passwords, profiles and human membership are create-only
+defaults. OpenTofu and its state/controller are retired. Grafana uses the
+`OAuth2Client` composition with PKCE, signed tokens and strict administrator-group
+access, while retaining its local recovery login. See
+[directory recovery](opentofu-to-crossplane-migration.md) and
+[Grafana sign-in](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
 
 ## Application settings
 
@@ -186,3 +205,39 @@ filesystem and denied network access. No production PVC or credentials were
 mounted, and all temporary resources were removed. Native `slapmodify` refreshes
 configuration timestamps even on a repeated apply; the idempotence check compares
 effective configuration while the directory-data checks remain byte-for-byte.
+
+### Jellyfin 12.2 upgrade recovery
+
+On 2026-10-17, source `22732d6891984d078455a98be1ae4b06e57a0ac2` published
+Jellyfin 12.2 with upstream LDAP 24 as
+`ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:6947130a86a85e82a545c0206cde9740d9e24374b137d35037ae3cc2dbb75200`.
+Jellyfin 12 disables legacy token headers by default; the settings client now puts
+its session token in the supported `Authorization: MediaBrowser` header.
+Real-image LDAP login, photo synchronization and administrator creation, promotion
+and demotion passed before publication.
+
+Before production migration, an offline checkpoint was backed up off-cluster as
+snapshot `b4b1ef9b` at 19:31:19 UTC. A separate destination restored that exact
+snapshot at 19:31:53 UTC. The restore helper validated all 41 files in generation
+`aa1e11e5b58143df923230cb8a5956e7`. An isolated PVC ran the new image and retained
+the server identity, all three original account IDs and administrator flags, all
+three libraries and their paths, and the baseline media counts. LDAP 24 loaded
+Active and the authenticated settings comparison passed. After clean shutdown,
+all 41 files and SQLite integrity for `data/jellyfin.db` passed verification.
+
+For rollback across this database migration, restore `b4b1ef9b` into separate
+storage and use the matching preupgrade image:
+`ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30`.
+Never start the older image against the migrated database. Directory snapshot
+`56827bc8` preserves the pre-migration group membership. Existing off-cluster
+retention, media recovery and scheduled destination refresh remain unchanged.
+
+Production deployed the new digest through Flux. A disposable directory identity
+verified administrator API access, demotion to an ordinary user with administrator
+API denial, and sign-in denial after all application memberships were removed.
+The fixture and its Jellyfin account/link were deleted. The permanent `admin`
+account uses the LDAP authentication provider and administrator policy; its normal
+LDAP password remains authoritative. Existing user accounts were preserved. A
+library refresh was triggered on the upgraded server. All isolated migration
+resources were removed. Independent security and resilience reviews approved the
+change; evidence is recorded in [issue 107](https://github.com/soupglasses/ops/issues/107).

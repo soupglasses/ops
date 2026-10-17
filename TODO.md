@@ -10,10 +10,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
-- [ ] Retire OpenTofu through observe-first adoption of the 14 LDAP foundation
-  entries, then remove its controller and modules. Follow
-  [the migration plan](docs/opentofu-to-crossplane-migration.md); preserve credentials,
-  human changes and a proven recovery path.
+- [x] Upgrade Jellyfin to 12.2 with LDAP 24 and verify `jellyfin.user` /
+  `jellyfin.admin` roles; provision the LDAP admin, preserve existing access and
+  remove the retired group. Restore and live authorization evidence is in
+  [the recovery record](docs/application-reconciliation.md#jellyfin-122-upgrade-recovery).
+
+- [x] Replace OpenTofu with the existing Crossplane Upjet provider, remove the
+  controller/modules/tooling, and enable Grafana OIDC with `OAuth2Client`.
+  [Migration and recovery evidence](docs/opentofu-to-crossplane-migration.md)
+  records identity-preservation tests and the real off-cluster restore drill.
 
 - [x] Keep Jellyfin LDAP password changes disabled; omit the redundant account-menu
   link and unusable external reset URL. Manage passwords directly in Canaille.
@@ -281,20 +286,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   `openldap-nfrastack-stage` claims remain Flux-managed with pruning disabled.
   Preserve current recovery points before removing these frozen copies.
 - [ ] **Reduce remaining LDAP administrative access.** Canaille still binds as
-  rootDN; the Terraform admin-group membership ownership bug needs a separate fix.
+  rootDN. Crossplane now preserves human-managed administrator membership.
   Review the existing backup controller's namespace-wide `pods/exec` permission
   when narrowing backup permissions across applications.
-- [ ] **Per-app LDAP service accounts with ordering.** Built and live-tested:
-  `components/ldap-account` + `tofu/ldap/service-account` (design in
-  `docs/ldap-service-accounts.md`). tofu-controller 0.16.4 is deployed and
-  `SECRET_LDAP_ADMIN_PASSWORD` is in cluster-secrets. Remaining: the gRPC-hang
-  follow-ups in `docs/tofu-controller-grpc-hang.md` if the hang recurs.
-- [ ] **ldap-account should bind as a delegated provisioner, not the rootdn.** The
-  component currently stamps the `cn=admin` password into each consuming namespace;
-  a namespace-level compromise there would yield the whole identity system. Create
-  `uid=provisioner,ou=system` in `tofu/ldap/base` with a slapd ACL restricted to
-  managing `ou=system`, switch the component to `SECRET_LDAP_PROVISIONER_PASSWORD`,
-  and retire the admin password from cluster-secrets.
 - [ ] **Every namespace carries cluster-secrets and the sops age key** (common
   component), because per-namespace Kustomizations decrypt and substitute locally.
   Accepted homelab tradeoff for now, but worth revisiting: the age key in any
