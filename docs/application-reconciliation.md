@@ -52,6 +52,14 @@ plugin patch discovers them for `jpegPhoto` synchronization before password logi
 The local `ops-recovery` administrator remains available for emergency access and
 configuration reconciliation; its password is stored in the encrypted application Secret.
 
+The directory profile grant is declared in OpenLDAP's `jellyfin-acl.ldif`. It permits
+that application's bind account to read selected profile fields and `jpegPhoto` only
+for its group members. A startup step merges the rule into restored native LDAP
+configuration, preserving unrelated rules and password protection. The generated
+policy ConfigMap triggers a rollout when changed; runtime ACL drift is repaired on
+restart. This avoids adding a runtime ACL administrator. See
+[the policy tool and recovery contract](../packages/openldap-acl/README.md).
+
 ## Application settings
 
 Jellyfin's configuration ConfigMap declares plugin settings, login branding, network
@@ -121,3 +129,37 @@ The private Gateway is `172.21.68.11/32` through the existing BGP sessions. It h
 WAN NAT mapping. Router source/interface rules and Service source ranges limit
 HTTPS access to the trusted LAN, VPN and NAS. See
 [private Gateway operations](../kubernetes/apps/network/cilium-private-gateway/README.md).
+
+Inside the cluster, `auth.finnes.dev` resolves to the public Gateway's BGP VIPs
+through the RKE2 CoreDNS configuration. This avoids WAN hairpin routing while
+retaining the public issuer hostname and verified TLS. The ingress proxy may
+connect only to those frontend addresses on TCP 443 for this path. Converge the
+DNS manifest independently of an RKE2 upgrade with
+`ansible-playbook playbooks/configure-cluster-dns.yml` from `ansible/`.
+
+### Configuration restore evidence
+
+On 2026-10-17, a fresh offline Jellyfin checkpoint was backed up off-cluster at
+17:28:06 UTC. Generation `bcd4a6bf08914209a5e55fd42f8d7139` contained 42 files and
+`data/jellyfin.db`, whose SHA-256 was
+`9753b44953d909f5cb994cf5081463cacb6990a5cc2bd33d29f644f0f73a6f22`.
+
+A separate ReplicationDestination and populated 20 GiB PVC exercised the normal
+snapshot/populator recovery path. The restore helper verified every file hash and
+SQLite integrity before starting the matching pinned Jellyfin image in a restricted,
+network-isolated Job. The recovered API matched the source server identity, account
+identity, three configured libraries and seven active plugins, including LDAP 23 and
+SSO 4.0.0.4. The read-only configuration check also validated owned settings against
+the existing Secret references without printing credentials or API tokens.
+
+The restored database contained one user, seven base items, 72 permissions and
+39 preferences. This initial checkpoint contained no user avatar; avatar recovery
+requires a subsequent checkpoint after the live photo acceptance test. The original
+application PVC remained untouched throughout the drill.
+
+Temporary Jobs, restore PVCs, the test destination and its snapshots, and the test
+network policy were deleted afterward. The production destination was refreshed at
+17:37:57 UTC to `volsync-jellyfin-dst-dest-20261017173757`. Its manual trigger was
+removed and the next scheduled refresh was confirmed for 2026-10-18 at 08:15 UTC.
+An outstanding manual tag takes precedence over a cron schedule in VolSync; keep
+only the schedule after completing an operator-triggered destination refresh.

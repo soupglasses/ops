@@ -20,6 +20,8 @@ patches:
       kind: ReplicationDestination
       name: '.*-dst'
     patch: |-
+      - op: remove
+        path: /spec/trigger/manual
       - op: add
         path: /spec/trigger/schedule
         value: "15 8 * * *"

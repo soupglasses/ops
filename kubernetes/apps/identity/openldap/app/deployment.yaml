@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 apiVersion: apps/v1
 kind: Deployment
@@ -48,11 +48,41 @@ spec:
               mountPath: /data
             - name: run
               mountPath: /run/openldap
+        - name: reconcile-directory-policy
+          image: ghcr.io/soupglasses/ops/openldap-acl@sha256:5a114d208d8e6c70f0215ec4642ea50ba573b463a5c717db4de3d783ce286028
+          args:
+            - --policy
+            - /policy/jellyfin.ldif
+            - --config-directory
+            - /data/config
+            - --lock-timeout
+            - "120"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 389
+            runAsGroup: 389
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: acl-policy
+              mountPath: /policy
+              readOnly: true
       containers:
         - name: openldap
-          image: docker.io/nfrastack/openldap:2.6-8.1.1@sha256:5e5c8fdd1d7e3a9623500839699b258d0569bf965528b85c682ec5d0902f5d6c
+          image: ghcr.io/soupglasses/ops/openldap-acl@sha256:5a114d208d8e6c70f0215ec4642ea50ba573b463a5c717db4de3d783ce286028
           command:
-            - /usr/sbin/slapd
+            - /bin/sh
+            - /usr/local/lib/openldap-acl/serve.sh
           args:
             - -F
             - /data/config
@@ -136,6 +166,9 @@ spec:
             limits:
               memory: 64Mi
       volumes:
+        - name: acl-policy
+          configMap:
+            name: openldap-acl-policy
         - name: data
           persistentVolumeClaim:
             claimName: openldap-directory

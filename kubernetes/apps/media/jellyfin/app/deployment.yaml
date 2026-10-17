@@ -65,7 +65,7 @@ spec:
         - name: restore
           image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
           command: [python3, /usr/local/lib/jellyfin/runtime.py]
-          args: [restore, --source, /config, --allow-initialize]
+          args: [restore, --source, /config]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

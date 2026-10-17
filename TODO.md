@@ -17,6 +17,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   NFSv4 export. Preserve existing datasets; retain the stable media directory on PVC recreation.
 - [x] Restore the initial off-cluster media backup into isolated storage and verify
   its canary and manifest; evidence is recorded in `docs/media-storage.md`.
+- [x] Restore the initial Jellyfin configuration checkpoint through a separate VolSync
+  destination and validate SQLite contents, account identity, libraries, plugins and API settings.
 - [x] Remove Cilium L2 announcements; advertise the private Gateway through the existing
   BGP service range, with an exact router prefix and private-only forwarding rules.
 - [ ] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration

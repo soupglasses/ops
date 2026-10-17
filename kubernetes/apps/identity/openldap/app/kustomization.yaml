@@ -15,6 +15,9 @@ components:
   - ../../../../components/volsync
   - ../../../../components/volsync-quiesce
 configMapGenerator:
+  - name: openldap-acl-policy
+    files:
+      - jellyfin.ldif=./jellyfin-acl.ldif
   - name: openldap-runtime
     files:
       - ./reload-tls.sh

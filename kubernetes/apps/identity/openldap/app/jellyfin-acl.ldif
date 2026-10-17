@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+dn: olcDatabase={1}mdb,cn=config
+olcAccess: to dn.subtree="ou=users,dc=finnes,dc=dev" filter="(memberOf=cn=media.jellyfin-users,ou=groups,dc=finnes,dc=dev)" attrs=entry,uid,cn,displayName,givenName,sn,mail,memberOf,jpegPhoto by dn.exact="uid=media.jellyfin,ou=system,dc=finnes,dc=dev" read by * break

@@ -1,12 +1,17 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
-# LMDB supplies a transaction-consistent directory export. Configuration changes
-# need their own maintenance window; do not race schema/ACL migrations with backup.
+# LMDB supplies a transaction-consistent directory export. Hold the same shared
+# lifecycle lock as slapd so offline policy changes wait for both exports.
 set -eu
 umask 077
+exec 8>/data/.configuration.lock
+flock -s 8
+# TLS reloads update cn=config online; serialize them with the configuration dump.
+exec 7>/run/openldap/configuration.lock
+flock 7
 mkdir -p /data/backup
 # Serialize scheduled and operator-triggered exports without stale lock files.
 exec 9>/data/backup/.lock

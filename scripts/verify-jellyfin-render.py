@@ -24,6 +24,9 @@ def verify(path):
         return matches[0]
 
     assert get("ReplicationSource", "jellyfin", "media")["spec"]["sourcePVC"] == "jellyfin-checkpoint"
+    destination_trigger = get("ReplicationDestination", "jellyfin-dst", "media")["spec"]["trigger"]
+    assert destination_trigger["schedule"] == "15 8 * * *"
+    assert not destination_trigger.get("manual"), "manual triggers suppress scheduled restore refresh"
     watcher = get("Deployment", "jellyfin-volsync-quiesce", "media")["spec"]["template"]["spec"]["containers"][0]
     environment = {item["name"]: item.get("value") for item in watcher["env"]}
     assert environment["PVC"] == "jellyfin-checkpoint"
