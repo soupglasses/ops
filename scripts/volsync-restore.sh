@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 #
 # Force a volsync PVC to restore from restic.
 #
-# Why this exists: components/volsync's RD fires `manual: restore-once` on
-# creation and never again, so its .status.latestImage is frozen to whatever
-# was in restic at first deploy. Recreating the PVC alone would restore that
-# stale frozen image. This script bumps the RD trigger, waits for the mover
-# to refresh latestImage, scales the workload to 0, deletes the PVC, kicks
+# A destination latestImage may be stale until its next scheduled or manual
+# refresh. Recreating the PVC alone would restore that stale image. This script
+# bumps the RD trigger, waits for the mover to refresh latestImage, scales the
+# workload to 0, deletes the PVC, kicks
 # flux to re-create it, waits for the populator to bind it, then scales the
 # workload back to its original replica count.
 #
@@ -40,6 +39,10 @@ set -euo pipefail
 SCALED_DOWN=0
 original_replicas=1
 WORKLOAD="${WORKLOAD:-}"
+trigger_requested=0
+trigger_completed=0
+trigger_cleaned=0
+manual_was_absent=0
 
 on_exit() {
     local code=$?
@@ -48,6 +51,10 @@ on_exit() {
         echo >&2
         echo "==> Aborted; scaling ${WORKLOAD} back to ${original_replicas}" >&2
         kubectl -n "$NS" scale "$WORKLOAD" --replicas="$original_replicas" 2>/dev/null || true
+    fi
+    if [[ $trigger_requested -eq 1 && $trigger_cleaned -eq 0 && $manual_was_absent -eq 1 ]]; then
+        echo "WARNING: RD/${RD} manual trigger ${restore_trigger} retained: restore and trigger cleanup were not completed." >&2
+        echo "    Inspect the mover and replacement PVC; restore the original restoreAsOf before removing spec.trigger.manual." >&2
     fi
     exit $code
 }
@@ -162,30 +169,42 @@ if ! kubectl -n "$NS" get replicationdestination "$RD" >/dev/null 2>&1; then
 fi
 
 echo "==> Patching RD/${RD} to refresh latestImage"
-patch=$(jq -nc --arg trigger "refresh-$(date +%s)" --arg before "$RESTORE_AS_OF" \
+restore_trigger="refresh-$(date +%s)-$$-${RANDOM}"
+original_rd=$(kubectl -n "$NS" get replicationdestination "$RD" -o json)
+manual_was_absent=$(jq -r 'if ((.spec.trigger // {}) | has("manual")) then 0 else 1 end' <<<"$original_rd")
+rd_uid=$(jq -r '.metadata.uid' <<<"$original_rd")
+prev=$(jq -r '.status.latestImage.name // ""' <<<"$original_rd")
+patch=$(jq -nc --arg trigger "$restore_trigger" --arg before "$RESTORE_AS_OF" \
     '{spec: {trigger: {manual: $trigger}, restic: {
         restoreAsOf: (if $before == "" then null else $before end)}}}')
-prev=$(kubectl -n "$NS" get replicationdestination "$RD" \
-    -o jsonpath='{.status.latestImage.name}' 2>/dev/null || true)
-kubectl -n "$NS" patch replicationdestination "$RD" --type=merge \
-    -p "$patch"
+# A lost patch response can still have started a mover; retain its trigger on failure.
+trigger_requested=1
+kubectl -n "$NS" patch replicationdestination "$RD" --type=merge -p "$patch"
 
 echo "==> Waiting for new latestImage (was: ${prev:-<none>})"
-# We can't `kubectl wait --for=jsonpath=...=<value>` here because we don't
-# know the new image name in advance. kubectl wait uses the K8s watch API
-# (HTTP server-stream, event-driven) but only for equality matches. A short
-# polling loop is fine — the mover takes ~tens of seconds per try.
 deadline=$(( $(date +%s) + 600 ))
 while [[ $(date +%s) -lt $deadline ]]; do
-    current=$(kubectl -n "$NS" get replicationdestination "$RD" \
-        -o jsonpath='{.status.latestImage.name}' 2>/dev/null || true)
-    if [[ -n "$current" && "$current" != "$prev" ]]; then
+    observed=$(kubectl -n "$NS" get replicationdestination "$RD" -o json)
+    if ! jq -e --arg uid "$rd_uid" --arg token "$restore_trigger" \
+        '.metadata.uid == $uid and .spec.trigger.manual == $token' <<<"$observed" >/dev/null; then
+        echo "ERROR: RD or manual trigger changed during restore; refusing PVC replacement" >&2
+        exit 1
+    fi
+    if jq -e --arg token "$restore_trigger" --arg previous "$prev" '
+        .status.lastManualSync == $token and
+        .status.latestMoverStatus.result == "Successful" and
+        ((.status.lastSyncStartTime // "") == "") and
+        ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0) and
+        ((.status.latestImage.name // "") != "") and
+        .status.latestImage.name != $previous' <<<"$observed" >/dev/null; then
+        trigger_completed=1
+        current=$(jq -r '.status.latestImage.name' <<<"$observed")
         break
     fi
     sleep 5
 done
-if [[ -z "${current:-}" || "$current" == "$prev" ]]; then
-    echo "ERROR: latestImage did not refresh within 10m" >&2
+if [[ $trigger_completed -ne 1 ]]; then
+    echo "ERROR: own restore did not complete successfully within 10m" >&2
     exit 1
 fi
 echo "    new latestImage: ${current}"
@@ -258,6 +277,32 @@ kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Bound \
 echo "==> Scaling ${WORKLOAD} back to ${original_replicas}"
 kubectl -n "$NS" scale "$WORKLOAD" --replicas="$original_replicas"
 SCALED_DOWN=0
+
+# Keep manual precedence over cron through confirmation and PVC binding so a
+# scheduled refresh cannot replace the selected historical image mid-restore.
+if [[ $manual_was_absent -eq 1 ]]; then
+    cleanup=$(jq -nc --arg uid "$rd_uid" --arg token "$restore_trigger" \
+        --arg before "$RESTORE_AS_OF" --argjson original "$original_rd" '
+        ($original.spec.restic // {}) as $restic |
+        ($restic + (if $before == "" then {} else {restoreAsOf:$before} end) |
+            if $before == "" then del(.restoreAsOf) else . end) as $expected |
+        [
+            {op:"test", path:"/metadata/uid", value:$uid},
+            {op:"test", path:"/spec/trigger/manual", value:$token},
+            {op:"test", path:"/spec/restic", value:$expected}
+        ] +
+        (if ($restic | has("restoreAsOf")) then
+            [{op:"add", path:"/spec/restic/restoreAsOf", value:$restic.restoreAsOf}]
+            elif $before != "" then
+            [{op:"remove", path:"/spec/restic/restoreAsOf"}]
+            else [] end) +
+        [{op:"remove", path:"/spec/trigger/manual"}]')
+    if ! kubectl -n "$NS" patch replicationdestination "$RD" --type=json -p "$cleanup"; then
+        echo "ERROR: trigger cleanup conflicted or failed; inspect RD/${RD} before resuming its schedule." >&2
+        exit 1
+    fi
+    trigger_cleaned=1
+fi
 
 echo "==> Waiting for ${WORKLOAD} rollout"
 kubectl -n "$NS" rollout status "$WORKLOAD" --timeout="$TIMEOUT"
