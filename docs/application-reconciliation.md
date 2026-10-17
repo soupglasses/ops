@@ -28,6 +28,13 @@ unmodified upstream LDAP plugin links the account on login and synchronizes its
 OIDC client or an SSO plugin for this path. The local `ops-recovery` administrator
 remains available for emergency access and settings reconciliation.
 
+LDAP password changes remain disabled. The plugin's `PasswordResetUrl` points to
+Canaille's `/reset` page; Jellyfin displays it through its existing forgotten-password
+dialog, which still continues to the PIN screen. The web client's native
+`menuLinks` also provides an **Account and password** link to Canaille. An init
+container merges those settings into the image's stock web configuration, preserving
+its themes and player plugins. No CSS, injected JavaScript or client fork is used.
+
 OpenLDAP server policy belongs to its existing deployment:
 [`access-policy.ldif`](../kubernetes/apps/identity/openldap/app/access-policy.ldif)
 is the authoritative MDB access policy, including the legacy reader/self rules

@@ -35,6 +35,7 @@ data:
             "UseStartTls": false,
             "SkipSslVerify": false,
             "AllowPassChange": false,
+            "PasswordResetUrl": "https://auth.finnes.dev/reset",
             "LdapBindUser": "uid=media.jellyfin,ou=system,dc=finnes,dc=dev",
             "LdapBaseDn": "ou=users,dc=finnes,dc=dev",
             "LdapSearchFilter": "(memberOf=cn=media.jellyfin-users,ou=groups,dc=finnes,dc=dev)",

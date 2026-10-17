@@ -15,6 +15,11 @@ resources:
 components:
   - ../../../../components/volsync
   - ../../../../components/volsync-quiesce
+configMapGenerator:
+  - name: jellyfin-web-settings
+    literals:
+      - >-
+        overrides.json={"menuLinks":[{"name":"Account and password","url":"https://auth.finnes.dev/","icon":"account_circle"}]}
 patches:
   - target:
       kind: ReplicationDestination
