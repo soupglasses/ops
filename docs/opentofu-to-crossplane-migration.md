@@ -3,227 +3,120 @@ SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 SPDX-License-Identifier: MIT
 -->
 
-# OpenTofu retirement plan
+# Directory ownership and OpenTofu retirement
 
-Replace OpenTofu execution and state with the existing Crossplane Upjet LDAP
-provider. Preserve the restored directory, existing DNs, passwords, memberships
-and application identities. This is a migration plan; no ownership transfer has
-been performed yet.
+Crossplane's existing Upjet LDAP provider owns the directory foundation. OpenTofu
+execution, state, controller, runners, tooling and `tofu/` modules are retired.
+Upjet embeds the LDAP Terraform provider SDK as a Go library; it does not invoke
+OpenTofu or require a state directory. Generated provider files remain generated.
 
-The target has no Tofu Controller, Terraform CRs, runner workloads, tfctl tooling
-or `tofu/` modules. Upjet continues using the existing LDAP Terraform provider SDK
-as a Go library. It does not invoke OpenTofu or need a state directory. No new
-controller, provider API or foundation CRD is needed.
+## Configuration
 
-## Verified scope
+The Flux Kustomization `identity/ldap-system-users` keeps its name so Canaille's
+existing dependency remains valid. Its application directory contains:
 
-Inventory on 2026-10-17 found one live Terraform CR:
-`identity/ldap-system-users`, using `./tofu/ldap/base`. It has no output Secret and
-already sets `destroyResourcesOnDeletion: false`. Its state Secret is
-`identity/tfstate-default-ldap-system-users`; its plan Secret is
-`identity/tfplan-default-ldap-system-users`. Only names, keys and ownership metadata
-were inspected, not their contents.
+- `providerconfig.yaml`: identity-local `ProviderConfig/directory-admin`, verified
+  LDAPS, using the existing `identity/openldap` Secret's `LDAP_ROOT_PASSWORD`.
+- `entries.yaml`: 14 entries adopted by their existing DNs, with
+  `[Observe, Create, Update]` management policies. Deleting these Kubernetes
+  resources retains their LDAP objects because `Delete` is excluded.
+- `attributes.yaml`: attribute documents referenced by those entries.
+- The unchanged encrypted bootstrap credential Secret.
 
-| Source | Current use | Replacement |
-| --- | --- | --- |
-| `tofu/ldap/base` | Live; 14 LDAP entries | Existing Upjet `Entry` resources in `identity` |
-| `tofu/ldap/service-account` and `components/ldap-account` | No active consumer | Existing app-scoped `Entry` pattern, as used by Jellyfin |
-| `tofu/ldap/grafana-oidc` and its Flux manifests | Deliberately not enabled | Remove dormant Tofu scaffolding; keep an inactive `OAuth2Client` example if useful |
-| `tofu/ldap/app-identity` and `components/app-identity` | Untracked draft work | Preserve the draft's intent before retiring it; do not silently delete user work |
+The entries are nine OUs, two password policies, `uid=admin`, `uid=auth`, and the
+administrator group. Authorization, consent and token records remain runtime data.
+Canaille still binds using the existing root DN; reducing that privilege is a
+separate task.
 
-Do not enable Grafana OIDC, generate credentials or change Grafana login behavior
-as part of retirement. A future activation uses the existing `OAuth2Client`
-composition and its own credential setup. It is not a live migration blocker.
+Reconciliation owns declared schema and password-policy attributes. Passwords,
+human names, email addresses and administrator membership are create-only defaults.
+Existing passwords, JPEG photos, profiles and members survive adoption and later
+reconciliation. Administrative membership changes belong in Canaille.
 
-The 14 foundation entries are nine OUs (`users`, `system`, `groups`, `policies`,
-`oauth`, and `clients`, `authorizations`, `consents`, `tokens` under `oauth`), two
-password policies, `uid=admin`, `uid=auth`, and `cn=admin,ou=groups`. Consent,
-authorization and token records inside those OUs remain runtime data, not Git
-resources. Canaille currently binds using the root DN, not the legacy `uid=auth`;
-preserve both account DNs without changing that privilege model in this migration.
+Flux substitutes the existing `ldap-admin-credentials` bootstrap hash keys into
+the new attribute Secret inside the cluster. A targeted patch appends that Secret
+after the global substitution-source patch; it preserves `cluster-settings` and
+`cluster-secrets`. These are single-line RFC2307 hashes, not arbitrary JSON input.
+Existing encrypted files were not changed or decrypted. Missing bootstrap inputs
+must be detected before enabling creation; `optional: false` checks the Secret's
+existence, not individual keys.
 
-## Target structure and credentials
+Application namespaces continue using the guarded
+`ClusterProviderConfig/directory`, with namespace opt-in, allowed parent DNs and
+namespace-prefixed RDNs. Grafana uses the existing `OAuth2Client` composition in
+`monitoring`, its own encrypted client credential, PKCE and signed ID-token
+validation. Only `monitoring.grafana-admins` can sign in through OIDC; the existing
+local recovery administrator remains available. See
+[Grafana sign-in](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
 
-Keep the Flux Kustomization name `ldap-system-users` so Canaille's dependency
-continues to identify the same foundation. Replace its application manifests with
-an identity-local `ProviderConfig`, an attribute Secret, and the 14 Entries.
+## Recovery
 
-The local provider references the existing `identity/openldap` Secret's
-`LDAP_ROOT_PASSWORD`. It supports the legacy DNs without changing them. Other
-application namespaces keep the guarded `ClusterProviderConfig/directory`, with
-namespace opt-in, namespace-prefixed RDNs and allowed-parent checks unchanged.
+Restore OpenLDAP through the existing VolSync destination and PVC `dataSourceRef`
+contract before applying the provider and directory entries. The restored DNs are
+adopted again from Git; no Terraform state import is needed. Create-only defaults
+are used only if an entry is absent. Never rebuild an empty directory over the
+only surviving data copy.
 
-```yaml
-apiVersion: ldap.ops.finnes.dev/v1beta1
-kind: ProviderConfig
-metadata:
-  name: directory-admin
-  namespace: identity
-spec:
-  host: openldap.identity.svc.cluster.local
-  port: 636
-  tls: true
-  tlsServerName: ldap.finnes.dev
-  bindDN: cn=admin,dc=finnes,dc=dev
-  credentialsSecretRef:
-    name: openldap
-    key: LDAP_ROOT_PASSWORD
----
-apiVersion: ldap.ops.finnes.dev/v1alpha1
-kind: Entry
-metadata:
-  name: directory-users
-  namespace: identity
-  annotations:
-    crossplane.io/external-name: ou=users,dc=finnes,dc=dev
-spec:
-  managementPolicies: [Observe]
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
-  forProvider:
-    dataJsonSecretRef:
-      name: directory-foundation-attributes
-      key: users.json
-    restrictAttributes: [objectClass]
-```
+Recovery requires the repository, the existing SOPS age key, off-cluster backup
+credentials and endpoint, and the pinned application/provider images or their
+recorded rebuild paths. These credentials are not recorded here. Follow
+[OpenLDAP recovery](openldap-volsync-migration.md),
+[native directory exports](openldap-nfrastack-migration.md), and the
+[VolSync contract](../kubernetes/components/volsync/README.md) for ordering,
+retention and selecting an older known-good recovery point.
 
-These are adoption examples, not generated CRD edits. Use `dataJsonCreateDefaultsSecretRef`
-for bootstrap values, then enable `Create` and `Update` only after the checks below.
-Do not enable `Delete` for foundation entries.
+The old state and plan were archived as age ciphertext at
+`/data/migrations/opentofu-20261017/state-plan.json.age`, inside the backed-up LDAP
+volume. Its recipient is the existing recovery age key; no additional key was
+created. This archive is optional historical rollback material, not a dependency
+of Crossplane recovery. Never resume the old membership-owning module against a
+live directory without first stopping Crossplane writes and reviewing its plan.
 
-The existing `ldap-admin-credentials` Secret already contains both bootstrap hash
-keys. Flux can substitute references to those single-line RFC2307 hashes into a
-new ordinary Secret's JSON values inside the cluster. The provider consumes the
-result through its existing Secret references. Existing encrypted files remain
-unchanged, and no agent reads, copies or rotates credential values.
+## Migration and restore evidence, 2026-10-17
 
-Two rendering details must be proved before adoption:
+The only live Terraform CR was `identity/ldap-system-users`, with 14 entries and
+no output Secret. The controller was first suspended, and Crossplane adopted all
+14 DNs in observe-only mode. An internal disposable check confirmed both rendered
+bootstrap hashes exactly matched the existing source values and were nonempty
+RFC2307 inputs, without displaying them.
 
-- The global patch in `kubernetes/clusters/home/cluster-apps.yaml` replaces child
-  `postBuild.substituteFrom` lists. Append the foundation's `ldap-admin-credentials`
-  reference with a narrowly targeted patch after the global patch. The final
-  render must retain `cluster-settings`, `cluster-secrets` and the LDAP reference.
-- `optional: false` checks that the Secret exists, not that each key exists.
-  Validate required keys and nonempty RFC2307 values without printing them before
-  enabling creation. Undefined Flux substitutions otherwise become empty strings.
-  Do not assume `${key:?}` is supported or enable a global feature gate without
-  checking its effect on other workloads. This interpolation is for these hashes,
-  not arbitrary passwords or client secrets requiring JSON escaping.
+A membership change occurred during observation. It was preserved as current
+human state rather than replaced with historical defaults. Immediately before
+enabling create/update, a fresh baseline was captured. All 14 managed entries
+became Ready, and the complete native directory export remained byte-identical:
 
-Keep the existing SOPS Secret under Flux ownership when replacing the old
-application manifests. There must be no interval where pruning the old stack can
-delete a required credential Secret.
+`d3bc21aea43ff6482949c36897cf5a037a80a4d8e87a463b670aea93a0047796`
 
-## Attribute ownership
+The off-cluster backup completed at 19:41:00 UTC, snapshot `ce0e68e8`. An isolated
+restore passed at 19:41:47 UTC. The restored export exactly matched both the paired
+native backup and that handoff baseline: 91 entries, including five password-bearing
+entries, two photos, six membership values and the existing OAuth client. The UUID
+set hash was `620912f651360c9246ef033c9ab7a06417d297889eab31c620a10f9a9f779726`.
+The restored database remained unchanged through two native policy-init passes.
+This backup precedes the new Grafana client and group; those are recreated from Git.
 
-| Entry | Continuously owned | Create-only or human-owned |
-| --- | --- | --- |
-| Nine OUs | Required schema attributes | Unrelated directory attributes |
-| Password policies | Explicit policy settings | Unlisted operational attributes |
-| Bootstrap admin user | Required schema attributes | Initial password, profile, photos and later human edits |
-| Legacy auth user | Required schema and policy association | Existing password; no rotation during adoption |
-| Admin group | Required schema attributes | Initial members only; preserve current members thereafter |
+The encrypted rollback archive also survived both the pre-migration and
+post-migration restore drills, with SHA256:
 
-The existing Tofu admin-group declaration owns membership, and its user resources
-own bootstrap password/profile values. Do not mechanically copy those ownership
-rules: they could remove human-added administrators or reset a changed password.
-Make these preservation choices explicit in the migration diff and tests.
-OpenLDAP server ACLs remain native LDIF in the OpenLDAP deployment, not ordinary
-LDAP Entry resources. Jellyfin's existing Entries and login behavior stay intact.
+`cd7a61e2dca5a6abe3701c975fdd73d9ea330a8bcd5d6d80d9c3f7a4919b84db`
 
-## Adoption and retirement order
+The real-provider kind/Helm regression
+`TestFoundationAdoptionPreservesRestoredIdentity` passed. It proves observe-only
+entryCSN preservation, schema reconciliation without changing passwords,
+profiles, JPEGs, membership or UUIDs, and deletion/recreation of managed resources
+with stable LDAP identities and no state import. It runs through the existing
+Helm integration hook; production Helm tests remain read-only smoke checks.
+Temporary test and restore resources were deleted, and scheduled backups remain
+configured.
 
-1. **Establish the rollback point.** Verify a fresh native LDAP backup and an
-   isolated restore. Preserve the current state artifact through an approved,
-   encrypted off-cluster backup mechanism without exposing its values. Record
-   immutable source/image revisions and the minimal existing recovery keys.
-
-2. **Freeze the old owner in Git.** Set the Terraform CR's `suspend: true` and
-   explicitly retain `destroyResourcesOnDeletion: false`. Wait for an already
-   running reconciliation/runner to finish; suspension is not cancellation.
-   Keep the controller, source artifact and old module available during handoff.
-
-3. **Adopt exact DNs in observe-only mode.** Replace the foundation manifests in
-   stages while retaining the suspended Terraform CR and credential Secret.
-   Order the foundation after `ldap-directory`/the provider. Confirm all 14
-   Entries identify the existing objects and cannot write in this phase. Do not
-   rename users, groups, policies or clients to satisfy the tenant prefix rule.
-
-4. **Enable the new owner.** Compare the intended attribute subset without
-   revealing credentials. Confirm current password values, memberships, photos
-   and runtime OAuth records are unchanged. Enable `[Observe, Create, Update]`
-   with explicit attribute whitelists and create-only defaults. Make Canaille's
-   existing foundation dependency wait for the new Entry health checks rather
-   than the old Terraform condition. Avoid a dependency cycle: provider depends
-   on OpenLDAP, foundation depends on provider, Canaille depends on foundation.
-
-5. **Finalize the old CR while its controller still exists.** Verify there is
-   still no `writeOutputsToSecret`; otherwise preserve/rehome its Secret and
-   consumers first. Remove the Terraform CR manifest from Flux with destruction
-   disabled, keeping the module files in Git. Then unsuspend only the terminating
-   object if required for finalization. Do not resume an
-   ordinary active apply or strip finalizers to force removal. Preserve the old
-   source until the finalizer and any runner finish; the following deployment
-   stage removes the controller and modules.
-
-6. **Remove the obsolete system.** Delete the controller HelmRelease and Flux
-   Kustomization, Tofu HelmRepository, stale runner resources, and the Terraform
-   CRD only after there are no CRs in any namespace. Remove all tracked `tofu/`
-   modules, dormant Tofu application/component scaffolding, obsolete dependency
-   and health-check references, and `.mise.toml`'s tfctl tool/completion hooks.
-   Retain the shared `GitRepository/flux-system`. Keep generic state-file ignore
-   patterns to prevent accidental credential commits. Convert useful examples
-   to the existing Crossplane APIs; reconcile untracked drafts deliberately.
-
-7. **Prove recovery without Tofu.** In a disposable cluster, restore LDAP and
-   existing credentials, then install Crossplane/provider and recreate resources
-   from Git with no tfstate. Verify existing identities, Canaille administration,
-   LDAP password login and Jellyfin photos. Test Grafana OIDC only if it was
-   separately enabled; local Grafana login must remain usable. Keep the encrypted
-   rollback archive until this drill and the live handoff pass.
-
-If adoption fails, leave Tofu suspended and put the new Entries back into
-observe-only mode before investigating. Never resume two writers. Restore and
-inspect the recorded backup in isolation before repairing live data; replaying
-old bootstrap declarations can overwrite passwords and membership. Resume the
-old owner only after Crossplane writes have stopped and its proposed changes
-have been reviewed.
-
-### Controller deletion behavior
-
-In Tofu Controller 0.16.5, disabling external resource destruction does not
-preserve output Secrets: finalization explicitly deletes them and generated
-outputs also have Terraform owner references. The live base CR currently has no
-output Secret, but recheck before deletion.
-
-Suspended CRs return before deletion handling, so deleting a still-suspended CR
-can leave its finalizer waiting forever. Complete adoption first, then allow
-normal finalization only for the terminating retained-resource CR. The original
-module and controller must remain available until that finishes.
+After adoption, Flux removed the Terraform manifest. The terminating CR's exact
+UID, deletion timestamp, disabled destruction and absent output Secret were
+checked before clearing suspension to let its finalizer finish. The controller
+and modules remained available until the CR was gone. This ordering matters:
+Tofu Controller 0.16.5 skips deletion handling while suspended, and disabling LDAP
+destruction does not preserve generated output Secrets.
 
 Sources: [controller suspension handling](https://github.com/flux-iac/tofu-controller/blob/v0.16.5/controllers/tf_controller.go#L189),
 [finalizer](https://github.com/flux-iac/tofu-controller/blob/v0.16.5/controllers/tf_controller_finalizer.go),
 [Secret cleanup](https://github.com/flux-iac/tofu-controller/blob/v0.16.5/runner/server.go#L524),
 [output ownership](https://github.com/flux-iac/tofu-controller/blob/v0.16.5/runner/server_outputs.go#L81).
-
-## Verification and completion
-
-Extend the existing provider's disposable kind/Helm integration tests rather than
-adding a test controller. Exercise adoption of a prepopulated directory, unchanged
-passwords and human membership/photos, controller restart without state, and
-retained LDAP objects when managed resources are removed. Smoke `helm test` in
-production remains read-only. Missing bootstrap inputs must prevent the migration
-from enabling creation; tests must never print credentials.
-
-Run `task flate:test` and inspect the rendered diff for dependency ordering,
-Secret references and attribute ownership. After each staged commit/push,
-reconcile Flux and verify LDAP binds, Canaille and Jellyfin through real APIs.
-Obtain independent security and resilience approval against the completed diff
-and restore evidence before retiring the last rollback path.
-
-The final inventory must show zero Terraform CRs, controller/runner workloads,
-Tofu-specific RBAC and active state/plan Secrets; no tracked `tofu/` files; and no
-active references to removed modules or tooling. Upjet's SDK dependency and
-historical migration references are intentional exceptions. Record the clean
-recovery evidence and close the migration TODO only after the live checks pass.

@@ -10,4 +10,3 @@ components:
   - ../../components/common
 resources:
   - ./hermes-access/ks.yaml
-  - ./tofu-controller/ks.yaml

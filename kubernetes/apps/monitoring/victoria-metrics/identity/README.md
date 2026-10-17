@@ -17,6 +17,12 @@ its `sub` claim supplies the stable directory username. Authorization uses code
 exchange with PKCE S256 and client credentials in the token request body. ID-token
 signatures are validated against Canaille's HTTPS JWKS endpoint.
 
+Grafana Generic OAuth does not import the OIDC `picture` claim, even though
+Canaille exposes the LDAP photo. Native Grafana avatars use Gravatar, which is
+disabled here; LDAP profile photos therefore do not appear in Grafana. There is
+no native avatar-claim mapping setting. See the pinned
+[OAuth user model](https://github.com/grafana/grafana/blob/v13.2.3/pkg/login/social/connectors/generic_oauth.go#L210-L221).
+
 The group initially contains `admin` and `sofie`. Subsequent membership changes
 belong to directory administrators: reconciliation owns the group's class and
 description, not its members. The namespace opts into the central backend, and

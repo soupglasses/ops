@@ -42,7 +42,6 @@ krew="https://github.com/soupglasses/mise-krew"
 "krew:pv-mounter" = "v26.41.0"
 # renovate: datasource=github-releases depName=backube/volsync
 "krew:volsync" = "v0.16.0"
-"github:flux-iac/tofu-controller" = "v0.16.5"
 
 [[hooks.enter]]
 shell = "bash"
@@ -54,7 +53,6 @@ source <(talosctl completion bash)
 source <(task --completion bash)
 source <(flux completion bash)
 source <(talhelper completion bash)
-source <(tfctl completion bash)
 source <(kubectl-volsync completion bash)
 
 # kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
@@ -128,7 +126,6 @@ source <(talosctl completion zsh)
 source <(task --completion zsh)
 source <(flux completion zsh)
 source <(talhelper completion zsh)
-source <(tfctl completion zsh)
 source <(kubectl-volsync completion bash)
 
 # kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
