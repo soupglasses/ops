@@ -10,6 +10,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [x] Parse Jellyfin console logs into searchable message, logger, thread and time
+  fields, with normalized Grafana severity; preserve unrecognized lines.
+
 - [x] Upgrade Jellyfin to 12.2 with LDAP 24 and verify `jellyfin.user` /
   `jellyfin.admin` roles; provision the LDAP admin, preserve existing access and
   remove the retired group. Restore and live authorization evidence is in

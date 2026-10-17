@@ -47,7 +47,7 @@ available journal and CRI files; entries already rotated off the rebuilt node ca
 ## Searchable fields
 
 Vector parses JSON, Kubernetes klog, logfmt, and timestamped console logs before
-shipping them. Minecraft and OpenLDAP connection statistics use parsers scoped to
+shipping them. Jellyfin, Minecraft and OpenLDAP connection statistics use parsers scoped to
 their app labels. Kubernetes labels remain unchanged. Unrecognized text is retained.
 The container timestamp remains the event time, including for formats without a date.
 
@@ -77,6 +77,8 @@ level:="error"
 
 Parsed application fields live under `log`, including `log.logger`, `log.thread`,
 and logfmt keys such as `log.module`. Grafana uses the stored `level` for severity.
+Jellyfin console lines expose their message, logger, thread and time under `log`;
+Serilog severity abbreviations are normalized to the same levels.
 Older entries retain their original schema. Parser changes do not replay stored logs.
 
 Parser fixtures are native Vector tests alongside the collector configuration. Run

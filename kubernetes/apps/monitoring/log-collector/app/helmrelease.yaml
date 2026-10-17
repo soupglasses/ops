@@ -125,6 +125,12 @@ spec:
               if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "minecraft" {
                 parsed, err = parse_regex(raw, r'^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[(?P<thread>.+)/(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\]: (?P<message>.*)$')
               }
+              if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "jellyfin" {
+                parsed, err = parse_regex(raw, r'^\[(?P<time>\d{2}:\d{2}:\d{2})\] \[(?P<level>VRB|DBG|INF|WRN|ERR|FTL)\] \[(?P<thread>\d+)\] (?P<logger>[^:]+): (?P<message>.*)$')
+                if err == null {
+                  parsed.level = get!({"VRB": "trace", "DBG": "debug", "INF": "info", "WRN": "warning", "ERR": "error", "FTL": "critical"}, [string!(parsed.level)])
+                }
+              }
               if err != null && .kubernetes.pod_labels."app.kubernetes.io/name" == "openldap" {
                 parsed, err = parse_regex(raw, r'^(?P<timestamp_hex>[0-9a-f]+\.[0-9a-f]+) (?P<thread>0x[0-9a-f]+) (?P<message>conn=\d+ .*)$')
                 if err == null {
@@ -369,6 +375,149 @@ spec:
               conditions:
                 - type: vrl
                   source: assert_eq!(.level, "warning")
+        - name: jellyfin trace
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [VRB] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "trace")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin debug
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [DBG] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "debug")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin info
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [INF] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "info")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin warning
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [WRN] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "warning")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin error
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [ERR] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "error")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin critical
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [FTL] [22] Jellyfin.Server.Program: Example message'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "critical")
+                    assert_eq!(.log.message, "Example message")
+                    assert_eq!(.log.logger, "Jellyfin.Server.Program")
+                    assert_eq!(.log.thread, "22")
+                    assert_eq!(.log.time, "19:47:38")
+        - name: jellyfin format scoped to app
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '[19:47:38] [ERR] [22] Other.Server: Example message'
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.log, "[19:47:38] [ERR] [22] Other.Server: Example message")
+        - name: jellyfin unrecognized text preserved
+          inputs:
+            - insert_at: parser
+              type: log
+              log_fields:
+                message: '   at Jellyfin.Server.Program.Main(String[] args)'
+                kubernetes:
+                  pod_labels:
+                    app.kubernetes.io/name: jellyfin
+          outputs:
+            - extract_from: severity
+              conditions:
+                - type: vrl
+                  source: |
+                    assert_eq!(.level, "unknown")
+                    assert_eq!(.log, "   at Jellyfin.Server.Program.Main(String[] args)")
         - name: openldap search result
           inputs:
             - insert_at: parser
