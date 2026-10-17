@@ -10,6 +10,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [ ] Retire OpenTofu through observe-first adoption of the 14 LDAP foundation
+  entries, then remove its controller and modules. Follow
+  [the migration plan](docs/opentofu-to-crossplane-migration.md); preserve credentials,
+  human changes and a proven recovery path.
+
 - [x] Keep Jellyfin LDAP password changes disabled; omit the redundant account-menu
   link and unusable external reset URL. Manage passwords directly in Canaille.
 

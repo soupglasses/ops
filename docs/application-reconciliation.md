@@ -8,7 +8,8 @@ SPDX-License-Identifier: MIT
 Crossplane manages directory entries and typed application identities. Flux owns
 those resources, application settings and deployment order. The LDAP provider uses
 Upjet and the Terraform provider SDK; there is no Terraform CLI or state directory.
-Existing Terraform-owned directory roots and applications retain their ownership.
+The LDAP foundation remains OpenTofu-owned until the
+[retirement plan](opentofu-to-crossplane-migration.md) is executed.
 
 ## Jellyfin identity
 
