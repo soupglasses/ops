@@ -230,6 +230,15 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] **Canaille did not trust ingress proxy headers.** OIDC metadata used HTTP URLs
   behind TLS-terminating ingress-nginx, causing Authlib validation failures and 500s
   after client creation. Enable legacy forwarded-header handling for the single proxy hop.
+- [x] **Publish Canaille's profile editability fix.** The fork image is upstream 0.3.6
+  plus the form settings fix; all 60 affected tests passed inside the published image.
+  [Release pipeline](https://gitlab.com/soupglasses/canaille/-/pipelines/2959094298).
+  To rebuild after registry loss, clone `git@gitlab.com:soupglasses/canaille.git`,
+  check out `0.3.6-soupglasses.3`, and run `docker build -t canaille-recovery .`.
+  Push the rebuilt image to an available registry and update the deployment digest.
+  The release tag's `.gitlab-ci.yml` documents the image tests and publishing process.
+- [ ] **Return Canaille to upstream images after the profile form fix is released.**
+  Track [upstream MR !351](https://gitlab.com/yaal/canaille/-/merge_requests/351).
 - [ ] **Canaille token administration has two upstream UI bugs.** Version 0.3.3 still
   crashes after revoking client-credentials tokens because audit logging assumes a user
   subject, and its Copy buttons submit the surrounding form. Report and track upstream;

@@ -31,7 +31,8 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
-          image: docker.io/yaalcoop/canaille:0.3.6
+          # Temporary 0.3.6 fork for https://gitlab.com/yaal/canaille/-/merge_requests/351.
+          image: registry.gitlab.com/soupglasses/canaille:0.3.6-soupglasses.3@sha256:81eb7121d41ff6ecb629efd6955708a8c2983d92bc4539c6a7d62f28a14ff86b
           ports:
             - containerPort: 8000
               name: http
