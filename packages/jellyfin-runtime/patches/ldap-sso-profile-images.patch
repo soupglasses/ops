@@ -1,0 +1,91 @@
+diff --git a/LDAP-Auth/LDAP-Auth.csproj b/LDAP-Auth/LDAP-Auth.csproj
+index 659ff5b..b61cd38 100644
+--- a/LDAP-Auth/LDAP-Auth.csproj
++++ b/LDAP-Auth/LDAP-Auth.csproj
+@@ -13,7 +13,7 @@
+   </ItemGroup>
+ 
+   <ItemGroup>
+-    <PackageReference Include="Jellyfin.Controller" Version="10.*-*" />
++    <PackageReference Include="Jellyfin.Controller" Version="10.11.11" />
+     <PackageReference Include="Novell.Directory.Ldap.NETStandard" Version="3.6.0" />
+   </ItemGroup>
+ 
+diff --git a/LDAP-Auth/LDAPAuthenticationProviderPlugin.cs b/LDAP-Auth/LDAPAuthenticationProviderPlugin.cs
+index a5b98c1..89964ab 100644
+--- a/LDAP-Auth/LDAPAuthenticationProviderPlugin.cs
++++ b/LDAP-Auth/LDAPAuthenticationProviderPlugin.cs
+@@ -458,9 +458,10 @@ namespace Jellyfin.Plugin.LDAP_Auth
+         /// Attempts to locate the requested username on the ldap using the plugin-configured search and attribute settings.
+         /// </summary>
+         /// <param name="username">The username to search.</param>
++        /// <param name="requireUnique">Whether to reject ambiguous search results.</param>
+         /// <returns>The located user or null if not found.</returns>
+         /// <exception cref="AuthenticationException">Thrown on failure to connect or bind to LDAP server.</exception>
+-        public LdapEntry LocateLdapUser(string username)
++        public LdapEntry LocateLdapUser(string username, bool requireUnique = false)
+         {
+             using var ldapClient = ConnectToLdap();
+ 
+@@ -538,6 +539,11 @@ namespace Jellyfin.Plugin.LDAP_Auth
+ 
+                 if (ldapUsers.HasMore())
+                 {
++                    if (requireUnique)
++                    {
++                        throw new AuthenticationException("LDAP user lookup is ambiguous.");
++                    }
++
+                     _logger.LogWarning("More than one LDAP result matched; using first result only.");
+                 }
+ 
+diff --git a/LDAP-Auth/LdapProfileImageSyncTask.cs b/LDAP-Auth/LdapProfileImageSyncTask.cs
+index 3a77da3..a9c92fa 100644
+--- a/LDAP-Auth/LdapProfileImageSyncTask.cs
++++ b/LDAP-Auth/LdapProfileImageSyncTask.cs
+@@ -96,6 +96,45 @@ namespace Jellyfin.Plugin.LDAP_Auth
+             var ldapAuthProvider = _applicationHost.GetExports<LdapAuthenticationProviderPlugin>(false).First();
+             var updatePluginConfig = false;
+ 
++            // SSO can assign this provider before the user's first password login.
++            // Discover those users without requiring or changing their credentials.
++            var linkedUsers = LdapPlugin.Instance.Configuration.GetAllLdapUsers();
++            foreach (var user in _userManager.GetUsers())
++            {
++                cancellationToken.ThrowIfCancellationRequested();
++                if (!string.Equals(user.AuthenticationProviderId, typeof(LdapAuthenticationProviderPlugin).FullName, StringComparison.Ordinal)
++                    || linkedUsers.Any(link => link.LinkedJellyfinUserId == user.Id))
++                {
++                    continue;
++                }
++
++                try
++                {
++                    var ldapUser = ldapAuthProvider.LocateLdapUser(user.Username, requireUnique: true);
++                    if (ldapUser is null)
++                    {
++                        continue;
++                    }
++
++                    var username = ldapAuthProvider.GetAttribute(ldapUser, LdapPlugin.Instance.Configuration.LdapUsernameAttribute)?.StringValue;
++                    var uid = ldapAuthProvider.GetAttribute(ldapUser, LdapPlugin.Instance.Configuration.LdapUidAttribute)?.StringValue;
++                    if (!string.Equals(username, user.Username, StringComparison.Ordinal)
++                        || string.IsNullOrEmpty(uid)
++                        || linkedUsers.Any(link => string.Equals(link.LdapUid, uid, StringComparison.Ordinal)))
++                    {
++                        continue;
++                    }
++
++                    LdapPlugin.Instance.Configuration.AddUser(user.Id, uid, string.Empty);
++                    linkedUsers = LdapPlugin.Instance.Configuration.GetAllLdapUsers();
++                    updatePluginConfig = true;
++                }
++                catch (AuthenticationException)
++                {
++                    _logger.LogWarning("Skipping an unresolvable LDAP profile image account");
++                }
++            }
++
+             foreach (var configUser in LdapPlugin.Instance.Configuration.GetAllLdapUsers())
+             {
+                 var user = _userManager.GetUserById(configUser.LinkedJellyfinUserId);

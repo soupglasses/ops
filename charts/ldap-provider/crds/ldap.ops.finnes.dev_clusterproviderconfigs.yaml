@@ -1,0 +1,87 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: clusterproviderconfigs.ldap.ops.finnes.dev
+spec:
+  group: ldap.ops.finnes.dev
+  names:
+    kind: ClusterProviderConfig
+    listKind: ClusterProviderConfigList
+    plural: clusterproviderconfigs
+    singular: clusterproviderconfig
+  scope: Cluster
+  versions:
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                allowedBases:
+                  description: Entries must be direct children of one of these DNs and use a namespace-prefixed
+                    RDN.
+                  items:
+                    type: string
+                  minItems: 1
+                  type: array
+                bindDN:
+                  type: string
+                credentialsSecretRef:
+                  properties:
+                    key:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      description: Namespace is required for cluster configurations and local for namespaced
+                        configurations.
+                      type: string
+                  required:
+                    - key
+                    - name
+                  type: object
+                host:
+                  type: string
+                port:
+                  type: integer
+                tls:
+                  default: true
+                  type: boolean
+                tlsServerName:
+                  description: TLSServerName overrides certificate verification when connecting through
+                    a Service name.
+                  type: string
+              required:
+                - allowedBases
+                - bindDN
+                - credentialsSecretRef
+                - host
+                - port
+                - tls
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

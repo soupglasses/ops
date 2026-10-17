@@ -1,0 +1,19 @@
+{
+  "jellyfin": {
+    "version": "10.11.11",
+    "image": "jellyfin/jellyfin:10.11.11@sha256:aefb67e6a7ff1debdd154a78a7bbb780fd0c873d8639210a7f6a2016ad2b35db"
+  },
+  "ldap": {
+    "repository": "jellyfin/jellyfin-plugin-ldapauth",
+    "revision": "dfc29525c23889b2a5ad60dc7f354440d3cb1350",
+    "version": "23.0.0.0",
+    "license": "MIT"
+  },
+  "sso": {
+    "repository": "9p4/jellyfin-plugin-sso",
+    "tag": "v4.0.0.4",
+    "asset": "sso-authentication_4.0.0.4.zip",
+    "sha256": "c09f16ba31059a434ddd7f811e4f9608d4b4c4514cc80a5bf1ca33bee61e1107",
+    "license": "GPL-3.0-only"
+  }
+}

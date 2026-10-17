@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: v2
+name: ldap-provider
+description: Reconcile LDAP entries and application identities with the Terraform LDAP SDK
+type: application
+version: 0.1.0
+appVersion: 0.1.0
