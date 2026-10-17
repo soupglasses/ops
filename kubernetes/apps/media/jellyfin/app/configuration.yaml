@@ -75,6 +75,7 @@ data:
         {
           "path": "/System/Configuration",
           "values": {
+            "ServerName": "Jellyfin",
             "PluginRepositories": []
           }
         }
