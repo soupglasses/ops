@@ -48,35 +48,6 @@ spec:
               mountPath: /data
             - name: run
               mountPath: /run/openldap
-        - name: reconcile-directory-policy
-          image: ghcr.io/soupglasses/ops/openldap-acl@sha256:5a114d208d8e6c70f0215ec4642ea50ba573b463a5c717db4de3d783ce286028
-          args:
-            - --policy
-            - /policy/jellyfin.ldif
-            - --config-directory
-            - /data/config
-            - --lock-timeout
-            - "120"
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 389
-            runAsGroup: 389
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              memory: 128Mi
-          volumeMounts:
-            - name: data
-              mountPath: /data
-            - name: acl-policy
-              mountPath: /policy
-              readOnly: true
       containers:
         - name: openldap
           image: ghcr.io/soupglasses/ops/openldap-acl@sha256:5a114d208d8e6c70f0215ec4642ea50ba573b463a5c717db4de3d783ce286028
