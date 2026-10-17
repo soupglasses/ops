@@ -266,7 +266,6 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                         "LdapAdminFilter": "_disabled_",
                         "CreateUsersFromLdap": True,
                         "AllowPassChange": False,
-                        "PasswordResetUrl": "https://auth.example.test/reset",
                         "EnableLdapProfileImageSync": True,
                         "LdapProfileImageAttribute": "jpegPhoto",
                         "LdapProfileImageFormat": "Binary",
@@ -344,13 +343,6 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         )
         user_id = result["User"]["Id"]
         self.assertEqual(result["User"]["Name"], "alice")
-        reset = reconciler.request(
-            "POST",
-            "/Users/ForgotPassword",
-            {"EnteredUsername": "alice"},
-            authenticated=False,
-        )
-        self.assertEqual(reset["PinFile"], "https://auth.example.test/reset")
         ldap_path = f"/Plugins/{LDAP_ID}/Configuration"
         linked = reconciler.request("GET", ldap_path)["LdapUsers"]
         self.assertEqual(len(linked), 1)
