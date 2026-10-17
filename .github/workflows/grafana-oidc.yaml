@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Grafana OIDC
+on:
+  pull_request:
+    paths:
+      - .github/workflows/grafana-oidc.yaml
+      - scripts/test_grafana_oidc.py
+      - kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml
+      - kubernetes/repositories/helm/victoria-metrics.yaml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/grafana-oidc.yaml
+      - scripts/test_grafana_oidc.py
+      - kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml
+      - kubernetes/repositories/helm/victoria-metrics.yaml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: grafana-oidc-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  grafana:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.10
+          install_args: aqua:helm python
+      - name: Install fixture dependencies
+        run: python3 -m pip install 'PyYAML==6.0.3' 'cryptography==50.0.1'
+      - name: Resolve the deployed Grafana image from its pinned chart
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, tempfile
+          from pathlib import Path
+          import yaml
+          release = yaml.safe_load(Path('kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml').read_text())['spec']
+          chart = release['chart']['spec']
+          repository = yaml.safe_load(Path('kubernetes/repositories/helm/victoria-metrics.yaml').read_text())['spec']['url']
+          with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as values:
+              yaml.safe_dump(release['values'], values)
+              values.flush()
+              rendered = subprocess.check_output(['helm', 'template', 'victoria-metrics', chart['chart'], '--repo', repository, '--version', chart['version'], '--values', values.name], text=True)
+          images = {c['image'] for obj in yaml.safe_load_all(rendered) if obj and obj.get('kind') == 'Deployment' for c in obj['spec']['template']['spec']['containers'] if c['name'] == 'grafana'}
+          assert len(images) == 1, 'expected exactly one deployed Grafana image'
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('GRAFANA_TEST_IMAGE=' + images.pop() + '\n')
+          PY
+      - name: Test signed tokens, group restrictions, PKCE and recovery login
+        run: python3 -m unittest scripts/test_grafana_oidc.py -v

@@ -1,0 +1,52 @@
+{{/* SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+SPDX-License-Identifier: MIT */}}
+{{- $xr := getCompositeResource . -}}
+{{- $spec := $xr.spec -}}
+{{- $name := printf "group-%s" $xr.metadata.uid -}}
+{{- $attributes := dict "objectClass" (list "groupOfNames") -}}
+{{- $defaults := dict "member" $spec.initialMembers -}}
+{{- if $spec.initialOwners -}}
+{{- $_ := set $defaults "owner" $spec.initialOwners -}}
+{{- end -}}
+{{- if $spec.description -}}
+{{- $_ := set $attributes "description" (list $spec.description) -}}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-attributes
+  namespace: {{ $xr.metadata.namespace }}
+  annotations:
+    {{ setResourceNameAnnotation "attributes" }}
+    gotemplating.fn.crossplane.io/ready: "True"
+  labels:
+    identity.ops.finnes.dev/group-uid: {{ $xr.metadata.uid | quote }}
+type: Opaque
+data:
+  attributes.json: {{ $attributes | mustToJson | b64enc | quote }}
+  defaults.json: {{ $defaults | mustToJson | b64enc | quote }}
+{{ printf "\n---\n" }}
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: {{ $name }}
+  namespace: {{ $xr.metadata.namespace }}
+  labels:
+    identity.ops.finnes.dev/group-uid: {{ $xr.metadata.uid | quote }}
+  annotations:
+    {{ setResourceNameAnnotation "ldap-entry" }}
+    crossplane.io/external-name: {{ printf "cn=%s,%s" $spec.cn __GROUPS_DN_JSON__ | quote }}
+    gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (and (eq (getResourceCondition "Ready" (getComposedResource . "ldap-entry")).Status "True") (eq (getResourceCondition "Synced" (getComposedResource . "ldap-entry")).Status "True")) | quote }}
+spec:
+  managementPolicies: [Observe, Create, Update]
+  providerConfigRef:
+    kind: {{ $spec.backendRef.kind | default "ClusterProviderConfig" }}
+    name: {{ $spec.backendRef.name | quote }}
+  forProvider:
+    dataJsonSecretRef:
+      name: {{ $name }}-attributes
+      key: attributes.json
+    dataJsonCreateDefaultsSecretRef:
+      name: {{ $name }}-attributes
+      key: defaults.json
+    restrictAttributes: [objectClass, description]

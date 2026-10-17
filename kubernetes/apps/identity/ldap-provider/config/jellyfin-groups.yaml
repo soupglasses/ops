@@ -36,7 +36,7 @@ metadata:
   annotations:
     crossplane.io/external-name: cn=jellyfin.user,ou=groups,dc=finnes,dc=dev
 spec:
-  managementPolicies: [Observe, Create, Update]
+  managementPolicies: [Observe]
   providerConfigRef:
     kind: ProviderConfig
     name: jellyfin-groups
@@ -57,7 +57,7 @@ metadata:
   annotations:
     crossplane.io/external-name: cn=jellyfin.admin,ou=groups,dc=finnes,dc=dev
 spec:
-  managementPolicies: [Observe, Create, Update]
+  managementPolicies: [Observe]
   providerConfigRef:
     kind: ProviderConfig
     name: jellyfin-groups

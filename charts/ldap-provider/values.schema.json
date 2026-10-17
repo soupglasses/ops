@@ -11,6 +11,10 @@
             "smoke",
             "integration"
           ]
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

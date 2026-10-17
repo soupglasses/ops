@@ -51,7 +51,7 @@ func TestHelmReadiness(t *testing.T) {
 		t.Fatal("provider Deployment is not available at its current generation")
 	}
 	groups := []string{"ldap.ops.finnes.dev/v1alpha1", "ldap.ops.finnes.dev/v1beta1"}
-	if os.Getenv("OAUTH2_ENABLED") == "true" {
+	if os.Getenv("OAUTH2_ENABLED") == "true" || os.Getenv("GROUPS_ENABLED") == "true" {
 		groups = append(groups, "identity.ops.finnes.dev/v1alpha1")
 	}
 	for _, group := range groups {

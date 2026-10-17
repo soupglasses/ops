@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"os"
 
-	localconfig "github.com/soupglasses/ops/packages/provider-ldap/config"
 	"github.com/crossplane/upjet/v2/pkg/pipeline"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	localconfig "github.com/soupglasses/ops/packages/provider-ldap/config"
 )
 
 func attributes(in []*tfprotov5.SchemaAttribute) map[string]any {
@@ -28,10 +28,6 @@ func attributes(in []*tfprotov5.SchemaAttribute) map[string]any {
 
 func main() {
 	provider := localconfig.SDKProvider()
-	// Attribute documents can contain passwords and must not appear in CR status.
-	provider.ResourcesMap["ldap_entry"].Schema["data_json"].Sensitive = true
-	provider.ResourcesMap["ldap_entry"].Schema["data_json_create_defaults"].Sensitive = true
-	provider.Schema["bind_password"].Sensitive = true
 	response, err := provider.GRPCProvider().GetProviderSchema(context.Background(), &tfprotov5.GetProviderSchemaRequest{})
 	if err != nil {
 		panic(err)

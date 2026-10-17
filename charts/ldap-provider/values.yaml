@@ -9,6 +9,7 @@ pollInterval: 1m
 tests:
   enabled: false
   mode: smoke
+  pattern: Test
   image:
     repository: ghcr.io/soupglasses/ops/provider-ldap-tests
     tag: development
@@ -17,6 +18,10 @@ tests:
 oauth2:
   enabled: false
   clientsDN: ou=clients,ou=oauth,dc=finnes,dc=dev
+groups:
+  enabled: false
+  baseDN: ou=groups,dc=finnes,dc=dev
+composition:
   functionPackage: xpkg.crossplane.io/crossplane-contrib/function-go-templating:v0.13.1
   crossplaneNamespace: crossplane-system
   crossplaneServiceAccount: crossplane

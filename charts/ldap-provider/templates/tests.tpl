@@ -19,7 +19,7 @@ rules:
     resources: [entries, providerconfigs]
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [identity.ops.finnes.dev]
-    resources: [oauth2clients]
+    resources: [oauth2clients, groupofnames]
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [""]
     resources: [secrets]
@@ -73,7 +73,7 @@ spec:
       args:
         - -test.v
         - -test.timeout=8m
-        - {{ ternary "-test.run=^TestHelmReadiness$" "-test.run=Test" (eq .Values.tests.mode "smoke") | quote }}
+        - {{ ternary "-test.run=^TestHelmReadiness$" (printf "-test.run=%s" .Values.tests.pattern) (eq .Values.tests.mode "smoke") | quote }}
       env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -85,6 +85,8 @@ spec:
               fieldPath: status.podIP
         - name: OAUTH2_ENABLED
           value: {{ .Values.oauth2.enabled | quote }}
+        - name: GROUPS_ENABLED
+          value: {{ .Values.groups.enabled | quote }}
         - name: HELM_RELEASE
           value: {{ .Release.Name }}
         - name: CANAILLE_SCHEMA_LDIF

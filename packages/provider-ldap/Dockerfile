@@ -19,7 +19,11 @@ RUN CGO_ENABLED=0 go test -vet=off -buildvcs=false -p=2 ./cmd/provider && \
     go clean -cache
 
 FROM scratch AS generated
-COPY --from=generate /src/generated /generated
+COPY --from=generate /src/generated/crds /generated/crds
+COPY --from=generate /src/config/schema.json /generated/schema.json
+
+FROM scratch AS generated-source
+COPY --from=generate /src/generated/source /
 
 FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0 AS runtime
 LABEL org.opencontainers.image.source="https://github.com/soupglasses/ops"

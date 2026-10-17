@@ -24,12 +24,39 @@ in the identity namespace. Managed DNs must be direct children of the configured
 bases and their RDN value must start with the application's namespace plus a dot.
 A local `ProviderConfig` is available for directories with their own credentials.
 
-Generated CRDs retain their upstream Apache license. Regenerate them from source:
+`GroupOfNames` is a typed LDAP group API. Set `groups.enabled=true` to install
+its XRD and composition. It can be enabled independently of OAuth2; both use the
+same function and namespace permissions configured under `composition`.
+
+```yaml
+apiVersion: identity.ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: example-users
+spec:
+  backendRef:
+    kind: ProviderConfig
+    name: directory-admin
+  cn: example.users
+  description: Users permitted to access Example
+  initialMembers:
+    - uid=admin,ou=users,dc=example,dc=test
+```
+
+Existing membership and owners remain managed in Canaille. Keep the group CR
+with its application's Kubernetes configuration; it need not be stored in the
+provider installation. An administrative ProviderConfig can be reused within
+its namespace. Tenant-facing ClusterProviderConfig restrictions remain enforced.
+
+Generated CRDs retain their upstream Apache license. From the repository root:
 
 ```sh
-docker build --target generated --output type=local,dest=/tmp/ldap-generated packages/provider-ldap
-cp /tmp/ldap-generated/generated/crds/* charts/ldap-provider/crds/
+task ldap:generate
+task ldap:export-generated OUTPUT=/tmp/ldap-generated-source
 ```
+
+See [provider development](../../packages/provider-ldap/README.md) for the source
+inventory, generated-source export and schema reproducibility checks.
 
 Do not edit generated files or add license headers to their contents. Generation
 emits REUSE sidecars. A CRD upgrade uses Flux HelmRelease `CreateReplace`; removal

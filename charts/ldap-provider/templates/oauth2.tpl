@@ -95,39 +95,6 @@ spec:
                       type: string
                       minLength: 1
 ---
-apiVersion: pkg.crossplane.io/v1beta1
-kind: DeploymentRuntimeConfig
-metadata:
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-function-restricted
-spec:
-  deploymentTemplate:
-    spec:
-      selector: {}
-      template:
-        spec:
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            seccompProfile:
-              type: RuntimeDefault
-          containers:
-            - name: package-runtime
-              securityContext:
-                allowPrivilegeEscalation: false
-                runAsNonRoot: true
-                capabilities:
-                  drop: [ALL]
----
-apiVersion: pkg.crossplane.io/v1
-kind: Function
-metadata:
-  name: function-go-templating
-spec:
-  package: {{ .Values.oauth2.functionPackage | quote }}
-  runtimeConfigRef:
-    name: {{ .Release.Namespace }}-{{ .Release.Name }}-function-restricted
----
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
@@ -148,52 +115,4 @@ spec:
         inline:
           template: |
 {{ .Files.Get "files/oauth2-client.gotmpl" | replace "__CLIENTS_DN_JSON__" (toJson .Values.oauth2.clientsDN) | indent 12 }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ .Release.Name }}-oauth2-composer
-rules:
-  - apiGroups: [ldap.ops.finnes.dev]
-    resources: [entries]
-    verbs: [get, list, watch, create, update, patch, delete]
-  - apiGroups: [""]
-    resources: [secrets]
-    verbs: [get, list, watch, create, update, patch, delete]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ .Release.Name }}-oauth2-composer
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ .Release.Name }}-oauth2-composer
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Values.oauth2.crossplaneServiceAccount }}
-    namespace: {{ .Values.oauth2.crossplaneNamespace }}
----
-# Crossplane's realtime informer watches composed Entry resources across namespaces.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-oauth2-observer
-rules:
-  - apiGroups: [ldap.ops.finnes.dev]
-    resources: [entries]
-    verbs: [get, list, watch]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-oauth2-observer
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-oauth2-observer
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Values.oauth2.crossplaneServiceAccount }}
-    namespace: {{ .Values.oauth2.crossplaneNamespace }}
 {{- end }}

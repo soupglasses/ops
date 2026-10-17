@@ -35,5 +35,7 @@ spec:
         repository: ghcr.io/soupglasses/ops/provider-ldap-tests
         tag: a3c6761060ef52f5f8674ba8f9dda58957d03d53
         digest: sha256:7dcf78974dc12280a8e9610ea2beec06d79ec5616d93486d61b055d347189f1d
+    groups:
+      enabled: true
     oauth2:
       enabled: true

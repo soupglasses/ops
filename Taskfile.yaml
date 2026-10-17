@@ -6,6 +6,9 @@
 version: "3"
 
 includes:
+  ldap:
+    taskfile: .taskfiles/ldap.yaml
+    dir: .
   app:
     taskfile: .taskfiles/application.yaml
     dir: .

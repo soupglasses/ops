@@ -1,52 +1,28 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
 
-name: Identity runtime
+name: Ldap Provider
 on:
   pull_request:
-    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml", "kubernetes/apps/identity/openldap/app/**",
-      "scripts/test_openldap_access.py"]
+    paths:
+      - "packages/provider-ldap/**"
+      - "charts/ldap-provider/**"
+      - ".taskfiles/ldap.yaml"
+      - ".github/workflows/ldap-provider.yaml"
   push:
     branches: [main]
-    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml", "kubernetes/apps/identity/openldap/app/**",
-      "scripts/test_openldap_access.py"]
+    paths:
+      - "packages/provider-ldap/**"
+      - "charts/ldap-provider/**"
+      - ".taskfiles/ldap.yaml"
+      - ".github/workflows/ldap-provider.yaml"
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: identity-runtime-${{ github.ref }}
+  group: ldap-provider-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  jellyfin:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Test runtime and settings reconciliation
-        run: |
-          python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
-          python3 -m unittest discover -s packages/jellyfin-runtime -p test_configuration.py -v
-      - name: Build pinned Jellyfin and plugins
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: packages/jellyfin-runtime/build.sh ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha
-          }}
-      - name: Test LDAP password login and upstream profile images
-        env:
-          JELLYFIN_INTEGRATION_IMAGE: ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
-        run: |
-          python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py -v
-      - name: Publish
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker push ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
   ldap:
     runs-on: ubuntu-latest
     permissions:
@@ -72,10 +48,11 @@ jobs:
         run: |
           docker build --target runtime -t ghcr.io/soupglasses/ops/provider-ldap:${{ github.sha }} packages/provider-ldap
           docker build --target tests -t ghcr.io/soupglasses/ops/provider-ldap-tests:${{ github.sha }} packages/provider-ldap
-      - name: Verify generated CRDs are reproducible
+      - name: Verify generated schemas are reproducible
         run: |
           docker build --target generated --output type=local,dest=/tmp/ldap-generated packages/provider-ldap
           diff -r charts/ldap-provider/crds /tmp/ldap-generated/generated/crds
+          diff packages/provider-ldap/config/schema.json /tmp/ldap-generated/generated/schema.json
       - name: Test real LDAP and Canaille
         run: docker run --rm ghcr.io/soupglasses/ops/provider-ldap-tests:${{ github.sha }} -test.v -test.run
           'TestCanaille|TestHuman'
@@ -92,13 +69,3 @@ jobs:
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push ghcr.io/soupglasses/ops/provider-ldap:${{ github.sha }}
           docker push ghcr.io/soupglasses/ops/provider-ldap-tests:${{ github.sha }}
-  openldap:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Test native OpenLDAP access policy with the stock image
-        env:
-          OPENLDAP_ACCESS_TEST: "1"
-        run: python3 -m unittest discover -s scripts -p test_openldap_access.py -v

@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Openldap
+on:
+  pull_request:
+    paths:
+      - "kubernetes/apps/identity/openldap/app/**"
+      - "scripts/test_openldap_access.py"
+      - ".github/workflows/openldap.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "kubernetes/apps/identity/openldap/app/**"
+      - "scripts/test_openldap_access.py"
+      - ".github/workflows/openldap.yaml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: openldap-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  openldap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Test native OpenLDAP access policy with the stock image
+        env:
+          OPENLDAP_ACCESS_TEST: "1"
+        run: python3 -m unittest discover -s scripts -p test_openldap_access.py -v
