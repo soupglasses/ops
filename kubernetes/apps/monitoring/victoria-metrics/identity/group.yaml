@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-directory-attributes
+stringData:
+  group.json: >-
+    {"objectClass":["groupOfNames"],"description":["Grafana administrators"]}
+  group-defaults.json: >-
+    {"member":["uid=admin,ou=users,dc=finnes,dc=dev","uid=sofie,ou=users,dc=finnes,dc=dev"]}
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: grafana-admins
+  annotations:
+    crossplane.io/external-name: cn=monitoring.grafana-admins,ou=groups,dc=finnes,dc=dev
+spec:
+  managementPolicies: [Observe, Create, Update]
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: directory
+  forProvider:
+    dataJsonSecretRef:
+      name: grafana-directory-attributes
+      key: group.json
+    dataJsonCreateDefaultsSecretRef:
+      name: grafana-directory-attributes
+      key: group-defaults.json
+    restrictAttributes: [objectClass, description]

@@ -14,3 +14,11 @@ resources:
   - ./victoria-logs/ks.yaml
   - ./rke2-host-metrics/ks.yaml
   - ./log-collector/ks.yaml
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      - op: add
+        path: /metadata/labels
+        value:
+          identity.ops.finnes.dev/backend: directory

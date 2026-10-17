@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: identity.ops.finnes.dev/v1alpha1
+kind: OAuth2Client
+metadata:
+  name: grafana
+spec:
+  backendRef:
+    kind: ClusterProviderConfig
+    name: directory
+  clientID: monitoring.grafana
+  displayName: Grafana
+  redirectURIs:
+    - https://grafana.${DOMAIN}/login/generic_oauth
+  scopes: [openid, profile, email, groups]
+  grantTypes: [authorization_code, refresh_token]
+  tokenEndpointAuthMethod: client_secret_post
+  clientSecretRef:
+    name: grafana-oidc
+    key: client-secret

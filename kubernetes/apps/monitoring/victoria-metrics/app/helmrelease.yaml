@@ -181,6 +181,12 @@ spec:
         existingSecret: grafana-auth
         userKey: admin-user
         passwordKey: admin-password
+      extraSecretMounts:
+        - name: grafana-oidc
+          secretName: grafana-oidc
+          mountPath: /etc/secrets/grafana-oidc
+          readOnly: true
+          defaultMode: 0440
       defaultDashboardsTimezone: browser
       plugins:
         - victoriametrics-logs-datasource@0.32.0
@@ -214,6 +220,34 @@ spec:
         analytics:
           check_for_updates: false
           reporting_enabled: false
+        auth:
+          oauth_allow_insecure_email_lookup: false
+        auth.generic_oauth:
+          enabled: true
+          name: Canaille
+          allow_sign_up: true
+          auto_login: false
+          client_id: monitoring.grafana
+          client_secret: $__file{/etc/secrets/grafana-oidc/client-secret}
+          auth_style: InParams
+          scopes: openid profile email groups
+          auth_url: https://auth.${DOMAIN}/oauth/authorize
+          token_url: https://auth.${DOMAIN}/oauth/token
+          api_url: https://auth.${DOMAIN}/oauth/userinfo
+          use_pkce: true
+          validate_id_token: true
+          jwk_set_url: https://auth.${DOMAIN}/oauth/jwks.json
+          use_refresh_token: true
+          login_attribute_path: sub
+          email_attribute_path: email
+          name_attribute_path: name
+          groups_attribute_path: groups
+          allowed_groups: monitoring.grafana-admins
+          role_attribute_path: >-
+            contains(groups || `[]`, 'monitoring.grafana-admins') && 'GrafanaAdmin' || ''
+          role_attribute_strict: true
+          allow_assign_grafana_admin: true
+          skip_org_role_sync: false
         auth.anonymous:
           enabled: false
         security:
