@@ -72,7 +72,7 @@ HTTP Request managed resource. LDAP entries remain Crossplane resources.
 
 ## Plugin compatibility and photos
 
-`plugins.lock.json` pins Jellyfin 10.11.11 and the unmodified upstream LDAP 23
+`plugins.lock.json` pins Jellyfin 12.2 and the unmodified upstream LDAP 24
 release ZIP by SHA-256, with its source revision recorded for license provenance
 and rebuilding. There is no local plugin patch or .NET build stage. Upstream LDAP code is MIT; Jellyfin retains its GPL license. Newly
 authored integration code is MIT, and builds preserve upstream license notices.

@@ -67,12 +67,12 @@ class Reconciler:
         if not path.startswith("/") or path.startswith("//"):
             raise ConfigurationError("invalid API path")
         headers = {"Content-Type": "application/json"}
-        if authenticated and self.token:
-            headers["X-Emby-Token"] = self.token
         headers["Authorization"] = (
             'MediaBrowser Client="ops-configuration", Device="Kubernetes", '
             'DeviceId="ops-configuration", Version="1"'
         )
+        if authenticated and self.token:
+            headers["Authorization"] += ", Token=" + json.dumps(self.token)
         data = json.dumps(body).encode() if body is not None else None
         try:
             with self.opener.open(

@@ -64,7 +64,9 @@ class ConfigurationTest(unittest.TestCase):
                     result = state["libraries"]
                 elif self.path == "/Startup/User":
                     result = {"Name": "root"}
-                elif self.headers.get("X-Emby-Token") != "fixture-token":
+                elif 'Token="fixture-token"' not in self.headers.get(
+                    "Authorization", ""
+                ):
                     self.send_error(401)
                     return
                 else:
@@ -109,7 +111,9 @@ class ConfigurationTest(unittest.TestCase):
                     )
                     library["Locations"].append(body["Path"])
                 elif self.path in ("/ldap", "/application"):
-                    if self.headers.get("X-Emby-Token") != "fixture-token":
+                    if 'Token="fixture-token"' not in self.headers.get(
+                        "Authorization", ""
+                    ):
                         self.send_error(401)
                         return
                     state[self.path[1:]] = body

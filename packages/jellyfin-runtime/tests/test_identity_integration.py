@@ -263,7 +263,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                         "LdapSearchAttributes": "uid,mail",
                         "LdapUidAttribute": "uid",
                         "LdapUsernameAttribute": "uid",
-                        "LdapAdminFilter": "_disabled_",
+                        "LdapAdminFilter": "(uid=alice)",
                         "CreateUsersFromLdap": True,
                         "AllowPassChange": False,
                         "EnableLdapProfileImageSync": True,
@@ -343,6 +343,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         )
         user_id = result["User"]["Id"]
         self.assertEqual(result["User"]["Name"], "alice")
+        self.assertTrue(result["User"]["Policy"]["IsAdministrator"])
         ldap_path = f"/Plugins/{LDAP_ID}/Configuration"
         linked = reconciler.request("GET", ldap_path)["LdapUsers"]
         self.assertEqual(len(linked), 1)
@@ -355,7 +356,9 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             try:
                 request = urllib.request.Request(
                     url + f"/Users/{user_id}/Images/Primary",
-                    headers={"X-Emby-Token": reconciler.token},
+                    headers={
+                        "Authorization": f'MediaBrowser Token="{reconciler.token}"'
+                    },
                 )
                 with urllib.request.urlopen(request, timeout=2) as response:
                     image = response.read()
@@ -394,6 +397,18 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             ],
             LDAP_PROVIDER,
         )
+        for admin_filter, expected in (("(uid=nobody)", False), ("(uid=alice)", True)):
+            desired["resources"][0]["values"]["LdapAdminFilter"] = admin_filter
+            desired_path.write_text(json.dumps(desired))
+            reconciler.run_once()
+            result = reconciler.request(
+                "POST",
+                "/Users/AuthenticateByName",
+                {"Username": "alice", "Pw": PASSWORD},
+                authenticated=False,
+            )
+            self.assertEqual(result["User"]["Id"], user_id)
+            self.assertEqual(result["User"]["Policy"]["IsAdministrator"], expected)
         reconciler.run_once(check_only=True)
 
 
