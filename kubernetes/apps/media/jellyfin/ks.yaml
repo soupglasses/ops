@@ -12,6 +12,8 @@ spec:
   dependsOn:
     - name: ldap-directory
       namespace: identity
+    - name: jellyfin-groups
+      namespace: media
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -102,3 +104,32 @@ spec:
   timeout: 5m
   prune: false
   wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin-groups
+  namespace: media
+spec:
+  path: ./kubernetes/apps/media/jellyfin/groups
+  targetNamespace: identity
+  dependsOn:
+    - name: ldap-system-users
+      namespace: identity
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  healthChecks:
+    - apiVersion: identity.ops.finnes.dev/v1alpha1
+      kind: GroupOfNames
+      name: jellyfin-user-group
+      namespace: identity
+    - apiVersion: identity.ops.finnes.dev/v1alpha1
+      kind: GroupOfNames
+      name: jellyfin-admin-group
+      namespace: identity
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true

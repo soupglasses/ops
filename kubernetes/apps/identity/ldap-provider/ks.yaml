@@ -37,14 +37,5 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  healthChecks:
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: jellyfin-user-group
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: jellyfin-admin-group
-      namespace: identity
   interval: 10m
   prune: true

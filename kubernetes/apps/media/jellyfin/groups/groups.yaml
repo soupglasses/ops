@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: identity.ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: jellyfin-user-group
+spec:
+  backendRef:
+    kind: ProviderConfig
+    name: directory-admin
+  cn: jellyfin.user
+  description: Users permitted to sign in to Jellyfin
+  initialMembers:
+    - uid=admin,ou=users,dc=finnes,dc=dev
+    - uid=sofie,ou=users,dc=finnes,dc=dev
+    - uid=lcp,ou=users,dc=finnes,dc=dev
+  initialOwners:
+    - uid=admin,ou=users,dc=finnes,dc=dev
+---
+apiVersion: identity.ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: jellyfin-admin-group
+spec:
+  backendRef:
+    kind: ProviderConfig
+    name: directory-admin
+  cn: jellyfin.admin
+  description: Jellyfin administrators
+  initialMembers:
+    - uid=admin,ou=users,dc=finnes,dc=dev
+  initialOwners:
+    - uid=admin,ou=users,dc=finnes,dc=dev

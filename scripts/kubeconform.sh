@@ -46,7 +46,7 @@ KUBECONFORM_ARGS=(
 
 # Derive local APIs from the same generated CRDs and composition shipped to Flux.
 helm template schema "$REPO_ROOT/charts/ldap-provider" --include-crds \
-    --set oauth2.enabled=true \
+    --set oauth2.enabled=true --set groups.enabled=true \
     | yq eval-all -o=json -I=0 '[.]' - \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
