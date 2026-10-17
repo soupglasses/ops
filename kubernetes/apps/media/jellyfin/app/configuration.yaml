@@ -82,7 +82,7 @@ data:
                   "groups"
                 ],
                 "DefaultProvider": "Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin",
-                "DefaultUsernameClaim": "preferred_username",
+                "DefaultUsernameClaim": "sub",
                 "NewPath": true,
                 "SchemeOverride": "https"
               }

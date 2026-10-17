@@ -85,7 +85,7 @@ already assigned to the LDAP authentication provider. It requires a unique LDAP
 result, an exact configured username match, and an unclaimed LDAP UID. It does not
 require the user's password, change authentication providers, or reset existing
 photo hashes. Configure matching LDAP and OIDC usernames (`uid` and
-`preferred_username`), and set SSO `DefaultProvider` to
+`sub` for Canaille 0.3.6), and set SSO `DefaultProvider` to
 `Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin`.
 
 Canaille's `groups` scope emits group display names (LDAP `cn`), so SSO roles use
@@ -114,3 +114,8 @@ The integration test requires Docker. It creates
 and deletes its own container and LDAP process. Its SSO-first test reproduces the
 account state produced by SSO (new user plus LDAP provider assignment); it does
 not replace a complete browser-based OIDC authorization-flow test.
+
+Canaille 0.3.6 maps `sub` to the directory username and `preferred_username` to
+the editable display name. Jellyfin uses `sub` so SSO, LDAP password login and
+photo lookup select the same UID. See the
+[pinned claim defaults](https://github.com/yaal-coop/canaille/blob/0.3.6/canaille/oidc/configuration.py).

@@ -305,7 +305,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                                 "OidEndpoint": "https://auth.example.test",
                                 "OidClientId": "fixture.jellyfin",
                                 "DefaultProvider": LDAP_PROVIDER,
-                                "DefaultUsernameClaim": "preferred_username",
+                                "DefaultUsernameClaim": "sub",
                             }
                         }
                     },
