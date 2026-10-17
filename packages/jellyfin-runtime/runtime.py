@@ -172,13 +172,15 @@ def seed_plugins(source, distribution=Path("/opt/jellyfin/plugins")):
         return
     plugins = source / "plugins"
     plugins.mkdir(parents=True, exist_ok=True)
+    # Retire only the former image-owned SSO binary; retain saved configuration.
+    retired = plugins / "SSO-Auth_4.0.0.4"
+    if retired.exists() or retired.is_symlink():
+        if not retired.is_dir() or retired.is_symlink():
+            raise RuntimeError("unexpected retired image-managed plugin path")
+        shutil.rmtree(retired)
     for plugin in distribution.iterdir():
         prefix = next(
-            (
-                name
-                for name in ("LDAP-Auth_", "SSO-Auth_")
-                if plugin.name.startswith(name)
-            ),
+            (name for name in ("LDAP-Auth_",) if plugin.name.startswith(name)),
             None,
         )
         if prefix is None or not plugin.is_dir() or plugin.is_symlink():

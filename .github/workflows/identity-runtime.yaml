@@ -4,10 +4,12 @@
 name: Identity runtime
 on:
   pull_request:
-    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml"]
+    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml", "kubernetes/apps/identity/openldap/app/**",
+      "scripts/test_openldap_access.py"]
   push:
     branches: [main]
-    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml"]
+    paths: ["packages/**", "charts/ldap-provider/**", ".github/workflows/identity-runtime.yaml", "kubernetes/apps/identity/openldap/app/**",
+      "scripts/test_openldap_access.py"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: packages/jellyfin-runtime/build.sh ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha
           }}
-      - name: Test LDAP password and SSO-first profile images
+      - name: Test LDAP password login and upstream profile images
         env:
           JELLYFIN_INTEGRATION_IMAGE: ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
         run: |
@@ -90,25 +92,13 @@ jobs:
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push ghcr.io/soupglasses/ops/provider-ldap:${{ github.sha }}
           docker push ghcr.io/soupglasses/ops/provider-ldap-tests:${{ github.sha }}
-  openldap-acl:
+  openldap:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Build matching OpenLDAP policy tools
-        run: docker build -t ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }} packages/openldap-acl
-      - name: Test offline recovery, lifecycle exclusion, and LDAP attribute access
+      - name: Test native OpenLDAP access policy with the stock image
         env:
-          OPENLDAP_ACL_TEST_IMAGE: ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }}
-        run: python3 -m unittest discover -s packages/openldap-acl -v
-      - name: Publish
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker push ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }}
+          OPENLDAP_ACCESS_TEST: "1"
+        run: python3 -m unittest discover -s scripts -p test_openldap_access.py -v

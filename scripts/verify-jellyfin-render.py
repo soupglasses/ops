@@ -43,6 +43,8 @@ def verify(path):
     application = get("Deployment", "jellyfin", "media")["spec"]["template"]["spec"]
     assert any(item["name"] == "restore-media" for item in application["initContainers"])
     jellyfin = next(item for item in application["containers"] if item["name"] == "jellyfin")
+    for probe in ("startupProbe", "readinessProbe"):
+        assert jellyfin[probe]["exec"]["command"] == ["python3", "/usr/local/lib/jellyfin/health.py"]
     assert not next(item for item in jellyfin["volumeMounts"] if item["name"] == "media").get("readOnly", False)
     gateway = get("Gateway", "private", "network")
     assert gateway["spec"]["infrastructure"]["labels"]["bgp"] == "enabled"

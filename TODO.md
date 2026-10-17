@@ -10,6 +10,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [ ] Simplify Jellyfin to the unpatched upstream LDAP plugin and fold server ACLs
+  into the existing stock-image OpenLDAP deployment; remove the separate ACL package.
+
 - [x] Publish MIT-authored LDAP SDK reconciliation, OAuth2Client composition and
   pinned Jellyfin integration images. Real kind/Helm, LDAP, photo synchronization,
   password login, configuration drift and recovery tests pass in CI.
@@ -19,6 +22,8 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   its canary and manifest; evidence is recorded in `docs/media-storage.md`.
 - [x] Restore the initial Jellyfin configuration checkpoint through a separate VolSync
   destination and validate SQLite contents, account identity, libraries, plugins and API settings.
+- [x] Verify a real older OpenLDAP backup initializes the current ACL policy while
+  preserving the directory database and native export byte-for-byte.
 - [x] Remove Cilium L2 announcements; advertise the private Gateway through the existing
   BGP service range, with an exact router prefix and private-only forwarding rules.
 - [ ] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration

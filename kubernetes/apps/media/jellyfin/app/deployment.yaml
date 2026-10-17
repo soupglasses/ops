@@ -40,7 +40,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: restore-media
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
           command: [python3, /usr/local/lib/jellyfin/media_restore.py]
           args: [--root, /media]
           envFrom:
@@ -63,7 +63,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: restore
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
           command: [python3, /usr/local/lib/jellyfin/runtime.py]
           args: [restore, --source, /config]
           securityContext:
@@ -82,7 +82,7 @@ spec:
               mountPath: /config
       containers:
         - name: jellyfin
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
           ports:
             - name: http
               containerPort: 8096
@@ -92,17 +92,17 @@ spec:
             capabilities:
               drop: [ALL]
           startupProbe:
-            httpGet:
-              path: /health
-              port: http
+            exec:
+              command: [python3, /usr/local/lib/jellyfin/health.py]
             failureThreshold: 60
             periodSeconds: 5
+            timeoutSeconds: 3
           readinessProbe:
-            httpGet:
-              path: /health
-              port: http
+            exec:
+              command: [python3, /usr/local/lib/jellyfin/health.py]
             periodSeconds: 10
             failureThreshold: 3
+            timeoutSeconds: 3
           livenessProbe:
             exec:
               command: [python3, /usr/local/lib/jellyfin/runtime.py, health]
@@ -129,7 +129,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: configuration
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:83f664a1f9a5f2de03f99a9fb1da2e6a634a9ecee654362d9a486ad3e289364f
           command: [python3, /usr/local/lib/jellyfin/configuration.py]
           args: [--config, /desired/configuration.json, --credentials, /credentials]
           readinessProbe:

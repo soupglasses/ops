@@ -6,8 +6,8 @@ SPDX-License-Identifier: MIT
 # Application identity and settings reconciliation
 
 Crossplane manages directory entries and typed application identities. Flux owns
-those resources, application settings and deployment order. The LDAP provider calls
-the Terraform provider SDK directly; there is no Terraform CLI or state directory.
+those resources, application settings and deployment order. The LDAP provider uses Upjet and
+the Terraform provider SDK; there is no Terraform CLI or state directory.
 Existing Terraform-owned directory roots and applications retain their ownership.
 
 ## Jellyfin identity
@@ -19,46 +19,25 @@ direct child of an allowed base, with an RDN prefixed by its namespace and a dot
 The generic Entry API reconciles only explicitly owned attributes. Group membership
 is initialized with the directory administrator and subsequently managed in Canaille.
 
-```yaml
-apiVersion: identity.ops.finnes.dev/v1alpha1
-kind: OAuth2Client
-metadata:
-  name: jellyfin
-  namespace: media
-spec:
-  backendRef:
-    name: directory
-    kind: ClusterProviderConfig
-  clientID: media.jellyfin
-  displayName: Jellyfin
-  redirectURIs:
-    - https://jellyfin.home.finnes.dev/sso/OID/redirect/canaille
-  scopes: [openid, profile, email, groups]
-  tokenEndpointAuthMethod: client_secret_post
-  clientSecretRef:
-    name: jellyfin-identity
-    key: OIDC_CLIENT_SECRET
-```
+Jellyfin members sign in with their normal LDAP username and password. The
+unmodified upstream LDAP plugin links the account on login and synchronizes its
+`jpegPhoto` through its existing scheduled task. Jellyfin does not need a separate
+OIDC client or an SSO plugin for this path. The local `ops-recovery` administrator
+remains available for emergency access and settings reconciliation.
 
-The current composition maps this API to Canaille's LDAP schema. Its child Entry
-and credential document are reconciled automatically. Both public clients and
-confidential clients are supported; credential references are namespace-local.
-Removing an identity CR retains the directory entry deliberately. Deleting an OAuth
-client permanently therefore requires an explicit directory administration action.
+OpenLDAP server policy belongs to its existing deployment:
+[`access-policy.ldif`](../kubernetes/apps/identity/openldap/app/access-policy.ldif)
+is the authoritative MDB access policy, including the legacy reader/self rules
+and the narrow Jellyfin group-member profile/photo grant. A stock-image init runs
+native `slapmodify` before the server starts. The generated ConfigMap rolls the
+Pod when policy changes. No separate ACL package, custom image or controller is
+required. Change server ACLs in Git; runtime ACL changes are replaced at startup.
 
-Jellyfin accepts members of `media.jellyfin-users` through LDAP password login and
-OIDC. SSO-created users use the LDAP authentication provider, and the pinned LDAP
-plugin patch discovers them for `jpegPhoto` synchronization before password login.
-The local `ops-recovery` administrator remains available for emergency access and
-configuration reconciliation; its password is stored in the encrypted application Secret.
-
-The directory profile grant is declared in OpenLDAP's `jellyfin-acl.ldif`. It permits
-that application's bind account to read selected profile fields and `jpegPhoto` only
-for its group members. A startup step merges the rule into restored native LDAP
-configuration, preserving unrelated rules and password protection. The generated
-policy ConfigMap triggers a rollout when changed; runtime ACL drift is repaired on
-restart. This avoids adding a runtime ACL administrator. See
-[the policy tool and recovery contract](../packages/openldap-acl/README.md).
+The Upjet provider manages ordinary directory entries using the existing Terraform
+LDAP SDK. Its `OAuth2Client` composition remains available for OIDC applications
+and maps that API to the configured backend's LDAP schema. Jellyfin currently
+uses only its bind-account and group entries. Deleting an Entry deliberately
+retains the directory object; permanent deletion is an explicit administration action.
 
 ## Application settings
 
@@ -66,8 +45,7 @@ Jellyfin's configuration ConfigMap declares plugin settings, login branding, net
 settings and library paths. The sidecar reads the current API values every minute,
 merges the owned subset and repairs drift. It preserves user mappings, photo hashes
 and other unmanaged state. Credentials are mounted files; API tokens remain in
-memory and are not written to Kubernetes status or logs. The SSO library requires
-`client_secret_post` client authentication.
+memory and are not written to Kubernetes status or logs.
 
 The sidecar is a bounded exception to Crossplane resource management. See
 [the runtime rationale](../packages/jellyfin-runtime/CONFIGURATION.md) for the
@@ -132,10 +110,8 @@ HTTPS access to the trusted LAN, VPN and NAS. See
 
 Inside the cluster, `auth.finnes.dev` resolves to the public Gateway's BGP VIPs
 through the RKE2 CoreDNS configuration. This avoids WAN hairpin routing while
-retaining the public issuer hostname and verified TLS. Jellyfin egress permits
-the selected Canaille backend on its pod port: Gateway hairpin policy is evaluated
-after routing, even when telemetry names the frontend address. See
-[the upstream explanation](https://github.com/cilium/cilium/issues/47617).
+retaining the public issuer hostname and verified TLS for OIDC applications.
+This cluster DNS setting is independent of Jellyfin's LDAP login.
 Converge the DNS manifest independently of an RKE2 upgrade with
 `ansible-playbook playbooks/configure-cluster-dns.yml` from `ansible/`.
 
@@ -151,8 +127,9 @@ snapshot/populator recovery path. The restore helper verified every file hash an
 SQLite integrity before starting the matching pinned Jellyfin image in a restricted,
 network-isolated Job. The recovered API matched the source server identity, account
 identity, three configured libraries and seven active plugins, including LDAP 23 and
-SSO 4.0.0.4. The read-only configuration check also validated owned settings against
-the existing Secret references without printing credentials or API tokens.
+the then-installed SSO 4.0.0.4. This baseline predates the LDAP-only simplification. The read-only configuration
+check also validated owned settings against the existing Secret references without
+printing credentials or API tokens.
 
 The restored database contained one user, seven base items, 72 permissions and
 39 preferences. This initial checkpoint contained no user avatar; avatar recovery
@@ -165,3 +142,22 @@ network policy were deleted afterward. The production destination was refreshed 
 removed and the next scheduled refresh was confirmed for 2026-10-18 at 08:15 UTC.
 An outstanding manual tag takes precedence over a cron schedule in VolSync; keep
 only the schedule after completing an operator-triggered destination refresh.
+
+### LDAP policy recovery
+
+The offline policy initializer must mount `/data/db` at `/var/lib/openldap` as well
+as mounting the directory PVC at `/data`. The persisted LDAP configuration refers to
+that database path; even a configuration-only `slapcat` opens it. Omitting the alias
+on a read-only container filesystem causes native initialization to fail before any
+ACL change. The alias grants access to the same database already present under `/data`.
+
+On 2026-10-17, an isolated VolSync destination/populator restored the real pre-migration
+backup using cutoff `2026-10-17T17:13:43Z`. With UID/GID 389, a read-only root filesystem
+and the then-current trial image, the original mounts reproduced the failure.
+Adding only the database alias made native policy initialization succeed and a
+second pass converge without changes. The directory database remained byte-identical
+with SHA-256 `deaf3dfd01f46f5e66e3cdf37ec1a62f2d00a6c53f27cd4698c09cc7e8e1adc2`.
+Its native export exactly matched the paired backup: 89 entries, SHA-256
+`3a6f4e5ffae23f300c76094ce6de638629a705459392988837282aa17fd61f1a`.
+The diagnostic mounted no production PVC, printed no configuration or credential
+values, and all temporary resources were deleted afterward.

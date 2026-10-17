@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Jellyfin runtime and recovery
 
-The image supervises Jellyfin and installs the pinned LDAP and SSO plugins. Application
+The image supervises Jellyfin and installs the pinned upstream LDAP plugin. Application
 configuration lives in `/config/server`; `/cache` is disposable. Media is a separate
 read-write mount for media and sidecar metadata; it has its own independent backup.
 
@@ -40,7 +40,8 @@ remains available while Jellyfin is stopped for checkpoint creation:
 python3 /usr/local/lib/jellyfin/runtime.py health --timeout 5
 ```
 
-Use Jellyfin's `/health` endpoint for readiness. Configuration must contain regular
+Use `health.py` for readiness; it requires the `/health` response to be `Healthy`.
+Configuration must contain regular
 files and directories; symlinks cause checkpoints to fail rather than follow paths
 outside the backed-up directory. Size staging for two complete archives because the
 previous recovery point remains until publication. Monitor source failures and backup
@@ -66,7 +67,7 @@ that flag from Git. Never enable it to work around missing recovery history.
 The shared VolSync destination/populator restores the configuration PVC from the
 staging snapshot. Use `task volsync:restore APP=jellyfin` or
 `task volsync:restore-at APP=jellyfin AT=<timestamp>` for a newer or older recovery point;
-the destination's `latestImage` is otherwise frozen. Preserve the original PVC or its
+the destination's `latestImage` also refreshes daily after the scheduled backup. Preserve the original PVC or its
 rollback snapshot until application verification succeeds.
 
 Recovery needs this repository, the off-cluster S3 endpoint and repository, the restic
@@ -79,7 +80,7 @@ after a database migration is unsafe; retain the matching image version with eac
 upgrade recovery point.
 
 An isolated restore drill must check database integrity, expected user/library records,
-server identity, LDAP and SSO configuration, plugin binaries and a known user image.
+server identity, LDAP configuration, plugin binaries and a known user image.
 Start the restored server with the matching image and check its API. Record the backup
 ID and non-sensitive verification results, then delete temporary resources. Media
 requires its own backup and restore checks; local ZFS snapshots alone do not survive

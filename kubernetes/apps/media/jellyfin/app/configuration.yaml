@@ -59,47 +59,6 @@ data:
           ]
         },
         {
-          "path": "/Plugins/505ce9d1-d916-42fa-86ca-673ef241d7df/Configuration",
-          "values": {
-            "OidConfigs": {
-              "canaille": {
-                "OidEndpoint": "https://auth.finnes.dev",
-                "OidClientId": "media.jellyfin",
-                "Enabled": true,
-                "EnableAuthorization": true,
-                "EnableAllFolders": true,
-                "EnableFolderRoles": false,
-                "EnableLiveTvRoles": false,
-                "EnableLiveTv": false,
-                "EnableLiveTvManagement": false,
-                "RoleClaim": "groups",
-                "Roles": [
-                  "media.jellyfin-users"
-                ],
-                "AdminRoles": [],
-                "OidScopes": [
-                  "email",
-                  "groups"
-                ],
-                "DefaultProvider": "Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin",
-                "DefaultUsernameClaim": "sub",
-                "NewPath": true,
-                "SchemeOverride": "https"
-              }
-            }
-          },
-          "secretValues": [
-            {
-              "path": [
-                "OidConfigs",
-                "canaille",
-                "OidSecret"
-              ],
-              "file": "OIDC_CLIENT_SECRET"
-            }
-          ]
-        },
-        {
           "path": "/System/Configuration/network",
           "values": {
             "EnableUPnP": false,
@@ -109,7 +68,7 @@ data:
         {
           "path": "/System/Configuration/branding",
           "values": {
-            "LoginDisclaimer": "<form action=\"/sso/OID/start/canaille\"><button class=\"raised block emby-button button-submit\">Sign in with SSO</button></form>"
+            "LoginDisclaimer": ""
           }
         },
         {

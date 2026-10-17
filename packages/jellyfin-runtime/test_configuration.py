@@ -40,12 +40,12 @@ class ConfigurationTest(unittest.TestCase):
                     {"LinkedJellyfinUserId": "one", "ProfileImageHash": "retained"}
                 ],
             },
-            "sso": {
-                "OidConfigs": {
-                    "canaille": {
+            "application": {
+                "Settings": {
+                    "managed": {
                         "Enabled": False,
-                        "CanonicalLinks": {"alice": "one"},
-                        "OidSecret": "old",
+                        "RuntimeLinks": {"alice": "one"},
+                        "ApiKey": "old",
                     },
                     "other": {"Enabled": True},
                 }
@@ -108,7 +108,7 @@ class ConfigurationTest(unittest.TestCase):
                         if item["Name"] == body["Name"]
                     )
                     library["Locations"].append(body["Path"])
-                elif self.path in ("/ldap", "/sso"):
+                elif self.path in ("/ldap", "/application"):
                     if self.headers.get("X-Emby-Token") != "fixture-token":
                         self.send_error(401)
                         return
@@ -141,12 +141,12 @@ class ConfigurationTest(unittest.TestCase):
                     ],
                 },
                 {
-                    "path": "/sso",
-                    "values": {"OidConfigs": {"canaille": {"Enabled": True}}},
+                    "path": "/application",
+                    "values": {"Settings": {"managed": {"Enabled": True}}},
                     "secretValues": [
                         {
-                            "path": ["OidConfigs", "canaille", "OidSecret"],
-                            "file": "OIDC_CLIENT_SECRET",
+                            "path": ["Settings", "managed", "ApiKey"],
+                            "file": "APPLICATION_API_KEY",
                         }
                     ],
                 },
@@ -156,7 +156,7 @@ class ConfigurationTest(unittest.TestCase):
         self.path.write_text(json.dumps(self.config))
         for name in (
             "LDAP_BIND_PASSWORD",
-            "OIDC_CLIENT_SECRET",
+            "APPLICATION_API_KEY",
             "JELLYFIN_ADMIN_PASSWORD",
         ):
             (self.directory / name).write_text("synthetic-credential-must-not-appear")
@@ -169,20 +169,20 @@ class ConfigurationTest(unittest.TestCase):
             self.state["ldap"]["LdapUsers"][0]["ProfileImageHash"], "retained"
         )
         self.assertEqual(
-            self.state["sso"]["OidConfigs"]["canaille"]["CanonicalLinks"],
+            self.state["application"]["Settings"]["managed"]["RuntimeLinks"],
             {"alice": "one"},
         )
-        self.assertTrue(self.state["sso"]["OidConfigs"]["other"]["Enabled"])
+        self.assertTrue(self.state["application"]["Settings"]["other"]["Enabled"])
         first_posts = copy.deepcopy(self.state["posts"])
         self.reconciler.run_once()
         self.assertEqual(self.state["posts"][len(first_posts) :], [])
         self.state["ldap"]["LdapServer"] = "drift"
-        (self.directory / "OIDC_CLIENT_SECRET").write_text("rotated-synthetic")
+        (self.directory / "APPLICATION_API_KEY").write_text("rotated-synthetic")
         restarted = configuration.Reconciler(self.path, self.directory)
         restarted.run_once()
         self.assertEqual(self.state["ldap"]["LdapServer"], "ldap.finnes.dev")
         self.assertEqual(
-            self.state["sso"]["OidConfigs"]["canaille"]["OidSecret"],
+            self.state["application"]["Settings"]["managed"]["ApiKey"],
             "rotated-synthetic",
         )
         self.assertEqual(self.state["posts"].count("/Startup/User"), 1)
@@ -265,9 +265,9 @@ class ConfigurationTest(unittest.TestCase):
         self.assertEqual(
             sorted(path.name for path in self.directory.iterdir()),
             [
+                "APPLICATION_API_KEY",
                 "JELLYFIN_ADMIN_PASSWORD",
                 "LDAP_BIND_PASSWORD",
-                "OIDC_CLIENT_SECRET",
                 "configuration.json",
             ],
         )

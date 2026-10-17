@@ -8,20 +8,16 @@ work_dir=$(mktemp -d)
 trap 'rm -rf -- "$work_dir"' EXIT
 ldap_repository=$(jq -r .ldap.repository "$package_dir/plugins.lock.json")
 ldap_revision=$(jq -r .ldap.revision "$package_dir/plugins.lock.json")
-sso_repository=$(jq -r .sso.repository "$package_dir/plugins.lock.json")
-sso_tag=$(jq -r .sso.tag "$package_dir/plugins.lock.json")
-sso_asset=$(jq -r .sso.asset "$package_dir/plugins.lock.json")
-sso_sha256=$(jq -r .sso.sha256 "$package_dir/plugins.lock.json")
-gh repo clone "$ldap_repository" "$work_dir/ldap" -- --filter=blob:none
-git -C "$work_dir/ldap" checkout --detach "$ldap_revision"
-rm -rf -- "$work_dir/ldap/.git"
-gh repo clone "$sso_repository" "$work_dir/sso-source" -- --depth=1 --branch "$sso_tag"
-gh release download "$sso_tag" --repo "$sso_repository" --pattern "$sso_asset" --dir "$work_dir"
-printf '%s  %s\n' "$sso_sha256" "$work_dir/$sso_asset" | sha256sum --check --status
-mkdir "$work_dir/sso"
-unzip -q "$work_dir/$sso_asset" -d "$work_dir/sso"
+ldap_tag=$(jq -r .ldap.tag "$package_dir/plugins.lock.json")
+ldap_asset=$(jq -r .ldap.asset "$package_dir/plugins.lock.json")
+ldap_sha256=$(jq -r .ldap.sha256 "$package_dir/plugins.lock.json")
+gh release download "$ldap_tag" --repo "$ldap_repository" --pattern "$ldap_asset" --dir "$work_dir"
+printf '%s  %s\n' "$ldap_sha256" "$work_dir/$ldap_asset" | sha256sum --check --status
+mkdir "$work_dir/ldap" "$work_dir/license"
+unzip -q "$work_dir/$ldap_asset" -d "$work_dir/ldap"
+gh api "repos/$ldap_repository/contents/LICENSE?ref=$ldap_revision" --jq .content \
+    | base64 --decode > "$work_dir/license/LICENSE"
 docker build \
-    --build-context "ldap-source=$work_dir/ldap" \
-    --build-context "sso-plugin=$work_dir/sso" \
-    --build-context "sso-license=$work_dir/sso-source" \
+    --build-context "ldap-plugin=$work_dir/ldap" \
+    --build-context "ldap-license=$work_dir/license" \
     --tag "$image" "$package_dir"

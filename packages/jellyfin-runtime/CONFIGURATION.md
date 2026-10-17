@@ -29,8 +29,7 @@ A resource declares an API `path`, nested `values`, and optional `secretValues`:
 Each poll reads the latest desired configuration and credential files, GETs the
 current API configuration, compares the declared fields, and POSTs a merged
 configuration when those fields differ. Undeclared object fields survive,
-including LDAP user links and photo hashes, SSO canonical links, and unrelated
-providers. Arrays are owned as complete values. Media libraries are additive:
+including LDAP user links, photo hashes, and unrelated settings. Arrays are owned as complete values. Media libraries are additive:
 missing libraries and declared paths are created without deleting other libraries
 or paths; an existing library with a conflicting collection type fails visibly.
 Plugin repositories are disabled because plugin binaries are maintained through
@@ -69,29 +68,20 @@ cannot safely perform this credential-bearing GET/merge/POST workflow:
   fails. The response retains plaintext credentials and observation continues.
 
 This is why application configuration uses a small sidecar rather than a generic
-HTTP Request managed resource. LDAP entries and OAuth2 client registration remain
-Crossplane resources.
+HTTP Request managed resource. LDAP entries remain Crossplane resources.
 
 ## Plugin compatibility and photos
 
-`plugins.lock.json` pins Jellyfin 10.11.11, LDAP 23, and SSO 4.0.0.4. LDAP 24 targets
-Jellyfin 12, while the pinned SSO plugin targets 10.11. Upstream LDAP code is MIT;
-Jellyfin and SSO retain their upstream GPL licenses. Newly authored integration
-code and the LDAP patch are MIT. Build steps preserve upstream license notices;
-no generated source or upstream license headers are rewritten.
+`plugins.lock.json` pins Jellyfin 10.11.11 and the unmodified upstream LDAP 23
+release ZIP by SHA-256, with its source revision recorded for license provenance
+and rebuilding. There is no local plugin patch or .NET build stage. Upstream LDAP code is MIT; Jellyfin retains its GPL license. Newly
+authored integration code is MIT, and builds preserve upstream license notices.
 
-The LDAP patch lets the scheduled photo-sync task discover SSO-created users
-already assigned to the LDAP authentication provider. It requires a unique LDAP
-result, an exact configured username match, and an unclaimed LDAP UID. It does not
-require the user's password, change authentication providers, or reset existing
-photo hashes. Configure matching LDAP and OIDC usernames (`uid` and
-`sub` for Canaille 0.3.6), and set SSO `DefaultProvider` to
-`Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin`.
-
-Canaille's `groups` scope emits group display names (LDAP `cn`), so SSO roles use
-`media.jellyfin-users`; the LDAP filter uses that group's complete DN. Register
-this client with `client_secret_post`: the pinned [OIDC client library defaults
-to POST-body client credentials](https://github.com/DuendeSoftware/foss/blob/imoc-6.0.1/identity-model-oidc-client/src/IdentityModel.OidcClient/OidcClientOptions.cs#L210).
+Users sign in with their directory username and password. The upstream LDAP
+plugin creates their Jellyfin account and records its LDAP UID. Its scheduled
+profile-image task then reads `jpegPhoto` for those linked users. The application
+group filter controls who can sign in. No Jellyfin SSO plugin or OAuth client is
+required.
 
 ## Verification
 
@@ -110,12 +100,8 @@ JELLYFIN_INTEGRATION_IMAGE=ops-jellyfin:development \
   -p test_identity_integration.py -v
 ```
 
-The integration test requires Docker. It creates
-and deletes its own container and LDAP process. Its SSO-first test reproduces the
-account state produced by SSO (new user plus LDAP provider assignment); it does
-not replace a complete browser-based OIDC authorization-flow test.
-
-Canaille 0.3.6 maps `sub` to the directory username and `preferred_username` to
-the editable display name. Jellyfin uses `sub` so SSO, LDAP password login and
-photo lookup select the same UID. See the
-[pinned claim defaults](https://github.com/yaal-coop/canaille/blob/0.3.6/canaille/oidc/configuration.py).
+The integration test requires Docker and deletes its own synthetic directory and
+application containers. It signs in through the ordinary LDAP password endpoint,
+runs upstream scheduled photo synchronization, checks the returned JPEG and LDAP
+photo hash, reconciles settings drift without losing the LDAP link, and signs in
+again with the same Jellyfin user ID.

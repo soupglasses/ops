@@ -20,7 +20,6 @@ from configuration import ConfigurationError, Reconciler
 from health import ready
 
 LDAP_ID = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"
-SSO_ID = "505ce9d1-d916-42fa-86ca-673ef241d7df"
 LDAP_PROVIDER = "Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin"
 PASSWORD = "disposable-integration-credential"
 
@@ -36,7 +35,7 @@ def command(*args, **kwargs):
     "set JELLYFIN_INTEGRATION_IMAGE to run disposable Docker/OpenLDAP tests",
 )
 class IdentityIntegration(unittest.TestCase):
-    def test_sso_created_user_receives_ldap_photo_before_password_login(self):
+    def test_ldap_password_login_and_upstream_scheduled_photo_sync(self):
         temporary = tempfile.TemporaryDirectory(prefix="ops-jellyfin-identity-")
         self.addCleanup(temporary.cleanup)
         work = Path(temporary.name)
@@ -161,27 +160,6 @@ sn: Fixture
 userPassword: {PASSWORD}
 jpegPhoto:: {base64.b64encode(jpeg).decode()}
 
-dn: uid=bob,ou=users,dc=example,dc=test
-objectClass: inetOrgPerson
-uid: bob
-cn: bob
-sn: Fixture
-jpegPhoto:: {base64.b64encode(jpeg).decode()}
-
-dn: cn=collision-one,ou=users,dc=example,dc=test
-objectClass: inetOrgPerson
-cn: collision-one
-uid: ambiguous
-sn: Fixture
-jpegPhoto:: {base64.b64encode(jpeg).decode()}
-
-dn: cn=collision-two,ou=users,dc=example,dc=test
-objectClass: inetOrgPerson
-cn: collision-two
-uid: ambiguous
-sn: Fixture
-jpegPhoto:: {base64.b64encode(jpeg).decode()}
-
 """
         command(
             "docker",
@@ -252,7 +230,6 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         credentials.mkdir()
         for name in (
             "LDAP_BIND_PASSWORD",
-            "OIDC_CLIENT_SECRET",
             "JELLYFIN_ADMIN_PASSWORD",
         ):
             (credentials / name).write_text(PASSWORD)
@@ -296,26 +273,6 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                         {"path": ["LdapBindPassword"], "file": "LDAP_BIND_PASSWORD"}
                     ],
                 },
-                {
-                    "path": f"/Plugins/{SSO_ID}/Configuration",
-                    "values": {
-                        "OidConfigs": {
-                            "canaille": {
-                                "Enabled": True,
-                                "OidEndpoint": "https://auth.example.test",
-                                "OidClientId": "fixture.jellyfin",
-                                "DefaultProvider": LDAP_PROVIDER,
-                                "DefaultUsernameClaim": "sub",
-                            }
-                        }
-                    },
-                    "secretValues": [
-                        {
-                            "path": ["OidConfigs", "canaille", "OidSecret"],
-                            "file": "OIDC_CLIENT_SECRET",
-                        }
-                    ],
-                },
             ],
         }
         desired["libraries"] = [
@@ -339,9 +296,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                 },
                 {
                     "path": "/System/Configuration/branding",
-                    "values": {
-                        "LoginDisclaimer": '<form action="/sso/OID/start/canaille"><button>Sign in with SSO</button></form>'
-                    },
+                    "values": {"LoginDisclaimer": ""},
                 },
             ]
         )
@@ -378,20 +333,17 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                 "Music": ["/media/music"],
             },
         )
-        # Reproduce the exact SSO-first state: SSO creates a local user, then
-        # assigns DefaultProvider. No LDAP password authentication has happened.
-        reconciler.request("POST", "/Users/New", {"Name": "bob"})
-        ambiguous = reconciler.request("POST", "/Users/New", {"Name": "ambiguous"})
-        ambiguous_policy = ambiguous["Policy"]
-        ambiguous_policy["AuthenticationProviderId"] = LDAP_PROVIDER
-        reconciler.request("POST", f"/Users/{ambiguous['Id']}/Policy", ambiguous_policy)
-        user = reconciler.request("POST", "/Users/New", {"Name": "alice"})
-        user_id = user["Id"]
-        policy = user["Policy"]
-        policy["AuthenticationProviderId"] = LDAP_PROVIDER
-        reconciler.request("POST", f"/Users/{user_id}/Policy", policy)
+        result = reconciler.request(
+            "POST",
+            "/Users/AuthenticateByName",
+            {"Username": "alice", "Pw": PASSWORD},
+            authenticated=False,
+        )
+        user_id = result["User"]["Id"]
         ldap_path = f"/Plugins/{LDAP_ID}/Configuration"
-        self.assertEqual(reconciler.request("GET", ldap_path)["LdapUsers"], [])
+        linked = reconciler.request("GET", ldap_path)["LdapUsers"]
+        self.assertEqual(len(linked), 1)
+        self.assertEqual(linked[0]["LdapUid"], "alice")
         tasks = reconciler.request("GET", "/ScheduledTasks")
         task = next(task for task in tasks if task["Key"] == "LdapProfileImageSync")
         reconciler.request("POST", f"/ScheduledTasks/Running/{task['Id']}")
@@ -411,7 +363,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             except OSError:
                 pass
             time.sleep(0.25)
-        self.assertIsNotNone(image, "SSO-first user never received an LDAP photo")
+        self.assertIsNotNone(image, "LDAP user never received an LDAP photo")
         self.assertEqual(image[:2], b"\xff\xd8")
         before = reconciler.request("GET", ldap_path)["LdapUsers"]
         self.assertEqual(len(before), 1)

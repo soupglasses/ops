@@ -60,7 +60,9 @@ class CheckpointTests(unittest.TestCase):
             self.assertTrue((destination / "checkpoint.tar").exists())
             return open_archive(*args, **kwargs)
 
-        with mock.patch.object(runtime.tarfile, "open", side_effect=require_restore_headroom):
+        with mock.patch.object(
+            runtime.tarfile, "open", side_effect=require_restore_headroom
+        ):
             runtime.restore(destination)
         self.assertEqual(
             runtime.inventory(self.source), runtime.inventory(destination / "server")
@@ -261,7 +263,9 @@ while True: time.sleep(0.05)
         (self.source / "plugins/LDAP-Auth_22").mkdir()
         (self.source / "plugins/LDAP-Auth_22/LDAP.dll").write_bytes(b"old plugin")
         (self.source / "plugins/Other_1").mkdir()
+        (self.source / "plugins/SSO-Auth_4.0.0.4").mkdir()
         runtime.seed_plugins(self.source, distribution)
+        self.assertFalse((self.source / "plugins/SSO-Auth_4.0.0.4").exists())
         self.assertFalse((self.source / "plugins/LDAP-Auth_22").exists())
         self.assertEqual(
             (self.source / "plugins/LDAP-Auth_23/LDAP.dll").read_bytes(),

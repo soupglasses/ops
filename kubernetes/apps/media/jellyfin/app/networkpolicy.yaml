@@ -38,15 +38,6 @@ spec:
         - ports:
             - port: "1636"
               protocol: TCP
-    # Gateway hairpin egress is evaluated against the selected backend and pod port.
-    - toEndpoints:
-        - matchLabels:
-            k8s:io.kubernetes.pod.namespace: identity
-            k8s:app.kubernetes.io/name: canaille
-      toPorts:
-        - ports:
-            - port: "8000"
-              protocol: TCP
     - toFQDNs:
         - matchName: ldap.finnes.dev
       toPorts:
