@@ -17,6 +17,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from configuration import ConfigurationError, Reconciler
+from health import ready
 
 LDAP_ID = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"
 SSO_ID = "505ce9d1-d916-42fa-86ca-673ef241d7df"
@@ -226,15 +227,23 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             os.environ["JELLYFIN_INTEGRATION_IMAGE"],
         ).strip()
         self.addCleanup(lambda: command("docker", "rm", "--force", container))
-        self.addCleanup(
-            lambda: Path("/tmp/ops-jellyfin-fixture.log").write_bytes(
-                subprocess.run(
-                    ["docker", "logs", container],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                ).stdout
-            )
-        )
+
+        def fixture_diagnostics():
+            logs = subprocess.run(
+                ["docker", "logs", container],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            ).stdout
+            Path("/tmp/ops-jellyfin-fixture.log").write_bytes(logs)
+            result = self._outcome.result
+            if any(test is self for test, _ in result.errors + result.failures):
+                print(
+                    "Synthetic Jellyfin fixture log:\n"
+                    + logs.decode(errors="replace")[-16000:],
+                    file=sys.stderr,
+                )
+
+        self.addCleanup(fixture_diagnostics)
         binding = json.loads(command("docker", "inspect", container))[0][
             "NetworkSettings"
         ]["Ports"]["8096/tcp"][0]
@@ -340,21 +349,16 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         desired_path.write_text(json.dumps(desired))
         reconciler = Reconciler(desired_path, credentials)
         for _ in range(240):
-            try:
-                with urllib.request.urlopen(url + "/health", timeout=1):
-                    break
-            except OSError:
-                status = command(
-                    "docker", "inspect", "--format", "{{.State.Status}}", container
-                ).strip()
-                if status == "exited":
-                    raise AssertionError(
-                        "fixture Jellyfin exited: "
-                        + command("docker", "logs", container)[-4000:]
-                    )
-                time.sleep(0.5)
+            if ready(url + "/health"):
+                break
+            status = command(
+                "docker", "inspect", "--format", "{{.State.Status}}", container
+            ).strip()
+            if status == "exited":
+                self.fail("fixture Jellyfin exited before becoming healthy")
+            time.sleep(0.5)
         else:
-            self.fail("Jellyfin did not become healthy")
+            self.fail("Jellyfin did not finish startup (health body must be Healthy)")
         for _ in range(120):
             try:
                 reconciler.run_once()

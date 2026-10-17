@@ -18,7 +18,7 @@ COPY --from=ldap-build /out/LDAP-Auth.dll /out/Novell.Directory.Ldap.NETStandard
 COPY --from=ldap-source /LICENSE /usr/share/licenses/jellyfin-ldap/LICENSE
 COPY --from=sso-plugin . /opt/jellyfin/plugins/SSO-Auth_4.0.0.4/
 COPY --from=sso-license /LICENSE.txt /usr/share/licenses/jellyfin-sso/LICENSE
-COPY runtime.py configuration.py media_restore.py /usr/local/lib/jellyfin/
+COPY runtime.py configuration.py media_restore.py health.py /usr/local/lib/jellyfin/
 ENV JELLYFIN_DATA_DIR=/config/server \
     JELLYFIN_CONFIG_DIR=/config/server/config \
     JELLYFIN_LOG_DIR=/config/server/log \
