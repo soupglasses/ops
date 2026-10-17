@@ -13,8 +13,9 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Stop logging idle Jellyfin configuration polls as applied changes. The success
   message was unconditional; log only successful configuration writes while keeping
   health checks fresh. HTTP regression tests cover idle polls and drift repair.
-- [ ] Verify quiet Jellyfin polling live after deploying the updated runtime image;
-  the current kandev credentials permit logs but deny the read-only `pods/exec` check.
+- [x] Deploy the updated Jellyfin configuration sidecar and verify two minutes of
+  quiet polls, both containers Ready, zero restarts and Flux Ready/Healthy at
+  `9ef4e71`. Runtime CI, LDAP integration and 57 Flux validation checks passed.
 
 - [x] Scope LDAP platform configuration independently of Jellyfin, adopt app-local
   `GroupOfNames` declarations through the shared administrative provider, mark
