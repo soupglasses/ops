@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: MIT
 
-{{ media_storage_mountpoint }}{% for client in media_storage_nfs_clients %} {{ client }}(rw,sync,root_squash,no_subtree_check,mountpoint,fsid={{ media_storage_nfs_fsid }}){% endfor %}
+{{ media_storage_mountpoint }}{% for client in media_storage_nfs_clients %} {{ client }}(rw,sync,root_squash{% if client in media_storage_nfs_anonymous_writer_clients %},anonuid=65534,anongid={{ media_storage_gid }}{% endif %},no_subtree_check,mountpoint,fsid={{ media_storage_nfs_fsid }}){% endfor %}

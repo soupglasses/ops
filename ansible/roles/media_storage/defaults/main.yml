@@ -16,3 +16,6 @@ media_storage_nfs_clients:
   - 172.21.70.0/24
   - 2a13:e745:1ee8:69::/64
   - 2a13:e745:1ee8:70::/64
+# The mounting CSI plugins need shared-writer access after server-side root group mapping.
+media_storage_nfs_anonymous_writer_clients:
+  - 172.21.71.10/32

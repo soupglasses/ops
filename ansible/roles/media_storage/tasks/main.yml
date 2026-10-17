@@ -22,6 +22,14 @@
       - item not in ['0.0.0.0/0', '::/0']
   loop: "{{ media_storage_nfs_clients }}"
 
+- name: Restrict anonymous writer mapping to explicitly exported clients
+  ansible.builtin.assert:
+    that:
+      - media_storage_nfs_anonymous_writer_clients | difference(media_storage_nfs_clients) | length ==
+        0
+      - media_storage_nfs_anonymous_writer_clients == ['172.21.71.10/32']
+    fail_msg: Anonymous media writer mapping is reserved for the NAS CSI mounting client.
+
 - name: Require the existing pool to be imported
   ansible.builtin.command:
     argv: [zpool, list, -H, -o, name, "{{ zfs_pool_name }}"]

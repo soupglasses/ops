@@ -22,3 +22,15 @@ spec:
     crds: CreateReplace
   values:
     args: [--poll-interval=1m]
+    securityContextCrossplane:
+      runAsNonRoot: true
+      capabilities:
+        drop: [ALL]
+      seccompProfile:
+        type: RuntimeDefault
+    securityContextRBACManager:
+      runAsNonRoot: true
+      capabilities:
+        drop: [ALL]
+      seccompProfile:
+        type: RuntimeDefault

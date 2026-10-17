@@ -48,6 +48,14 @@ firewall must permit that port from the same private clients; public access rema
 denied. NFSv2, NFSv3 and UDP are disabled. NFS AUTH_SYS trusts the allowed clients'
 numeric user/group IDs; this is private LAN storage, not an Internet-facing share.
 
+The NAS export client (`172.21.71.10/32`) additionally maps squashed root to UID
+`65534` and media writer GID `2000`. Ubuntu's NFS `manage-gids` replaces a root
+CSI process's supplementary groups with the host's root groups, so the client's
+supplementary media group alone does not provide access. This mapping grants the
+mounting plugins shared-writer access while preserving root squashing and the
+private `2770` directory mode. It does not grant root ownership or administrator
+access. LAN and VPN export clients retain the default anonymous identity.
+
 The shared writer group is `media`, GID `2000`. The role adds the named administrator
 to it. New login sessions pick up the membership. Directories use setgid and default
 ACLs, so new files retain shared group access without making the share world readable.
