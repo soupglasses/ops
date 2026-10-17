@@ -41,12 +41,24 @@ def contains(current, desired):
     return type(current) is type(desired) and current == desired
 
 
+def changed_fields(current, desired, prefix=()):
+    fields = []
+    for key, value in desired.items():
+        path = (*prefix, key)
+        if isinstance(value, dict) and isinstance(current.get(key), dict):
+            fields.extend(changed_fields(current[key], value, path))
+        elif key not in current or not contains(current[key], value):
+            fields.append(list(path))
+    return fields
+
+
 class Reconciler:
     def __init__(self, config_path, credentials_dir):
         self.config_path = Path(config_path)
         self.credentials_dir = Path(credentials_dir)
         self.token = None
         self.changed = False
+        self.changes = []
         self.opener = urllib.request.build_opener(NoRedirect())
 
     def credential(self, name):
@@ -64,7 +76,15 @@ class Reconciler:
             raise ConfigurationError("empty credential file")
         return value
 
-    def request(self, method, path, body=None, authenticated=True, retry=True):
+    def request(
+        self,
+        method,
+        path,
+        body=None,
+        authenticated=True,
+        retry=True,
+        change=None,
+    ):
         if not path.startswith("/") or path.startswith("//"):
             raise ConfigurationError("invalid API path")
         headers = {"Content-Type": "application/json"}
@@ -78,24 +98,50 @@ class Reconciler:
         try:
             with self.opener.open(
                 urllib.request.Request(
-                    self.base_url + path, data=data, headers=headers, method=method
+                    self.base_url + path,
+                    data=data,
+                    headers=headers,
+                    method=method,
                 ),
                 timeout=15,
             ) as response:
                 content = response.read()
+                result = json.loads(content) if content else None
                 if method == "POST" and path != "/Users/AuthenticateByName":
                     self.changed = True
-                return json.loads(content) if content else None
+                    event = {
+                        "message": "Jellyfin configuration changed",
+                        "level": "info",
+                        "action": "initialized"
+                        if path.startswith("/Startup/")
+                        else "updated",
+                        "resource": urllib.parse.urlsplit(path).path,
+                        **(change or {}),
+                    }
+                    self.changes.append(event)
+                    print(json.dumps(event), flush=True)
+                return result
         except urllib.error.HTTPError as error:
             status = error.code
             error.close()
             if status == 401 and authenticated and retry:
                 self.token = None
                 self.authenticate()
-                return self.request(method, path, body, authenticated, retry=False)
-            raise ConfigurationError(f"API request failed (HTTP {status})") from None
+                return self.request(
+                    method,
+                    path,
+                    body,
+                    authenticated,
+                    retry=False,
+                    change=change,
+                )
+            raise ConfigurationError(
+                f"API {method} {urllib.parse.urlsplit(path).path} failed (HTTP {status})"
+            ) from None
         except (OSError, ValueError):
-            raise ConfigurationError("API request failed") from None
+            raise ConfigurationError(
+                f"API {method} {urllib.parse.urlsplit(path).path} failed"
+            ) from None
 
     def authenticate(self):
         result = self.request(
@@ -170,7 +216,11 @@ class Reconciler:
                 if check_only:
                     raise ConfigurationError("managed media library is missing")
                 query = urllib.parse.urlencode(
-                    {"name": name, "collectionType": kind, "refreshLibrary": "false"}
+                    {
+                        "name": name,
+                        "collectionType": kind,
+                        "refreshLibrary": "false",
+                    }
                 )
                 self.request(
                     "POST",
@@ -179,6 +229,11 @@ class Reconciler:
                         "LibraryOptions": {
                             "PathInfos": [{"Path": path} for path in paths]
                         }
+                    },
+                    change={
+                        "action": "created",
+                        "library": name,
+                        "paths": paths,
                     },
                 )
                 continue
@@ -196,14 +251,21 @@ class Reconciler:
                         "POST",
                         "/Library/VirtualFolders/Paths?refreshLibrary=false",
                         {"Name": name, "Path": path},
+                        change={
+                            "action": "path_added",
+                            "library": name,
+                            "path": path,
+                        },
                     )
 
     def run_once(self, check_only=False):
         self.changed = False
+        self.changes = []
         self.load()
         info = self.request("GET", "/System/Info/Public", authenticated=False)
         if not info.get(
-            "StartupWizardCompleted", info.get("IsStartupWizardCompleted", False)
+            "StartupWizardCompleted",
+            info.get("IsStartupWizardCompleted", False),
         ):
             if check_only:
                 raise ConfigurationError("startup wizard is incomplete")
@@ -243,7 +305,12 @@ class Reconciler:
             if not contains(current, desired):
                 if check_only:
                     raise ConfigurationError("managed configuration has drifted")
-                self.request("POST", resource["path"], merge(current, desired))
+                self.request(
+                    "POST",
+                    resource["path"],
+                    merge(current, desired),
+                    change={"fields": changed_fields(current, desired)},
+                )
         self.reconcile_libraries(check_only)
         return int(self.config.get("intervalSeconds", 60))
 
@@ -259,10 +326,14 @@ def main():
         help="verify owned fields without changing server settings",
     )
     parser.add_argument(
-        "--health", action="store_true", help="check recent successful reconciliation"
+        "--health",
+        action="store_true",
+        help="check recent successful reconciliation",
     )
     parser.add_argument(
-        "--health-file", type=Path, default=Path("/run/jellyfin/configuration.ready")
+        "--health-file",
+        type=Path,
+        default=Path("/run/jellyfin/configuration.ready"),
     )
     args = parser.parse_args()
     if args.health:
@@ -279,13 +350,38 @@ def main():
                 args.health_file.parent.mkdir(parents=True, exist_ok=True)
                 args.health_file.touch()
             if reconciler.changed:
-                print("Jellyfin configuration reconciled", flush=True)
+                counts = {
+                    action: sum(
+                        event["action"] == action for event in reconciler.changes
+                    )
+                    for action in (
+                        "created",
+                        "updated",
+                        "path_added",
+                        "initialized",
+                    )
+                }
+                print(
+                    json.dumps(
+                        {
+                            "message": "Jellyfin configuration reconciled",
+                            "level": "info",
+                            "changed": len(reconciler.changes),
+                            **counts,
+                        }
+                    ),
+                    flush=True,
+                )
             elif args.once or args.check:
                 print("Jellyfin configuration is in sync", flush=True)
         except ConfigurationError as error:
             if not args.once and not args.check:
                 args.health_file.unlink(missing_ok=True)
-            print(str(error), file=sys.stderr, flush=True)
+            print(
+                json.dumps({"message": str(error), "level": "error"}),
+                file=sys.stderr,
+                flush=True,
+            )
             if args.once or args.check:
                 return 1
         if args.once or args.check:

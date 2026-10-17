@@ -86,6 +86,21 @@ ID and non-sensitive verification results, then delete temporary resources. Medi
 requires its own backup and restore checks; local ZFS snapshots alone do not survive
 loss of the NAS or pool.
 
+## Configuration logs
+
+The configuration sidecar checks managed settings every minute. Idle polls are silent
+and still refresh its health marker. Successful writes emit JSON at `info` level with
+the API resource, operation and changed field paths. Nested field paths are arrays of
+key names; setting values, passwords, tokens and response bodies are never logged.
+Library events identify the library and paths created or added. Each changed poll ends
+with operation counts (`created`, `updated`, `path_added`, `initialized`) and a total
+`changed` count. Counts describe successful API writes, not individual fields.
+
+Writes are logged immediately, so a later failure cannot hide earlier changes. Errors
+use `error` level and identify the API method and endpoint when a request fails. The
+reconciler preserves unmanaged settings and libraries and performs no deletions.
+Use `configuration.py --check` for an explicit in-sync result without changing settings.
+
 ## Tests
 
 ```sh

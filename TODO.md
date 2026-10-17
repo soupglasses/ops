@@ -10,6 +10,11 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [x] Add structured Jellyfin reconciliation diagnostics: successful write counts,
+  API resources, changed field names, library operations and request failure context.
+  Keep setting values and credentials out of logs; preserve quiet idle polling.
+  Fourteen HTTP tests cover summaries, failures, partial progress and authentication.
+
 - [x] Stop logging idle Jellyfin configuration polls as applied changes. The success
   message was unconditional; log only successful configuration writes while keeping
   health checks fresh. HTTP regression tests cover idle polls and drift repair.

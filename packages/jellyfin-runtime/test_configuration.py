@@ -37,7 +37,10 @@ class ConfigurationTest(unittest.TestCase):
                 "LdapServer": "wrong",
                 "LdapBindPassword": "old",
                 "LdapUsers": [
-                    {"LinkedJellyfinUserId": "one", "ProfileImageHash": "retained"}
+                    {
+                        "LinkedJellyfinUserId": "one",
+                        "ProfileImageHash": "retained",
+                    }
                 ],
             },
             "application": {
@@ -79,13 +82,19 @@ class ConfigurationTest(unittest.TestCase):
                 data = self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 body = json.loads(data) if data else None
                 state["posts"].append(self.path)
+                if self.path in state.get("fail_posts", []):
+                    self.send_error(500)
+                    return
                 result = None
                 if self.path == "/Startup/User":
                     state["password"] = body["Password"]
                 elif self.path == "/Startup/Complete":
                     state["completed"] = True
                 elif self.path == "/Users/AuthenticateByName":
-                    if body != {"Username": "ops-recovery", "Pw": state["password"]}:
+                    if body != {
+                        "Username": "ops-recovery",
+                        "Pw": state["password"],
+                    }:
                         self.send_error(401, "synthetic-credential-must-not-appear")
                         return
                     result = {"AccessToken": "fixture-token"}
@@ -141,7 +150,10 @@ class ConfigurationTest(unittest.TestCase):
                         "EnableLdapProfileImageSync": True,
                     },
                     "secretValues": [
-                        {"path": ["LdapBindPassword"], "file": "LDAP_BIND_PASSWORD"}
+                        {
+                            "path": ["LdapBindPassword"],
+                            "file": "LDAP_BIND_PASSWORD",
+                        }
                     ],
                 },
                 {
@@ -203,7 +215,9 @@ class ConfigurationTest(unittest.TestCase):
         self.assertNotIn("/Startup/User", self.state["posts"])
         self.assertEqual(self.state["ldap"]["LdapServer"], "wrong")
 
-    def test_polling_logs_changes_but_keeps_idle_polls_silent_and_healthy(self):
+    def test_polling_logs_changes_but_keeps_idle_polls_silent_and_healthy(
+        self,
+    ):
         marker = self.directory / "ready"
         output = io.StringIO()
         polls = 0
@@ -224,6 +238,12 @@ class ConfigurationTest(unittest.TestCase):
             else:
                 self.assertEqual(self.state["posts"], ["/ldap"])
                 self.assertEqual(output.getvalue().count("configuration reconciled"), 2)
+                summary = json.loads(output.getvalue().splitlines()[-1])
+                self.assertEqual(summary["changed"], 1)
+                self.assertEqual(summary["updated"], 1)
+                self.assertEqual(summary["created"], 0)
+                self.assertEqual(summary["path_added"], 0)
+                self.assertEqual(summary["initialized"], 0)
                 raise StopIteration
 
         with (
@@ -248,6 +268,103 @@ class ConfigurationTest(unittest.TestCase):
         self.assertEqual(output.getvalue(), "Jellyfin configuration is in sync\n")
         self.assertEqual(self.state["posts"], [])
 
+    def test_change_logs_identify_fields_and_library_operations_without_values(
+        self,
+    ):
+        self.config["libraries"] = [
+            {
+                "name": "Movies",
+                "collectionType": "movies",
+                "paths": ["/media/movies"],
+            }
+        ]
+        self.path.write_text(json.dumps(self.config))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.reconciler.run_once()
+            self.reconciler.run_once()
+        events = [json.loads(line) for line in output.getvalue().splitlines()]
+        updates = [event for event in events if event["action"] == "updated"]
+        self.assertEqual(
+            [event["resource"] for event in updates], ["/ldap", "/application"]
+        )
+        self.assertEqual(
+            updates[0]["fields"],
+            [
+                ["LdapServer"],
+                ["EnableLdapProfileImageSync"],
+                ["LdapBindPassword"],
+            ],
+        )
+        self.assertEqual(
+            updates[1]["fields"],
+            [
+                ["Settings", "managed", "Enabled"],
+                ["Settings", "managed", "ApiKey"],
+            ],
+        )
+        self.assertEqual(events[-1]["action"], "created")
+        self.assertEqual(events[-1]["library"], "Movies")
+        self.assertEqual(events[-1]["paths"], ["/media/movies"])
+        self.assertNotIn("synthetic", output.getvalue())
+        self.assertNotIn("fixture-token", output.getvalue())
+        self.assertNotIn("RuntimeLinks", output.getvalue())
+        self.state["libraries"][-1]["Locations"] = []
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.reconciler.run_once()
+        event = json.loads(output.getvalue())
+        self.assertEqual(event["action"], "path_added")
+        self.assertEqual(event["library"], "Movies")
+        self.assertEqual(event["path"], "/media/movies")
+
+    def test_successful_changes_are_logged_even_if_a_later_resource_fails(
+        self,
+    ):
+        self.reconciler.run_once()
+        self.state["ldap"]["LdapServer"] = "drift"
+        self.config["libraries"] = [
+            {
+                "name": "Unmanaged",
+                "collectionType": "movies",
+                "paths": ["/media/movies"],
+            }
+        ]
+        self.path.write_text(json.dumps(self.config))
+        output = io.StringIO()
+        with (
+            contextlib.redirect_stdout(output),
+            self.assertRaises(configuration.ConfigurationError),
+        ):
+            self.reconciler.run_once()
+        event = json.loads(output.getvalue())
+        self.assertEqual(event["resource"], "/ldap")
+        self.assertEqual(event["fields"], [["LdapServer"]])
+
+    def test_failed_update_is_not_logged_as_success(self):
+        self.reconciler.run_once()
+        self.state["ldap"]["LdapServer"] = "drift"
+        self.state["fail_posts"] = ["/ldap"]
+        output = io.StringIO()
+        with (
+            contextlib.redirect_stdout(output),
+            self.assertRaisesRegex(
+                configuration.ConfigurationError, "POST /ldap failed"
+            ),
+        ):
+            self.reconciler.run_once()
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(self.reconciler.changes, [])
+
+    def test_authentication_after_restart_does_not_log_a_configuration_change(self):
+        self.reconciler.run_once()
+        restarted = configuration.Reconciler(self.path, self.directory)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            restarted.run_once()
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(restarted.changes, [])
+
     def test_missing_credentials_does_not_write_settings(self):
         self.reconciler.run_once()
         self.state["posts"].clear()
@@ -267,7 +384,11 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_libraries_are_additive_and_checked_without_deletion(self):
         self.config["libraries"] = [
-            {"name": "Movies", "collectionType": "movies", "paths": ["/media/movies"]}
+            {
+                "name": "Movies",
+                "collectionType": "movies",
+                "paths": ["/media/movies"],
+            }
         ]
         self.path.write_text(json.dumps(self.config))
         self.reconciler.run_once()
@@ -281,7 +402,8 @@ class ConfigurationTest(unittest.TestCase):
             self.reconciler.run_once(check_only=True)
         self.reconciler.run_once()
         self.assertEqual(
-            self.state["libraries"][1]["Locations"], ["/media/extra", "/media/movies"]
+            self.state["libraries"][1]["Locations"],
+            ["/media/extra", "/media/movies"],
         )
         self.state["libraries"][1]["CollectionType"] = "music"
         with self.assertRaises(configuration.ConfigurationError):
@@ -291,7 +413,8 @@ class ConfigurationTest(unittest.TestCase):
     def test_health_marker_staleness(self):
         marker = self.directory / "ready"
         with patch(
-            "sys.argv", ["configuration", "--health", "--health-file", str(marker)]
+            "sys.argv",
+            ["configuration", "--health", "--health-file", str(marker)],
         ):
             self.assertEqual(configuration.main(), 1)
             marker.touch()
@@ -308,7 +431,10 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_response_credentials_never_printed(self):
         output = io.StringIO()
-        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+        with (
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(output),
+        ):
             self.reconciler.run_once()
         self.assertNotIn("synthetic", output.getvalue())
         self.assertEqual(
