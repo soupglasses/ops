@@ -132,9 +132,11 @@ HTTPS access to the trusted LAN, VPN and NAS. See
 
 Inside the cluster, `auth.finnes.dev` resolves to the public Gateway's BGP VIPs
 through the RKE2 CoreDNS configuration. This avoids WAN hairpin routing while
-retaining the public issuer hostname and verified TLS. The ingress proxy may
-connect only to those frontend addresses on TCP 443 for this path. Converge the
-DNS manifest independently of an RKE2 upgrade with
+retaining the public issuer hostname and verified TLS. Jellyfin egress permits
+the selected Canaille backend on its pod port: Gateway hairpin policy is evaluated
+after routing, even when telemetry names the frontend address. See
+[the upstream explanation](https://github.com/cilium/cilium/issues/47617).
+Converge the DNS manifest independently of an RKE2 upgrade with
 `ansible-playbook playbooks/configure-cluster-dns.yml` from `ansible/`.
 
 ### Configuration restore evidence
