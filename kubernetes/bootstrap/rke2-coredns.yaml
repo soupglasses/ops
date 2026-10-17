@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
@@ -25,6 +25,12 @@ spec:
             parameters: :9153
           - name: rewrite
             parameters: continue name ldap.finnes.dev openldap.identity.svc.cluster.local
+          # Keep the issuer hostname and certificate while avoiding WAN hairpinning.
+          - name: hosts
+            configBlock: |-
+              172.21.68.10 auth.finnes.dev
+              2a13:e745:1ee8:68::10 auth.finnes.dev
+              fallthrough
           - name: kubernetes
             parameters: in-addr.arpa ip6.arpa
             configBlock: |-

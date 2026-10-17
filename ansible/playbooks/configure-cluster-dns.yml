@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+- name: Converge the RKE2-managed cluster DNS configuration
+  hosts: rke2_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install the repository DNS manifest for the RKE2 Helm controller
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../kubernetes/bootstrap/rke2-coredns.yaml"
+        dest: /var/lib/rancher/rke2/server/manifests/rke2-coredns-config.yaml
+        owner: root
+        group: root
+        mode: "0644"
