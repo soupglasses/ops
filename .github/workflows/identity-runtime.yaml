@@ -90,3 +90,25 @@ jobs:
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push ghcr.io/soupglasses/ops/provider-ldap:${{ github.sha }}
           docker push ghcr.io/soupglasses/ops/provider-ldap-tests:${{ github.sha }}
+  openldap-acl:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build matching OpenLDAP policy tools
+        run: docker build -t ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }} packages/openldap-acl
+      - name: Test offline recovery, lifecycle exclusion, and LDAP attribute access
+        env:
+          OPENLDAP_ACL_TEST_IMAGE: ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }}
+        run: python3 -m unittest discover -s packages/openldap-acl -v
+      - name: Publish
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push ghcr.io/soupglasses/ops/openldap-acl:${{ github.sha }}
