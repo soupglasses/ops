@@ -160,8 +160,9 @@ LDAP Entry resources. Jellyfin's existing Entries and login behavior stay intact
 
 5. **Finalize the old CR while its controller still exists.** Verify there is
    still no `writeOutputsToSecret`; otherwise preserve/rehome its Secret and
-   consumers first. Request deletion with destruction disabled, then unsuspend
-   only the terminating object if required for finalization. Do not resume an
+   consumers first. Remove the Terraform CR manifest from Flux with destruction
+   disabled, keeping the module files in Git. Then unsuspend only the terminating
+   object if required for finalization. Do not resume an
    ordinary active apply or strip finalizers to force removal. Preserve the old
    source until the finalizer and any runner finish; the following deployment
    stage removes the controller and modules.
@@ -181,6 +182,13 @@ LDAP Entry resources. Jellyfin's existing Entries and login behavior stay intact
    LDAP password login and Jellyfin photos. Test Grafana OIDC only if it was
    separately enabled; local Grafana login must remain usable. Keep the encrypted
    rollback archive until this drill and the live handoff pass.
+
+If adoption fails, leave Tofu suspended and put the new Entries back into
+observe-only mode before investigating. Never resume two writers. Restore and
+inspect the recorded backup in isolation before repairing live data; replaying
+old bootstrap declarations can overwrite passwords and membership. Resume the
+old owner only after Crossplane writes have stopped and its proposed changes
+have been reviewed.
 
 ### Controller deletion behavior
 
