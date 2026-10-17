@@ -10,7 +10,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
-- [ ] Simplify Jellyfin to the unpatched upstream LDAP plugin and fold server ACLs
+- [x] Simplify Jellyfin to the unpatched upstream LDAP plugin and fold server ACLs
   into the existing stock-image OpenLDAP deployment; remove the separate ACL package.
 
 - [x] Publish MIT-authored LDAP SDK reconciliation, OAuth2Client composition and
@@ -26,7 +26,7 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   preserving the directory database and native export byte-for-byte.
 - [x] Remove Cilium L2 announcements; advertise the private Gateway through the existing
   BGP service range, with an exact router prefix and private-only forwarding rules.
-- [ ] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration
+- [x] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration
   and media restore acceptance; remove first-install flags after those drills.
 - [ ] Repeat the media restore drill with representative files after importing the
   real library; the initial empty-library canary does not prove those future files.
@@ -47,6 +47,12 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   credit upstream work and need provenance review before changing attribution.
 
 ## Backups / disaster recovery
+
+- [ ] **Refresh shared VolSync restore destinations.** The shared component still
+  initializes destinations with `manual: restore-once`; it does not advance their
+  recovery snapshots with subsequent backups. Jellyfin already declares a daily
+  refresh. Review the shared contract separately so other PVC rebuilds do not use
+  a stale initial snapshot; OpenLDAP was explicitly refreshed after this migration.
 
 - [x] **Refresh local access after the RKE2 rebuild.** `task kube:kubeconfig` fetches
   and verifies the current credentials before replacing the operator's local file.

@@ -6,8 +6,8 @@ SPDX-License-Identifier: MIT
 # Application identity and settings reconciliation
 
 Crossplane manages directory entries and typed application identities. Flux owns
-those resources, application settings and deployment order. The LDAP provider uses Upjet and
-the Terraform provider SDK; there is no Terraform CLI or state directory.
+those resources, application settings and deployment order. The LDAP provider uses
+Upjet and the Terraform provider SDK; there is no Terraform CLI or state directory.
 Existing Terraform-owned directory roots and applications retain their ownership.
 
 ## Jellyfin identity
@@ -115,33 +115,47 @@ This cluster DNS setting is independent of Jellyfin's LDAP login.
 Converge the DNS manifest independently of an RKE2 upgrade with
 `ansible-playbook playbooks/configure-cluster-dns.yml` from `ansible/`.
 
+### LDAP-only live acceptance
+
+On 2026-10-17, the simplified runtime built from source `bc12af9` was published as
+`ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:ae736303e6c1ed9ca00824356042a1335e9ce98403b21934faf4e296b02a0a30`
+and deployed through Flux. The retired SSO binary was absent. A disposable
+directory member signed in with an LDAP password before any Jellyfin account
+existed. The upstream LDAP task imported the exact fixture JPEG, and repeat login
+returned the same Jellyfin user ID. The upstream photo task also had an automatic
+interval trigger. The settings acceptance command and private
+TLS health endpoint passed, and all Flux Kustomizations were Ready.
+
 ### Configuration restore evidence
 
-On 2026-10-17, a fresh offline Jellyfin checkpoint was backed up off-cluster at
-17:28:06 UTC. Generation `bcd4a6bf08914209a5e55fd42f8d7139` contained 42 files and
-`data/jellyfin.db`, whose SHA-256 was
-`9753b44953d909f5cb994cf5081463cacb6990a5cc2bd33d29f644f0f73a6f22`.
+On 2026-10-17, a fresh offline checkpoint containing the LDAP-linked test account
+and its photo was backed up off-cluster at 18:34:36 UTC as snapshot `d3b05901`.
+An independent ReplicationDestination restored that exact snapshot at 18:34:50 UTC
+and populated a separate 20 GiB PVC. Generation `752f02fa492a4bf1a6ec70ec78ae6815`
+contained 39 files. The restore helper verified every file hash and SQLite
+integrity; the restored pre-start database SHA-256 was
+`d4a3e9c041d0d2995d93bb758cd657402199d4920a8f48c704bb081376b3abaa`.
 
-A separate ReplicationDestination and populated 20 GiB PVC exercised the normal
-snapshot/populator recovery path. The restore helper verified every file hash and
-SQLite integrity before starting the matching pinned Jellyfin image in a restricted,
-network-isolated Job. The recovered API matched the source server identity, account
-identity, three configured libraries and seven active plugins, including LDAP 23 and
-the then-installed SSO 4.0.0.4. This baseline predates the LDAP-only simplification. The read-only configuration
-check also validated owned settings against the existing Secret references without
-printing credentials or API tokens.
+At 18:37:31 UTC, the matching pinned image passed an authenticated API comparison
+against the source: the same server identity, both account IDs, three libraries,
+six active plugins including LDAP 23 and no SSO, and the declared settings using
+existing Secret references without printing credentials. The restored test user
+retained the exact 632-byte JPEG, SHA-256
+`ed8de651b6efa7e3f6a4c034e4f25d7539918037956fa29803aee994905073c5`.
+The verifier used a restricted, network-isolated Job. The production PVC was not
+mounted or replaced, and all temporary restore resources were removed.
 
-The restored database contained one user, seven base items, 72 permissions and
-39 preferences. This initial checkpoint contained no user avatar; avatar recovery
-requires a subsequent checkpoint after the live photo acceptance test. The original
-application PVC remained untouched throughout the drill.
+The disposable account, LDAP link and group membership were removed after recovery
+verification; the settings check passed again. The production destination refreshes
+daily at 08:15 UTC. Operator-triggered refreshes must remove their manual trigger
+afterward because an outstanding manual tag takes precedence over the cron schedule.
 
-Temporary Jobs, restore PVCs, the test destination and its snapshots, and the test
-network policy were deleted afterward. The production destination was refreshed at
-17:37:57 UTC to `volsync-jellyfin-dst-dest-20261017173757`. Its manual trigger was
-removed and the next scheduled refresh was confirmed for 2026-10-18 at 08:15 UTC.
-An outstanding manual tag takes precedence over a cron schedule in VolSync; keep
-only the schedule after completing an operator-triggered destination refresh.
+After fixture cleanup, clean backups succeeded at 18:40:13 UTC for Jellyfin
+(snapshot `db88990b`) and 18:40:17 UTC for LDAP (snapshot `48bf607d`). Both production
+destinations restored those exact clean snapshots at 18:40:37 UTC. The sources kept
+their 06:15 schedules. Jellyfin kept its 08:15 destination schedule without a manual
+trigger; LDAP's existing one-time trigger was preserved. The latter's lack of an
+automatic refresh schedule is tracked separately in `TODO.md`.
 
 ### LDAP policy recovery
 
@@ -151,13 +165,14 @@ that database path; even a configuration-only `slapcat` opens it. Omitting the a
 on a read-only container filesystem causes native initialization to fail before any
 ACL change. The alias grants access to the same database already present under `/data`.
 
-On 2026-10-17, an isolated VolSync destination/populator restored the real pre-migration
-backup using cutoff `2026-10-17T17:13:43Z`. With UID/GID 389, a read-only root filesystem
-and the then-current trial image, the original mounts reproduced the failure.
-Adding only the database alias made native policy initialization succeed and a
-second pass converge without changes. The directory database remained byte-identical
-with SHA-256 `deaf3dfd01f46f5e66e3cdf37ec1a62f2d00a6c53f27cd4698c09cc7e8e1adc2`.
-Its native export exactly matched the paired backup: 89 entries, SHA-256
-`3a6f4e5ffae23f300c76094ce6de638629a705459392988837282aa17fd61f1a`.
-The diagnostic mounted no production PVC, printed no configuration or credential
-values, and all temporary resources were deleted afterward.
+The stock-image policy was tested against an off-cluster
+pre-change backup on 2026-10-17. Snapshot `cb535e08`, captured at 18:11:35 UTC,
+restored through an independent ReplicationDestination and populated PVC. At
+18:30:28 UTC, the current native policy had applied twice with identical effective
+configuration, an unchanged MDB file and a byte-identical 92-entry native export
+(SHA-256 `a419d1aaa188480e278c455e017c3af6370f19c4d91f5d3d5b0b6f5f6120ffff`).
+The verifier used the stock production image, UID/GID 389, a read-only root
+filesystem and denied network access. No production PVC or credentials were
+mounted, and all temporary resources were removed. Native `slapmodify` refreshes
+configuration timestamps even on a repeated apply; the idempotence check compares
+effective configuration while the directory-data checks remain byte-for-byte.
