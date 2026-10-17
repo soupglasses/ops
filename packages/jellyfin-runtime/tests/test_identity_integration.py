@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import socket
 import subprocess
 import sys
 import tempfile
@@ -40,62 +39,110 @@ class IdentityIntegration(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="ops-jellyfin-identity-")
         self.addCleanup(temporary.cleanup)
         work = Path(temporary.name)
-        gateway = json.loads(command("docker", "network", "inspect", "bridge"))[0][
-            "IPAM"
-        ]["Config"][0]["Gateway"]
-        with socket.socket() as listener:
-            listener.bind((gateway, 0))
-            ldap_port = listener.getsockname()[1]
+        image = os.environ["JELLYFIN_INTEGRATION_IMAGE"]
+        fixture_image = "ops-jellyfin-ldap-fixture:integration"
+        # Keep the fixture in Docker as well: host slapd module paths and mandatory
+        # access-control profiles differ between developer machines and CI runners.
+        dockerfile = b"""# SPDX-License-Identifier: MIT
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+USER root
+RUN echo 'slapd slapd/no_configuration boolean true' | debconf-set-selections \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends slapd ldap-utils \
+    && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT ["slapd"]
+"""
+        command(
+            "docker",
+            "build",
+            "--build-arg",
+            "BASE_IMAGE=" + image,
+            "--tag",
+            fixture_image,
+            "-",
+            input=dockerfile,
+        )
+        network = "ops-jellyfin-identity-" + str(os.getpid())
+        command("docker", "network", "create", network)
+        self.addCleanup(lambda: command("docker", "network", "rm", network))
         ldap_dir = work / "ldap"
         ldap_dir.mkdir()
         config = work / "slapd.conf"
-        schema = Path(os.getenv("LDAP_SCHEMA_DIR", "/etc/openldap/schema"))
-        if not schema.exists():
-            schema = Path("/etc/ldap/schema")
-        modules = ""
-        if Path("/usr/lib/ldap/back_mdb.so").exists():
-            modules = "modulepath /usr/lib/ldap\nmoduleload back_mdb\n"
-        config.write_text(f"""{modules}include {schema}/core.schema
-include {schema}/cosine.schema
-include {schema}/inetorgperson.schema
-pidfile {work}/slapd.pid
-argsfile {work}/slapd.args
+        config.write_text(f"""include /etc/ldap/schema/core.schema
+include /etc/ldap/schema/cosine.schema
+include /etc/ldap/schema/inetorgperson.schema
+modulepath /usr/lib/ldap
+moduleload back_mdb
+pidfile /fixture/slapd.pid
+argsfile /fixture/slapd.args
 database mdb
 maxsize 10485760
 suffix "dc=example,dc=test"
 rootdn "cn=admin,dc=example,dc=test"
 rootpw {PASSWORD}
-directory {ldap_dir}
+directory /fixture/ldap
 access to * by dn.exact="cn=admin,dc=example,dc=test" manage by anonymous auth by self read by * none
 """)
-        ldap_url = f"ldap://{gateway}:{ldap_port}"
-        log = (work / "slapd.log").open("wb")
-        slapd = subprocess.Popen(
-            [
-                "sh",
-                "-c",
-                'ulimit -n 1024; exec "$@"',
-                "fixture",
-                "slapd",
-                "-f",
-                str(config),
-                "-h",
-                ldap_url,
-                "-d",
-                "0",
-            ],
-            stdout=log,
-            stderr=log,
-        )
-        self.addCleanup(log.close)
-        self.addCleanup(lambda: slapd.wait(timeout=10))
-        self.addCleanup(slapd.kill)
-        for _ in range(100):
-            try:
-                with socket.create_connection((gateway, ldap_port), timeout=0.2):
-                    break
-            except OSError:
-                time.sleep(0.1)
+        ldap_container = command(
+            "docker",
+            "run",
+            "--detach",
+            "--network",
+            network,
+            "--network-alias",
+            "ldap",
+            "--ulimit",
+            "nofile=1024:1024",
+            "--volume",
+            str(work) + ":/fixture",
+            fixture_image,
+            "-f",
+            "/fixture/slapd.conf",
+            "-h",
+            "ldap://0.0.0.0:1389",
+            "-d",
+            "256",
+        ).strip()
+        self.addCleanup(lambda: command("docker", "rm", "--force", ldap_container))
+        ldap_url = "ldap://127.0.0.1:1389"
+        probe = [
+            "docker",
+            "exec",
+            ldap_container,
+            "ldapwhoami",
+            "-x",
+            "-H",
+            ldap_url,
+            "-D",
+            "cn=admin,dc=example,dc=test",
+            "-w",
+            PASSWORD,
+        ]
+        for _ in range(150):
+            result = subprocess.run(probe, capture_output=True)
+            if result.returncode == 0:
+                break
+            status = command(
+                "docker", "inspect", "--format", "{{.State.Status}}", ldap_container
+            ).strip()
+            if status == "exited":
+                break
+            time.sleep(0.2)
+        else:
+            status = "readiness timeout"
+        if result.returncode:
+            diagnostic = subprocess.run(
+                ["docker", "logs", ldap_container], capture_output=True
+            )
+            self.fail(
+                "LDAP fixture did not become ready ("
+                + status
+                + "): "
+                + (diagnostic.stdout + diagnostic.stderr).decode(errors="replace")[
+                    -5000:
+                ]
+            )
         jpeg = (Path(__file__).parent / "profile.jpg").read_bytes()
         ldif = f"""dn: dc=example,dc=test
 objectClass: domain
@@ -136,6 +183,10 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
 
 """
         command(
+            "docker",
+            "exec",
+            "--interactive",
+            ldap_container,
             "ldapadd",
             "-x",
             "-H",
@@ -153,6 +204,8 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "docker",
             "run",
             "--detach",
+            "--network",
+            network,
             "--user",
             "1000:1000",
             "--read-only",
@@ -212,8 +265,8 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                 {
                     "path": f"/Plugins/{LDAP_ID}/Configuration",
                     "values": {
-                        "LdapServer": gateway,
-                        "LdapPort": ldap_port,
+                        "LdapServer": "ldap",
+                        "LdapPort": 1389,
                         "UseSsl": False,
                         "UseStartTls": False,
                         "SkipSslVerify": False,

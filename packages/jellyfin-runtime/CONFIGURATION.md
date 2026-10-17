@@ -110,7 +110,7 @@ JELLYFIN_INTEGRATION_IMAGE=ops-jellyfin:development \
   -p test_identity_integration.py -v
 ```
 
-The integration test requires Docker and local OpenLDAP tools/schemas. It creates
+The integration test requires Docker. It creates
 and deletes its own container and LDAP process. Its SSO-first test reproduces the
 account state produced by SSO (new user plus LDAP provider assignment); it does
 not replace a complete browser-based OIDC authorization-flow test.

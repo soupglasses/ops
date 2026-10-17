@@ -3,6 +3,7 @@
 image:
   repository: ghcr.io/soupglasses/ops/provider-ldap
   tag: development
+  digest: ""
   pullPolicy: IfNotPresent
 pollInterval: 1m
 tests:
@@ -11,6 +12,7 @@ tests:
   image:
     repository: ghcr.io/soupglasses/ops/provider-ldap-tests
     tag: development
+    digest: ""
     pullPolicy: IfNotPresent
 oauth2:
   enabled: false

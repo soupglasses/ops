@@ -37,9 +37,6 @@ jobs:
         env:
           JELLYFIN_INTEGRATION_IMAGE: ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
         run: |
-          echo 'slapd slapd/no_configuration boolean true' | sudo debconf-set-selections
-          sudo apt-get update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y slapd ldap-utils
           python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py -v
       - name: Publish
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

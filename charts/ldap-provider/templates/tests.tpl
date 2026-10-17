@@ -54,7 +54,7 @@ spec:
   serviceAccountName: {{ .Release.Name }}-tests
   containers:
     - name: tests
-      image: "{{ .Values.tests.image.repository }}:{{ .Values.tests.image.tag }}"
+      image: "{{ .Values.tests.image.repository }}{{ if .Values.tests.image.digest }}@{{ .Values.tests.image.digest }}{{ else }}:{{ .Values.tests.image.tag }}{{ end }}"
       imagePullPolicy: {{ .Values.tests.image.pullPolicy }}
       args:
         - -test.v
