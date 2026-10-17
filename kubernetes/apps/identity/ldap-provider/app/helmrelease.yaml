@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ldap-provider
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./charts/ldap-provider
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+  test:
+    enable: true
+  values:
+    image:
+      repository: ghcr.io/soupglasses/ops/provider-ldap
+      tag: a3c6761060ef52f5f8674ba8f9dda58957d03d53
+      digest: sha256:1a7bc13914a0bce9e77cd8017be361af0ec6191314be531485fb150ef4a103cd
+    tests:
+      enabled: true
+      mode: smoke
+      image:
+        repository: ghcr.io/soupglasses/ops/provider-ldap-tests
+        tag: a3c6761060ef52f5f8674ba8f9dda58957d03d53
+        digest: sha256:7dcf78974dc12280a8e9610ea2beec06d79ec5616d93486d61b055d347189f1d
+    oauth2:
+      enabled: true

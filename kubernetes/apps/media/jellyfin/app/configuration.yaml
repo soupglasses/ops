@@ -1,0 +1,145 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jellyfin-configuration
+  labels:
+    app.kubernetes.io/name: jellyfin
+data:
+  configuration.json: |
+    {
+      "baseURL": "http://127.0.0.1:8096",
+      "adminUsername": "ops-recovery",
+      "intervalSeconds": 60,
+      "startup": {
+        "configuration": {
+          "UICulture": "en-US",
+          "MetadataCountryCode": "US",
+          "PreferredMetadataLanguage": "en"
+        },
+        "remoteAccess": {
+          "EnableRemoteAccess": true,
+          "EnableAutomaticPortMapping": false
+        }
+      },
+      "resources": [
+        {
+          "path": "/Plugins/958aad66-3784-4d2a-b89a-a7b6fab6e25c/Configuration",
+          "values": {
+            "LdapServer": "ldap.finnes.dev",
+            "LdapPort": 636,
+            "UseSsl": true,
+            "UseStartTls": false,
+            "SkipSslVerify": false,
+            "AllowPassChange": false,
+            "LdapBindUser": "uid=media.jellyfin,ou=system,dc=finnes,dc=dev",
+            "LdapBaseDn": "ou=users,dc=finnes,dc=dev",
+            "LdapSearchFilter": "(memberOf=cn=media.jellyfin-users,ou=groups,dc=finnes,dc=dev)",
+            "LdapSearchAttributes": "uid",
+            "LdapUidAttribute": "uid",
+            "LdapUsernameAttribute": "uid",
+            "LdapAdminFilter": "_disabled_",
+            "CreateUsersFromLdap": true,
+            "EnableAllFolders": true,
+            "EnableLdapProfileImageSync": true,
+            "RemoveImagesNotInLdap": false,
+            "LdapProfileImageAttribute": "jpegPhoto",
+            "LdapProfileImageFormat": "Binary"
+          },
+          "secretValues": [
+            {
+              "path": [
+                "LdapBindPassword"
+              ],
+              "file": "LDAP_BIND_PASSWORD"
+            }
+          ]
+        },
+        {
+          "path": "/Plugins/505ce9d1-d916-42fa-86ca-673ef241d7df/Configuration",
+          "values": {
+            "OidConfigs": {
+              "canaille": {
+                "OidEndpoint": "https://auth.finnes.dev",
+                "OidClientId": "media.jellyfin",
+                "Enabled": true,
+                "EnableAuthorization": true,
+                "EnableAllFolders": true,
+                "EnableFolderRoles": false,
+                "EnableLiveTvRoles": false,
+                "EnableLiveTv": false,
+                "EnableLiveTvManagement": false,
+                "RoleClaim": "groups",
+                "Roles": [
+                  "media.jellyfin-users"
+                ],
+                "AdminRoles": [],
+                "OidScopes": [
+                  "email",
+                  "groups"
+                ],
+                "DefaultProvider": "Jellyfin.Plugin.LDAP_Auth.LdapAuthenticationProviderPlugin",
+                "DefaultUsernameClaim": "preferred_username",
+                "NewPath": true,
+                "SchemeOverride": "https"
+              }
+            }
+          },
+          "secretValues": [
+            {
+              "path": [
+                "OidConfigs",
+                "canaille",
+                "OidSecret"
+              ],
+              "file": "OIDC_CLIENT_SECRET"
+            }
+          ]
+        },
+        {
+          "path": "/System/Configuration/network",
+          "values": {
+            "EnableUPnP": false,
+            "EnableRemoteAccess": true
+          }
+        },
+        {
+          "path": "/System/Configuration/branding",
+          "values": {
+            "LoginDisclaimer": "<form action=\"/sso/OID/start/canaille\"><button class=\"raised block emby-button button-submit\">Sign in with SSO</button></form>"
+          }
+        },
+        {
+          "path": "/System/Configuration",
+          "values": {
+            "PluginRepositories": []
+          }
+        }
+      ],
+      "libraries": [
+        {
+          "name": "Movies",
+          "collectionType": "movies",
+          "paths": [
+            "/media/movies"
+          ]
+        },
+        {
+          "name": "TV",
+          "collectionType": "tvshows",
+          "paths": [
+            "/media/tv"
+          ]
+        },
+        {
+          "name": "Music",
+          "collectionType": "music",
+          "paths": [
+            "/media/music"
+          ]
+        }
+      ]
+    }

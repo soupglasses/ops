@@ -1,0 +1,182 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  annotations:
+    testing.ops.finnes.dev/container: configuration
+    testing.ops.finnes.dev/command: >-
+      ["python3", "/usr/local/lib/jellyfin/configuration.py", "--config", "/desired/configuration.json",
+      "--credentials", "/credentials", "--check"]
+  labels:
+    app: jellyfin
+    app.kubernetes.io/name: jellyfin
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+        app.kubernetes.io/name: jellyfin
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: [2000]
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: restore-media
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          command: [python3, /usr/local/lib/jellyfin/media_restore.py]
+          args: [--root, /media]
+          envFrom:
+            - secretRef:
+                name: volsync-jellyfin-media
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: media
+              mountPath: /media
+            - name: temporary
+              mountPath: /tmp
+        - name: restore
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          command: [python3, /usr/local/lib/jellyfin/runtime.py]
+          args: [restore, --source, /config, --allow-initialize]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: jellyfin
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          ports:
+            - name: http
+              containerPort: 8096
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: [python3, /usr/local/lib/jellyfin/runtime.py, health]
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 4Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: checkpoint
+              mountPath: /backup
+            - name: media
+              mountPath: /media
+              readOnly: false
+            - name: cache
+              mountPath: /cache
+            - name: runtime
+              mountPath: /run/jellyfin
+            - name: temporary
+              mountPath: /tmp
+        - name: configuration
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820
+          command: [python3, /usr/local/lib/jellyfin/configuration.py]
+          args: [--config, /desired/configuration.json, --credentials, /credentials]
+          readinessProbe:
+            exec:
+              command: [python3, /usr/local/lib/jellyfin/configuration.py, --health]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: runtime
+              mountPath: /run/jellyfin
+            - name: desired
+              mountPath: /desired
+              readOnly: true
+            - name: credentials
+              mountPath: /credentials
+              readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin
+        - name: checkpoint
+          persistentVolumeClaim:
+            claimName: jellyfin-checkpoint
+        - name: media
+          persistentVolumeClaim:
+            claimName: jellyfin-media
+        - name: cache
+          emptyDir: {}
+        - name: runtime
+          emptyDir: {}
+        - name: temporary
+          emptyDir: {}
+        - name: desired
+          configMap:
+            name: jellyfin-configuration
+        - name: credentials
+          secret:
+            secretName: jellyfin-identity
+            defaultMode: 0440

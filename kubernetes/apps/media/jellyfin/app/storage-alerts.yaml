@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jellyfin-storage
+  labels:
+    monitoring.finnes.dev/enabled: "true"
+spec:
+  groups:
+    - name: jellyfin.storage
+      rules:
+        - alert: JellyfinRestoreCapacityLow
+          expr: >-
+            kubelet_volume_stats_used_bytes{namespace="media",persistentvolumeclaim="jellyfin"} / kubelet_volume_stats_capacity_bytes{namespace="media",persistentvolumeclaim="jellyfin"}
+            > 0.4
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: Jellyfin configuration is approaching its restore size budget
+            description: >-
+              Expand configuration and checkpoint volumes together. Recovery needs room for both the archive
+              and its extracted native files; the native state budget is 8 GiB.

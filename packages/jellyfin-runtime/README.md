@@ -8,7 +8,7 @@ SPDX-License-Identifier: MIT
 
 The image supervises Jellyfin and installs the pinned LDAP and SSO plugins. Application
 configuration lives in `/config/server`; `/cache` is disposable. Media is a separate
-read-only mount and is not included in configuration backups.
+read-write mount for media and sidecar metadata; it has its own independent backup.
 
 ## Offline checkpoints
 

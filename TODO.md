@@ -1,12 +1,24 @@
 <!--
 SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 
-SPDX-License-Identifier: 0BSD
+SPDX-License-Identifier: MIT
 -->
 
 # TODO
 
 Findings from the July 2026 architecture review, ranked. Data-loss items first.
+
+## Application reconciliation
+
+- [x] Publish MIT-authored LDAP SDK reconciliation, OAuth2Client composition and
+  pinned Jellyfin integration images. Real kind/Helm, LDAP, photo synchronization,
+  password login, configuration drift and recovery tests pass in CI.
+- [x] Create the isolated compressed ZFS media dataset with a 1 TiB quota and private
+  NFSv4 export. Preserve existing datasets; retain the stable media directory on PVC recreation.
+- [ ] Complete live Jellyfin identity, private BGP TLS and off-cluster configuration
+  and media restore acceptance; remove first-install flags after those drills.
+- [ ] Repeat the media restore drill with representative files after importing the
+  real library; the initial empty-library canary does not prove those future files.
 
 ## Copyright attribution
 

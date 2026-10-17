@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 name: Flate Validation
 
@@ -32,13 +32,16 @@ jobs:
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
         with:
           version: 2026.10.9
-          install_args: github:home-operations/flate aqua:go-task/task
+          install_args: github:home-operations/flate aqua:go-task/task aqua:mikefarah/yq
 
       - name: Test diff summary
         run: python3 -m unittest discover -s scripts -p test_flate_diff_summary.py
 
       - name: Test
         run: task flate:test
+
+      - name: Verify application recovery contracts
+        run: task app:verify-render
 
       - name: Diff
         id: render-diff

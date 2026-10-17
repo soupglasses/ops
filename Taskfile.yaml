@@ -6,6 +6,9 @@
 version: "3"
 
 includes:
+  app:
+    taskfile: .taskfiles/application.yaml
+    dir: .
   ansible:
     taskfile: ansible/Taskfile.yaml
     dir: ansible

@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jellyfin-directory-attributes
+stringData:
+  group.json: >-
+    {"objectClass":["groupOfNames"],"description":["Users permitted to sign in to Jellyfin"]}
+  group-defaults.json: >-
+    {"member":["uid=admin,ou=users,dc=finnes,dc=dev"]}
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: jellyfin-users
+  annotations:
+    crossplane.io/external-name: cn=media.jellyfin-users,ou=groups,dc=finnes,dc=dev
+spec:
+  managementPolicies: [Observe, Create, Update]
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: directory
+  forProvider:
+    dataJsonSecretRef:
+      name: jellyfin-directory-attributes
+      key: group.json
+    dataJsonCreateDefaultsSecretRef:
+      name: jellyfin-directory-attributes
+      key: group-defaults.json
+    restrictAttributes: [objectClass, description]
+---
+apiVersion: ldap.ops.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: jellyfin-bind
+  annotations:
+    crossplane.io/external-name: uid=media.jellyfin,ou=system,dc=finnes,dc=dev
+spec:
+  managementPolicies: [Observe, Create, Update]
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: directory
+  forProvider:
+    dataJsonSecretRef:
+      name: jellyfin-identity
+      key: ldap-entry.json
+    restrictAttributes: [objectClass, cn, sn, userPassword, pwdPolicySubentry]

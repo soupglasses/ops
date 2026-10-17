@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./entries.yaml
+  - ./oauth2client.yaml
+  - ../app/secret.sops.yaml
+  - ./rbac.yaml

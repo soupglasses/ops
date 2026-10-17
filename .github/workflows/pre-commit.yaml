@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 name: Pre-commit Checks
 
@@ -34,10 +34,13 @@ jobs:
           version: 2026.10.9
           install_args: >-
             python aqua:go-task/task aqua:pre-commit/pre-commit aqua:editorconfig-checker/editorconfig-checker
-            aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2 aqua:mikefarah/yq pipx:reuse
+            aqua:helm aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2 aqua:mikefarah/yq pipx:reuse
 
       - name: Run pre-commit checks
         run: task check
 
       - name: Test schema synchronization
         run: python3 -m unittest discover -s scripts -p test_kubernetes_schema_headers.py
+
+      - name: Test local CRD validation
+        run: python3 -m unittest discover -s scripts -p test_kubeconform_local_schemas.py

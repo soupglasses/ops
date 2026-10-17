@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crossplane
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: crossplane
+      version: 2.4.2
+      sourceRef:
+        kind: HelmRepository
+        name: crossplane
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+  values:
+    args: [--poll-interval=1m]

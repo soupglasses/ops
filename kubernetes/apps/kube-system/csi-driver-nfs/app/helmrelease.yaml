@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: csi-driver-nfs
+  namespace: kube-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: csi-driver-nfs
+      version: 4.13.5
+      sourceRef:
+        kind: HelmRepository
+        name: csi-driver-nfs
+        namespace: flux-system
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    kubeletDir: /var/lib/kubelet
+    driver:
+      mountPermissions: 0
+    controller:
+      replicas: 1
+      runOnControlPlane: true
+      enableSnapshotter: false
+      defaultOnDeletePolicy: retain
+      nodeSelector:
+        kubernetes.io/hostname: nas
+    node:
+      nodeSelector:
+        kubernetes.io/hostname: nas
+    externalSnapshotter:
+      enabled: false
+      customResourceDefinitions:
+        enabled: false
+    storageClass:
+      create: false
+  postRenderers:
+    - kustomize:
+        patches:
+          # Host ACLs own media permissions; kubelet must not recursively chgrp the root-squashed share.
+          - target:
+              kind: CSIDriver
+              name: nfs.csi.k8s.io
+            patch: |-
+              - op: replace
+                path: /spec/fsGroupPolicy
+                value: None
+          # Root is squashed on NFS, so the mounting plugins need the shared media group too.
+          - target:
+              kind: Deployment
+              name: csi-nfs-controller
+            patch: |-
+              - op: add
+                path: /spec/template/spec/securityContext/supplementalGroups
+                value: [2000]
+          - target:
+              kind: DaemonSet
+              name: csi-nfs-node
+            patch: |-
+              - op: add
+                path: /spec/template/spec/securityContext/supplementalGroups
+                value: [2000]

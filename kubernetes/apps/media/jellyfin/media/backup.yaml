@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-jellyfin-media
+  namespace: media
+stringData:
+  RESTIC_REPOSITORY: ${SECRET_S3_ENDPOINT}/volsync-jellyfin-media
+  RESTIC_PASSWORD: ${SECRET_PASSWORD}
+  AWS_ACCESS_KEY_ID: ${SECRET_AWS_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${SECRET_AWS_SECRET_ACCESS_KEY}

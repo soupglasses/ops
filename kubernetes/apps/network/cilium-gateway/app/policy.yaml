@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 apiVersion: cilium.io/v2
 kind: CiliumClusterwideNetworkPolicy
@@ -28,6 +28,14 @@ spec:
       toPorts:
         - ports:
             - port: "3000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: media
+            k8s:app.kubernetes.io/name: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
               protocol: TCP
 ---
 apiVersion: cilium.io/v2

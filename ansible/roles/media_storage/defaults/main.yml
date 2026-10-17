@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+media_storage_dataset_name: "{{ zfs_pool_name }}/media"
+media_storage_mountpoint: /srv/media
+media_storage_group: media
+media_storage_gid: 2000
+media_storage_quota: 1T
+media_storage_writers:
+  - "{{ ansible_user }}"
+media_storage_nfs_fsid: 71
+media_storage_nfs_clients:
+  - 172.21.71.10/32
+  - 172.21.69.0/24
+  - 172.21.70.0/24
+  - 2a13:e745:1ee8:69::/64
+  - 2a13:e745:1ee8:70::/64

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 - name: Configure the RKE2 server
   hosts: rke2_servers
@@ -16,5 +16,6 @@
   roles:
     - os_hardening
     - zfs
+    - media_storage
     - nvidia
     - rke2

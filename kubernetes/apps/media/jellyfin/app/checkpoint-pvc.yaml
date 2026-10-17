@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-checkpoint
+  annotations:
+    volsync.backube/use-copy-trigger: ""
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: openebs-zfs
+  resources:
+    requests:
+      storage: 20Gi

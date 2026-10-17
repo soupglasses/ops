@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: media
+resources:
+  - ./deployment.yaml
+  - ./service.yaml
+  - ./configuration.yaml
+  - ./networkpolicy.yaml
+  - ./httproute.yaml
+  - ./checkpoint-pvc.yaml
+  - ./storage-alerts.yaml
+components:
+  - ../../../../components/volsync
+  - ../../../../components/volsync-quiesce
+patches:
+  - target:
+      kind: ReplicationDestination
+      name: '.*-dst'
+    patch: |-
+      - op: add
+        path: /spec/trigger/schedule
+        value: "15 8 * * *"
+  - target:
+      kind: ReplicationSource
+      name: '[$][{]APP[}]'
+    patch: |-
+      - op: replace
+        path: /spec/sourcePVC
+        value: jellyfin-checkpoint
+  - target:
+      kind: Deployment
+      name: '.*-volsync-quiesce'
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: jellyfin-checkpoint
+  - target:
+      kind: Role
+      name: '.*-volsync-quiesce'
+    patch: |-
+      - op: replace
+        path: /rules/0/resourceNames
+        value: [jellyfin-checkpoint]
+  - target:
+      kind: PersistentVolumeClaim
+      name: '[$][{]APP[}]'
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/volsync.backube~1use-copy-trigger

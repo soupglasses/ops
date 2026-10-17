@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: private-gateway
+spec:
+  blocks:
+    - cidr: 172.21.68.11/32
+  serviceSelector:
+    matchLabels:
+      networking.finnes.dev/exposure: private
+      bgp: "enabled"

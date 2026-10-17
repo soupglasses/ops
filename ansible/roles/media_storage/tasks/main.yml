@@ -1,0 +1,257 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+- name: Validate the isolated dataset and mount names
+  ansible.builtin.assert:
+    that:
+      - media_storage_dataset_name == zfs_pool_name ~ '/media'
+      - media_storage_dataset_name is match('^[A-Za-z0-9_.-]+/media$')
+      - media_storage_mountpoint == '/srv/media'
+      - media_storage_group is match('^[a-z_][a-z0-9_-]*$')
+      - media_storage_gid | int > 0
+      - media_storage_quota is match('^[1-9][0-9]*[GMTP]$')
+      - media_storage_nfs_fsid | int > 0
+      - media_storage_nfs_clients | length > 0
+    fail_msg: Only the isolated media child dataset and /srv/media mount are managed.
+
+- name: Validate explicit export client networks
+  ansible.builtin.assert:
+    that:
+      - item | ansible.utils.ipaddr('net') != false
+      - item not in ['0.0.0.0/0', '::/0']
+  loop: "{{ media_storage_nfs_clients }}"
+
+- name: Require the existing pool to be imported
+  ansible.builtin.command:
+    argv: [zpool, list, -H, -o, name, "{{ zfs_pool_name }}"]
+  changed_when: false
+  check_mode: false
+
+- name: Inspect the media dataset without adopting another filesystem
+  ansible.builtin.command:
+    argv: [zfs, list, -H, -o, mountpoint, "{{ media_storage_dataset_name }}"]
+  register: media_storage_existing_dataset
+  changed_when: false
+  failed_when: media_storage_existing_dataset.rc not in [0, 1]
+  check_mode: false
+
+- name: Require an existing media dataset to have its documented mountpoint
+  ansible.builtin.assert:
+    that:
+      - media_storage_existing_dataset.rc != 0 or media_storage_existing_dataset.stdout == media_storage_mountpoint
+    fail_msg: Refusing to relocate or adopt an existing dataset with a different mountpoint.
+
+- name: Inspect whether an existing dataset is already mounted
+  ansible.builtin.command:
+    argv: [zfs, get, -H, -o, value, mounted, "{{ media_storage_dataset_name }}"]
+  register: media_storage_existing_mounted
+  changed_when: false
+  check_mode: false
+  when: media_storage_existing_dataset.rc == 0
+
+- name: Inspect the mountpoint before creating or mounting a dataset
+  ansible.builtin.stat:
+    path: "{{ media_storage_mountpoint }}"
+    follow: false
+  register: media_storage_mount_stat
+
+- name: Require the mountpoint to be a real directory when present
+  ansible.builtin.assert:
+    that:
+      - not media_storage_mount_stat.stat.exists or media_storage_mount_stat.stat.isdir | default(false)
+      - not media_storage_mount_stat.stat.islnk | default(false)
+
+- name: Inspect files that a new dataset would otherwise hide
+  ansible.builtin.find:
+    paths: "{{ media_storage_mountpoint }}"
+    recurse: false
+    hidden: true
+    file_type: any
+  register: media_storage_mount_files
+  when:
+    - media_storage_existing_mounted.stdout | default('no') != 'yes'
+    - media_storage_mount_stat.stat.exists
+
+- name: Refuse to hide pre-existing host files
+  ansible.builtin.assert:
+    that:
+      - media_storage_mount_files.matched | default(0) == 0
+    fail_msg: /srv/media contains files outside the managed dataset; preserve and resolve them first.
+  when: media_storage_existing_mounted.stdout | default('no') != 'yes'
+
+- name: Install NFS and shared-directory ACL tooling
+  ansible.builtin.apt:
+    name: [nfs-kernel-server, nfs-common, acl]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Maintain the dedicated media dataset without destroying existing data
+  community.general.zfs:
+    name: "{{ media_storage_dataset_name }}"
+    state: present
+    extra_zfs_properties:
+      mountpoint: "{{ media_storage_mountpoint }}"
+      compression: zstd
+      recordsize: 1M
+      atime: "off"
+      xattr: sa
+      acltype: posix
+      quota: "{{ media_storage_quota }}"
+
+- name: Create the shared media writer group
+  ansible.builtin.group:
+    name: "{{ media_storage_group }}"
+    gid: "{{ media_storage_gid }}"
+    state: present
+
+- name: Add named administrators to the media writer group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: "{{ media_storage_group }}"
+    append: true
+  loop: "{{ media_storage_writers }}"
+  when: not ansible_check_mode
+
+- name: Install the explicit dataset mount service
+  ansible.builtin.template:
+    src: media-mount.service.j2
+    dest: /etc/systemd/system/media-storage-mount.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Read the current dataset mount state
+  ansible.builtin.command:
+    argv: [zfs, get, -H, -o, value, mounted, "{{ media_storage_dataset_name }}"]
+  register: media_storage_current_mounted
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
+
+- name: Remount the dedicated dataset when its oneshot service was already active
+  ansible.builtin.command:
+    argv: [zfs, mount, "{{ media_storage_dataset_name }}"]
+  changed_when: true
+  when:
+    - not ansible_check_mode
+    - media_storage_current_mounted.stdout != 'yes'
+
+- name: Mount the media dataset before enabling exports
+  ansible.builtin.systemd_service:
+    name: media-storage-mount.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: not ansible_check_mode
+
+- name: Read the mounted dataset state
+  ansible.builtin.command:
+    argv: [zfs, get, -H, -o, value, mounted, "{{ media_storage_dataset_name }}"]
+  register: media_storage_dataset_mounted
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
+
+- name: Require the dataset to be mounted before configuring its files
+  ansible.builtin.assert:
+    that:
+      - media_storage_dataset_mounted.stdout == 'yes'
+    fail_msg: Refusing to change permissions or export a directory without the media dataset mounted.
+  when: not ansible_check_mode
+
+- name: Maintain dataset-root shared ownership without changing existing file ownership
+  ansible.builtin.file:
+    path: "{{ media_storage_mountpoint }}"
+    state: directory
+    owner: root
+    group: "{{ media_storage_group }}"
+    mode: "2770"
+  when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
+
+- name: Set inheritable media writer and private-directory permissions
+  ansible.posix.acl:
+    path: "{{ media_storage_mountpoint }}"
+    default: true
+    etype: "{{ item.etype }}"
+    entity: "{{ item.entity | default('') }}"
+    permissions: "{{ item.permissions }}"
+    state: present
+  loop:
+    - {etype: user, permissions: rwx}
+    - {etype: group, permissions: rwx}
+    - {etype: group, entity: "{{ media_storage_group }}", permissions: rwx}
+    - {etype: mask, permissions: rwx}
+    - {etype: other, permissions: '---'}
+  when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
+
+- name: Maintain the documented library directories
+  ansible.builtin.file:
+    path: "{{ media_storage_mountpoint }}/{{ item }}"
+    state: directory
+    owner: root
+    group: "{{ media_storage_group }}"
+    mode: "2770"
+  loop: [library, library/movies, library/tv, library/music]
+  when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
+
+- name: Create NFS configuration directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/nfs.conf.d
+    - /etc/exports.d
+    - /etc/systemd/system/nfs-server.service.d
+
+- name: Restrict the dedicated NFS service to TCP NFSv4
+  ansible.builtin.copy:
+    dest: /etc/nfs.conf.d/media.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+      # SPDX-License-Identifier: MIT
+      [nfsd]
+      vers2=n
+      vers3=n
+      vers4=y
+      udp=n
+      tcp=y
+  notify: Restart NFS server
+
+- name: Require the media mount before NFS starts
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nfs-server.service.d/media.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+      # SPDX-License-Identifier: MIT
+      [Unit]
+      Requires=media-storage-mount.service
+      After=media-storage-mount.service
+  notify: Restart NFS server
+
+- name: Maintain the private media export
+  ansible.builtin.template:
+    src: media.exports.j2
+    dest: /etc/exports.d/media.exports
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload media export
+
+- name: Enable the NFS server
+  ansible.builtin.systemd_service:
+    name: nfs-server.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: not ansible_check_mode

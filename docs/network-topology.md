@@ -34,6 +34,7 @@ Internet
 | Kubernetes node | `172.21.71.10` |
 | Kubernetes node IPv6 | `2a13:e745:1ee8:71::10` |
 | Public Cilium VIP | `172.21.68.10/32` |
+| Private Cilium VIP | `172.21.68.11/32`, HTTPS from trusted networks only |
 | Public Cilium IPv6 VIP | `2a13:e745:1ee8:68::10/128` |
 | Router ASN | `64513` |
 | Cilium ASN | `64512` |
@@ -106,12 +107,16 @@ after both BGP and end-to-end service tests pass.
 ## BGP
 
 Cilium peers with RouterOS over both node address families. RouterOS accepts only the
-two public service VIP routes and installs:
+two public service VIP routes and the private application VIP route, and installs:
 
 ```text
 172.21.68.10/32 -> 172.21.71.10
+172.21.68.11/32 -> 172.21.71.10
 2a13:e745:1ee8:68::10/128 -> 2a13:e745:1ee8:71::10
 ```
+
+The private VIP has no WAN NAT mapping. Interface-scoped LAN/VPN/NAS rules permit
+TCP 443, followed by an explicit drop for other forwarding to that VIP.
 
 Pod CIDRs are not advertised to RouterOS. Pod routing is internal to the cluster and
 is not required for public VIP forwarding.

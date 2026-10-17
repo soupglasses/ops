@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 version: "3"
 
@@ -59,3 +59,20 @@ tasks:
     desc: Verify enforced Flux host policy through fresh dual-stack connections
     cmds:
       - ansible-playbook playbooks/verify-host-firewall.yml
+
+  gateway:verify:
+    desc: Verify the private IPv4 Gateway, TLS endpoint and public route isolation
+    cmds:
+      - ansible-playbook playbooks/verify-private-gateway.yml {{.CLI_ARGS}}
+
+  gateway:test:
+    desc: Exercise private Gateway acceptance checks against isolated API fixtures
+    cmds:
+      - python3 ../scripts/test_private_gateway.py
+
+  media:configure:
+    desc: Configure compressed ZFS media storage and private NFSv4 without loading secrets
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/media-storage.yml {{.CLI_ARGS}}

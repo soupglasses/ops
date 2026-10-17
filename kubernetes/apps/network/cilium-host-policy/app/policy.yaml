@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 apiVersion: cilium.io/v2
 kind: CiliumClusterwideNetworkPolicy
@@ -43,6 +43,14 @@ spec:
             - {port: "6443", protocol: TCP}
             - {port: "9345", protocol: TCP}
             - {port: "10250", protocol: TCP}
+    - fromCIDR:
+        - 172.21.69.0/24
+        - 172.21.70.0/24
+        - 2a13:e745:1ee8:69::/64
+        - 2a13:e745:1ee8:70::/64
+      toPorts:
+        - ports:
+            - {port: "2049", protocol: TCP}
     - fromCIDR:
         - 172.21.71.1/32
         - 2a13:e745:1ee8:71::1/128

@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+{{ media_storage_mountpoint }}{% for client in media_storage_nfs_clients %} {{ client }}(rw,sync,root_squash,no_subtree_check,mountpoint,fsid={{ media_storage_nfs_fsid }}){% endfor %}

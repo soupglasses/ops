@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 #
 # Pre-commit kubeconform wrapper.
 #
@@ -30,16 +30,25 @@ export SECRET_AWS_SECRET_ACCESS_KEY=placeholder
 
 KUBE_VERSION="$(awk '/^rke2_version:/ {split($2, version, "+"); sub(/^v/, "", version[1]); print version[1]}' \
     "$REPO_ROOT/ansible/inventories/home/group_vars/all/main.yml")"
+schema_dir="$(mktemp -d)"
+trap 'rm -rf "$schema_dir"' EXIT
+
 KUBECONFORM_ARGS=(
     "-kubernetes-version=$KUBE_VERSION"
+    "-schema-location=$schema_dir/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
     -schema-location=default
     -schema-location='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
     -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json'
     -summary
 )
 
-schema_dir="$(mktemp -d)"
-trap 'rm -rf "$schema_dir"' EXIT
+
+
+# Derive local APIs from the same generated CRDs and composition shipped to Flux.
+helm template schema "$REPO_ROOT/charts/ldap-provider" --include-crds \
+    --set oauth2.enabled=true \
+    | yq eval-all -o=json -I=0 '[.]' - \
+    | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
 # The community catalog omits CRDs themselves; validate those against the
 # selected Kubernetes release's own OpenAPI definitions.

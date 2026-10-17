@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.ops.finnes.dev/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: directory
+spec:
+  host: openldap.identity.svc.cluster.local
+  port: 636
+  tls: true
+  tlsServerName: ldap.finnes.dev
+  bindDN: cn=admin,dc=finnes,dc=dev
+  credentialsSecretRef:
+    namespace: identity
+    name: openldap
+    key: LDAP_ROOT_PASSWORD
+  allowedBases:
+    - ou=system,dc=finnes,dc=dev
+    - ou=groups,dc=finnes,dc=dev
+    - ou=clients,ou=oauth,dc=finnes,dc=dev

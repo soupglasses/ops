@@ -12,3 +12,4 @@ resources:
   - ./openldap/ks.yaml
   - ./ldap-system-users/ks.yaml
   - ./canaille/ks.yaml
+  - ./ldap-provider/ks.yaml
