@@ -28,3 +28,8 @@ Verify discovery and actual samples, evaluate queries against representative dat
 and exercise the alert or probe condition where practical. Report which operational
 question is now answered and any known blind spots. Dashboard polish and unrelated
 coverage gaps belong in follow-up work.
+
+Repository starting points: `kubernetes/apps/monitoring/victoria-metrics/` owns the
+metrics stack, rules, and Grafana provisioning. Use `docs/application-dashboard.md`
+and `docs/node-dashboard.md` for dashboard semantics, and
+`kubernetes/apps/monitoring/victoria-logs/README.md` for log fields and parser checks.

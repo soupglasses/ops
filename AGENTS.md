@@ -7,8 +7,7 @@ SPDX-License-Identifier: 0BSD
 # Working in ops
 
 Git and Flux own durable production state. Work in an isolated worktree, preserve
-unrelated changes, and stage explicit paths. Use small conventional commits with the
-user's authorship and the model attribution required by the session instructions.
+unrelated changes, and stage explicit paths.
 
 ## Delivery and verification
 
@@ -20,9 +19,9 @@ user's authorship and the model attribution required by the session instructions
 - Format changed YAML with `yamlfmt`. Pass the configured pre-commit checks, and
   preserve SPDX notices. Match neighboring licenses for new files using
   `task license:0bsd FILE=...` or `task license:mit FILE=...`.
-- For pull requests, wait for required checks with `gh pr checks <n> --watch
-  --interval 30`, then fetch the current head, results, comments, and Flux Local diff.
-  Base the verdict on that head and evidence relevant to the change.
+- For pull requests, wait with `gh pr checks <n> --watch --interval 30`, then fetch
+  the current head, results, comments, and Flux Local diff. Base the verdict on that
+  head and evidence relevant to the change.
 - Push production changes to `main`, reconcile with `task flux:reconcile`, and verify
   the affected application live. Keep branch preparation distinct from deployment.
 - Remove temporary verification resources and leave the end state Flux-managed.
@@ -32,13 +31,14 @@ user's authorship and the model attribution required by the session instructions
 
 Application data must survive a clean rebuild from Git, off-cluster backups, and
 independently held recovery keys. For changes affecting recovery, preserve a rollback
-copy until restored application contents have been validated. The VolSync component
-and recovery runbooks describe the established implementation.
+copy until restored application contents have been validated. Use the
+[VolSync contract](kubernetes/components/volsync/README.md) and
+[restore-drill example](docs/openldap-volsync-migration.md) for recovery changes.
 
 Use the credentials assigned to the current runtime. Mise defaults `KUBECONFIG` to
 `.secure/kubeconfig`; when using an externally supplied credential, select it after
-mise loads the project environment: `mise exec -- env KUBECONFIG=<assigned-path>
-kubectl ...`.
+mise loads the project environment:
+`mise exec -- env KUBECONFIG=<assigned-path> kubectl ...`.
 
 Keep `.secure/` and its contents unread. Existing `.sops.yaml` files are user-managed:
 if one needs editing, ask the user to make the change and wait for confirmation.
@@ -53,6 +53,7 @@ encrypted. Secret names, key names, and opaque encrypted blobs may be inspected.
 Pin GitHub Actions to full commit digests. Keep workflow permissions explicit and
 restrict write operations to trusted contexts.
 
-Project skills live in `.agents/skills/` and are explicitly invoked with `$<name>`:
-`ops-deliver`, `ops-incident`, `ops-observability`, `ops-security`, and `ops-recovery`.
-They provide focused workflows; specialist reviews are available when requested.
+Project skills live in `.agents/skills/`: `ops-deliver`, `ops-incident`,
+`ops-observability`, `ops-security`, and `ops-recovery`. Their descriptions determine
+when to select them. Each can also be invoked with `$<name>`. Specialist reviews are
+available when requested.
