@@ -7,4 +7,3 @@ resources:
   - ./provider.yaml
   - ./pluginsettings.yaml
   - ./composition.yaml
-  - ./legacy-configuration.yaml
