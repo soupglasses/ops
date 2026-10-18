@@ -9,7 +9,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ldap-plugin . /opt/jellyfin/plugins/LDAP-Auth_24.0.0.0/
 COPY --from=ldap-license /LICENSE /usr/share/licenses/jellyfin-ldap/LICENSE
-COPY runtime.py configuration.py media_restore.py health.py /usr/local/lib/jellyfin/
+COPY runtime.py media_restore.py health.py /usr/local/lib/jellyfin/
 ENV JELLYFIN_DATA_DIR=/config/server \
     JELLYFIN_CONFIG_DIR=/config/server/config \
     JELLYFIN_LOG_DIR=/config/server/log \

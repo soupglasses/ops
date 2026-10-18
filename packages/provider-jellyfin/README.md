@@ -73,16 +73,16 @@ The resulting manifests exclude Delete: pruning cannot remove libraries, plugins
 or application data. Libraries own their declared paths; the upstream provider
 requires replacement for path changes, so those changes need a deliberate migration.
 
-The initial bootstrap keeps both new Flux Kustomizations suspended until the
-repository's publication workflow has pushed the first package. Pin its digest
-before resuming observation.
+The manifest pins the native package by digest. The publication workflow tags each
+package with its source revision so the controller can be rebuilt from this repository.
 
-The application backup and restore contract remains the runtime's offline
-checkpoint, staging PVC, VolSync destination and restore init containers. Restore
-the application before resuming provider writes. Existing library names and plugin
-GUIDs are adopted again; user mappings, photos, memberships and other unmanaged
-plugin settings remain runtime data. Use an older VolSync recovery point for
-corruption recovery, rather than asking Crossplane to reconstruct user data.
+The current application policy has no configuration or media backups and no restore
+init containers, by operator request. Preserve the existing PVCs during adoption.
+Library names and plugin GUIDs identify existing objects; user mappings, photos,
+memberships and other unmanaged settings remain application data. Crossplane cannot
+reconstruct that data after its loss. The real-image checkpoint fixture tests the
+retained utilities and provider compatibility, not an active production backup path.
+See the [runtime storage policy](../jellyfin-runtime/README.md).
 
 The runtime still supplies the pinned LDAP binaries. Although this provider
 generates Plugin, PluginRepository and ScheduledTask APIs, production plugin
