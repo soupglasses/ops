@@ -6,11 +6,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jellyfin
-  annotations:
-    testing.ops.finnes.dev/container: configuration
-    testing.ops.finnes.dev/command: >-
-      ["python3", "/usr/local/lib/jellyfin/configuration.py", "--config", "/desired/configuration.json",
-      "--credentials", "/credentials", "--check"]
   labels:
     app: jellyfin
     app.kubernetes.io/name: jellyfin
@@ -40,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: jellyfin
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:6947130a86a85e82a545c0206cde9740d9e24374b137d35037ae3cc2dbb75200
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:eff7a6ebc2609f6b6b2c5322e00971694d778b0d2c6467466b441def4cd39b88
           ports:
             - name: http
               containerPort: 8096
@@ -84,35 +79,6 @@ spec:
               mountPath: /run/jellyfin
             - name: temporary
               mountPath: /tmp
-        - name: configuration
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:f3304e67f1e4be14bc458f1d70a5e7b5c46b65d2fbb7df004c48740b42426fca
-          command: [python3, /usr/local/lib/jellyfin/configuration.py]
-          args: [--config, /desired/configuration.json, --credentials, /credentials]
-          readinessProbe:
-            exec:
-              command: [python3, /usr/local/lib/jellyfin/configuration.py, --health]
-            periodSeconds: 10
-            timeoutSeconds: 5
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              memory: 128Mi
-          volumeMounts:
-            - name: runtime
-              mountPath: /run/jellyfin
-            - name: desired
-              mountPath: /desired
-              readOnly: true
-            - name: credentials
-              mountPath: /credentials
-              readOnly: true
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -126,10 +92,3 @@ spec:
           emptyDir: {}
         - name: temporary
           emptyDir: {}
-        - name: desired
-          configMap:
-            name: jellyfin-configuration
-        - name: credentials
-          secret:
-            secretName: jellyfin-identity
-            defaultMode: 0440

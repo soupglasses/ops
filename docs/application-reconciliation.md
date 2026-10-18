@@ -82,30 +82,33 @@ and membership/owner preservation through re-adoption.
 
 ## Application settings
 
-Jellyfin's configuration ConfigMap declares plugin settings, login branding, network
-settings and library paths. The sidecar reads the current API values every minute,
-merges the owned subset and repairs drift. It preserves user mappings, photo hashes
-and other unmanaged state. Credentials are mounted files; API tokens remain in
-memory and are not written to Kubernetes status or logs.
-
-The sidecar is a bounded exception to Crossplane resource management. See
-[the runtime rationale](../packages/jellyfin-runtime/CONFIGURATION.md) for the
-upstream HTTP provider's credential-handling problem and pinned evidence. The
-existing Jellyfin Terraform provider is MPL-licensed; its code is not vendored here.
+Jellyfin's application-local Crossplane resources declare plugin settings, login branding,
+network settings and library paths. The namespaced Upjet provider embeds the pinned
+Jellyfin Terraform provider and repairs API drift. It replaces the configuration
+sidecar while preserving the application's current storage policy.
+The LDAP plugin configuration owns only declared keys, preserving user mappings,
+photo hashes and other runtime state. Credentials stay in namespace-local Secrets.
+The ProviderConfig can read the existing administrator username from a Secret key; no
+separate automation account is required. See the
+[provider migration and build instructions](../packages/provider-jellyfin/README.md).
+The upstream Jellyfin Terraform provider retains its MPL license.
 
 New authored integration code is MIT. Generated Upjet CRDs keep their upstream
 license through generated sidecars. Upstream Jellyfin/plugin binaries retain their
-own licenses in the image. Regenerate CRDs using the chart README; do not edit
+own licenses in the image. Regenerate CRDs using the provider README; do not edit
 generated files to add licensing text.
 
 ## Acceptance tests
 
 ```sh
-# Read-only settings comparison against the running application's API.
-task app:test NAMESPACE=media APP=jellyfin
+# Wait for adopted Jellyfin settings and libraries to reconcile.
+kubectl -n media wait --for=condition=Ready --timeout=180s \
+  pluginconfigurations,systemconfigurations,networkingconfigurations,brandingconfigurations,libraries --all
+kubectl -n media wait --for=condition=Synced --timeout=180s \
+  pluginconfigurations,systemconfigurations,networkingconfigurations,brandingconfigurations,libraries --all
 # Read-only provider/API smoke checks through the chart's Helm hook.
 task app:test NAMESPACE=identity RELEASE=ldap-provider
-# Verify final Flux rendering, including checkpoint selection and media retention.
+# Verify final Flux rendering, including the declared storage policy.
 task app:verify-render
 ```
 
@@ -136,13 +139,13 @@ revisions and the build recipes are retained in this repository.
 
 Media uses the dedicated compressed 1 TiB ZFS dataset and NFS CSI stable `library`
 directory. Jellyfin can write media sidecar files. Its database, accounts and artwork
-under `/config/server` use a separate VolSync-backed PVC. Checkpoints stop Jellyfin,
-validate and atomically publish an archive, then resume it before snapshots are
-released. The restore destination refreshes its latest snapshot daily after the
-scheduled backup, so PVC recreation does not remain pinned to the initial bootstrap
-snapshot. A per-start guard validates or restores media; it never overwrites
-surviving initialized data. See [media recovery](media-storage.md) and
-[configuration recovery](../packages/jellyfin-runtime/README.md).
+under `/config/server` use a separate persistent volume. Configuration and media
+backups and automatic restore dependencies were removed by operator request.
+Crossplane reconstructs declared settings; it cannot reconstruct lost user mappings,
+photos or application databases. The historical recovery evidence below describes
+the former backup deployment, not an active recovery guarantee. See the
+[current storage policy](../packages/jellyfin-runtime/README.md) and
+[backup cleanup](jellyfin-backup-cleanup.md).
 
 The private Gateway is `172.21.68.11/32` through the existing BGP sessions. It has no
 WAN NAT mapping. Router source/interface rules and Service source ranges limit
@@ -253,3 +256,26 @@ LDAP password remains authoritative. Existing user accounts were preserved. A
 library refresh was triggered on the upgraded server. All isolated migration
 resources were removed. Independent security and resilience reviews approved the
 change; evidence is recorded in [issue 107](https://github.com/soupglasses/ops/issues/107).
+
+### Jellyfin Upjet checkpoint compatibility
+
+The Upjet migration retains the same Jellyfin 12.2 and LDAP 24 binaries and the
+offline checkpoint format. A real-image fixture now configures the server through
+the generated Upjet connector, verifies LDAP login by username and email, checks
+administrator promotion/demotion and profile-photo synchronization, and repairs
+owned-setting drift without replacing LDAP user mappings or library identities.
+
+The fixture exports an offline checkpoint and restores it into a second isolated
+Jellyfin instance. Server identity, library IDs, LDAP mappings and photo bytes remain
+unchanged. Fresh provider processes adopt the restored state, correct a deliberately
+changed LDAP host, pass an unchanged-state comparison, and authenticate the same LDAP
+user with the expected administrator role. All disposable containers are removed.
+
+This tests application-state compatibility with the new API writer and the retained
+checkpoint utilities. Production backups and restore dependencies were separately
+removed by operator request; this fixture does not establish current off-cluster
+recoverability. The native kind test additionally applies a namespaced resource
+through the installed controller, verifying observation without writes, desired
+updates and drift correction while preserving users and unspecified settings.
+Rollout and package evidence is tracked in
+[issue 110](https://github.com/soupglasses/ops/issues/110).

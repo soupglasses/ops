@@ -7,7 +7,6 @@ namespace: media
 resources:
   - ./deployment.yaml
   - ./service.yaml
-  - ./configuration.yaml
   - ./networkpolicy.yaml
   - ./httproute.yaml
   - ./pvc.yaml
