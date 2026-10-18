@@ -6,3 +6,4 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: jellyfin-configuration
+  namespace: media
