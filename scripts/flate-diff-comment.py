@@ -30,8 +30,15 @@ def api(endpoint, method="GET", body=None, paginate=False):
 def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     number = os.environ["PR_NUMBER"]
+    head_sha = os.environ["PR_HEAD_SHA"]
+    commit_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/commit/{head_sha}"
     run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
-    body = f"{MARKER}\n{Path('body.md').read_text().rstrip()}\n\n[Latest validation run]({run_url}).\n"
+    body = (
+        f"{MARKER}\n{Path('body.md').read_text().rstrip()}\n\n"
+        f"PR commit: [`{head_sha[:12]}`]({commit_url}) "
+        f"(validated as merged into the base branch). "
+        f"[Validation run]({run_url}).\n"
+    )
     endpoint = f"repos/{repo}/issues/{number}/comments"
     pages = api(endpoint, paginate=True)
     # Recognize the old heading to consolidate comments created before the marker.

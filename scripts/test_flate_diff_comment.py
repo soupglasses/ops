@@ -33,6 +33,7 @@ class CommentTests(unittest.TestCase):
         env = {
             "GITHUB_REPOSITORY": "soupglasses/ops", "PR_NUMBER": "42",
             "GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "123",
+            "PR_HEAD_SHA": "abcdef1234567890abcdef1234567890abcdef12",
         }
         with patch.dict("os.environ", env), patch.object(
             Path, "read_text", return_value="No rendered Flux diff.\n",
@@ -50,6 +51,9 @@ class CommentTests(unittest.TestCase):
         self.assertEqual(calls[1].args[:2], ("repos/soupglasses/ops/issues/42/comments", "POST"))
         self.assertIn(comment.MARKER, calls[1].args[2])
         self.assertIn("actions/runs/123", calls[1].args[2])
+        self.assertIn("[`abcdef123456`]", calls[1].args[2])
+        self.assertIn("/commit/abcdef1234567890abcdef1234567890abcdef12", calls[1].args[2])
+        self.assertIn("validated as merged into the base branch", calls[1].args[2])
 
     def test_updates_existing_comment_even_when_diff_is_empty(self):
         calls = self.publish([[entry(7, comment.MARKER + "\nold diff")]])
