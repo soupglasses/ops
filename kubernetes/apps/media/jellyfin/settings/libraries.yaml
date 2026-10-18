@@ -10,6 +10,8 @@ metadata:
 spec:
   managementPolicies:
     - Observe
+    - Create
+    - Update
   providerConfigRef:
     kind: ProviderConfig
     name: jellyfin
@@ -27,6 +29,8 @@ metadata:
 spec:
   managementPolicies:
     - Observe
+    - Create
+    - Update
   providerConfigRef:
     kind: ProviderConfig
     name: jellyfin
@@ -44,6 +48,8 @@ metadata:
 spec:
   managementPolicies:
     - Observe
+    - Create
+    - Update
   providerConfigRef:
     kind: ProviderConfig
     name: jellyfin

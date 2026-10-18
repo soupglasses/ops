@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+# Adopt the unused ConfigMap into a pruning inventory after the sidecar retires.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jellyfin-configuration
