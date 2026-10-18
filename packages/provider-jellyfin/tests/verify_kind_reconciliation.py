@@ -3,6 +3,7 @@
 """Exercise the installed controller against a disposable Jellyfin in kind."""
 
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -50,7 +51,7 @@ apply(
             "containers": [
                 {
                     "name": "jellyfin",
-                    "image": next(
+                    "image": os.environ.get("JELLYFIN_TEST_IMAGE") or next(
                         line.split()[1]
                         for line in (
                             Path(__file__).resolve().parents[2]

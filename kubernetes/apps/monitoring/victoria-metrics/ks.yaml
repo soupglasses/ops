@@ -56,7 +56,7 @@ spec:
   path: ./kubernetes/apps/monitoring/victoria-metrics/identity
   targetNamespace: monitoring
   dependsOn:
-    - name: ldap-directory
+    - name: ldap-system-users
       namespace: identity
   sourceRef:
     kind: GitRepository

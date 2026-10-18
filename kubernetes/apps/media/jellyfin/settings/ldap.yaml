@@ -9,10 +9,6 @@ spec:
   providerConfigRef:
     name: jellyfin
   pluginID: 958aad66-3784-4d2a-b89a-a7b6fab6e25c
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
   configuration:
     LdapServer: ldap.finnes.dev
     LdapPort: 636

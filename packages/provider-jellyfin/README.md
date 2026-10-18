@@ -28,6 +28,8 @@ PROVIDER_PACKAGE=/tmp/provider-jellyfin.xpkg bash packages/provider-jellyfin/kin
 docker build --target generated --output type=local,dest=/tmp/jellyfin-generated packages/provider-jellyfin
 ```
 
+Set `JELLYFIN_TEST_IMAGE` to load a local image into kind instead of pulling the stock image.
+
 Copy generated CRDs from `/tmp/jellyfin-generated/generated/crds/` into
 `packages/provider-jellyfin/package/crds/`, and the generated schema into `config/schema.json`.
 Do not edit generated Go files or CRDs. CI verifies reproducibility and exercises
@@ -87,8 +89,8 @@ Jellyfin configuration and media have no backups or restore init containers: the
 off-site storage cost outweighs rebuilding this data. Preserve existing PVCs during adoption.
 Library names and plugin GUIDs identify existing objects; user mappings, photos,
 memberships and other unmanaged settings remain application data. Crossplane cannot
-reconstruct that data after its loss. The real-image checkpoint fixture tests the
-retained utilities and provider compatibility, not an active production backup path.
+reconstruct that data after its loss. The real-image integration fixture verifies that ordinary restarts and provider
+re-adoption preserve existing identities, mappings, photos and libraries.
 See the [runtime storage policy](../jellyfin-runtime/README.md).
 
 The runtime supplies pinned LDAP binaries. Keep binary updates in the tested image

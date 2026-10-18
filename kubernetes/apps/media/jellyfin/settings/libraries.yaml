@@ -8,13 +8,6 @@ metadata:
   annotations:
     crossplane.io/external-name: Movies
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     collectionType: movies
     paths:
@@ -27,13 +20,6 @@ metadata:
   annotations:
     crossplane.io/external-name: TV
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     collectionType: tvshows
     paths:
@@ -46,13 +32,6 @@ metadata:
   annotations:
     crossplane.io/external-name: Music
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     collectionType: music
     paths:

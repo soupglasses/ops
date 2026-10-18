@@ -4,13 +4,11 @@
 version: "3"
 tasks:
   test:
-    desc: Run an application's acceptance check (NAMESPACE and APP, or RELEASE)
+    desc: Run a Helm release's native acceptance tests
     requires:
-      vars: [NAMESPACE]
-    cmds:
-      - |
-        python3 scripts/application-test.py --namespace {{.NAMESPACE | shellQuote}} \
-          {{if .RELEASE}}--release {{.RELEASE | shellQuote}}{{else}}--deployment {{.APP | shellQuote}}{{end}}
+      vars: [NAMESPACE, RELEASE]
+    cmd: helm test {{.RELEASE | shellQuote}} --namespace {{.NAMESPACE | shellQuote}} --logs --timeout
+      5m
 
   verify-render:
     desc: Verify Jellyfin storage, no-backup policy and private-route invariants in the final Flux render

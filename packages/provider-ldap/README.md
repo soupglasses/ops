@@ -30,7 +30,7 @@ From the repository root:
 
 ```sh
 task ldap:generate
-task ldap:export-generated OUTPUT=/tmp/ldap-generated-source
+task ldap:export-generated DESTINATION=/tmp/ldap-generated-source
 ```
 
 `generate` refreshes the schema snapshot and CRDs using pinned Docker tools.
@@ -48,16 +48,17 @@ live CRDs and composes ordinary Entries and attribute Secrets. These generated
 runtime resources have owner references and identity UID labels; change their
 parent CR rather than editing the child resources.
 
-`GroupOfNames` follows Canaille's LDAP model: `cn`, `member`, `owner` and
-`description`. It owns the object class and description. `initialMembers` and
-optional `initialOwners` apply only to new LDAP entries; later Canaille edits
-are preserved. LDAP maintains reverse `memberOf` through its existing overlays.
-Deleting the CR removes composed Kubernetes objects while retaining the LDAP
-group. A new CR with the same `cn` adopts it without replacing membership or UUID.
+`GroupOfNames` declares `cn` and `description`. Git owns the object class and
+description; Canaille owns members and owners. New groups contain only the
+platform's non-login sentinel account, configured through `groups.sentinelDN`.
+This satisfies LDAP's required `member` attribute without granting human access.
+Keep the sentinel when removing the last human member in Canaille. The directory
+foundation continuously reconciles its unusable password marker.
 
-The class requires at least one member when creating an entry. Do not insert an
-implicit administrator or sentinel to hide that requirement. App-specific group
-names and bootstrap membership belong with each application's manifests.
+LDAP maintains reverse `memberOf` through its existing overlays. Deleting the CR
+removes composed Kubernetes objects while retaining the LDAP group. A new CR
+with the same `cn` adopts it without replacing membership, owners or UUID.
+Application manifests contain no membership or ownership lists.
 
 References: [Canaille LDAP setup](https://canaille.readthedocs.io/en/latest/howtos/database/ldap.html),
 [deployed Canaille group model](https://github.com/yaal-coop/canaille/blob/0.3.6/canaille/backends/ldap/models/core.py#L100-L109).

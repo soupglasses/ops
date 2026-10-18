@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 version: "3"
-vars:
-  OUTPUT: '{{default "/tmp/ops-ldap-generated-source" .OUTPUT}}'
 tasks:
   generate:
     desc: Regenerate the LDAP schema snapshot and CRDs from the pinned SDK and generators
@@ -16,6 +14,8 @@ tasks:
         cp "$generated_dir/generated/schema.json" packages/provider-ldap/config/schema.json
         cp "$generated_dir/generated/crds/"* charts/ldap-provider/crds/
   export-generated:
-    desc: Export generated LDAP Go source and its MANIFEST for inspection (OUTPUT overrides destination)
-    cmd: docker build --target generated-source --output {{printf "type=local,dest=%s" .OUTPUT | shellQuote}}
-      packages/provider-ldap
+    desc: Export generated LDAP Go source and its MANIFEST for inspection (DESTINATION overrides destination)
+    vars:
+      DESTINATION: '{{default "/tmp/ops-ldap-generated-source" .DESTINATION}}'
+    cmd: docker build --target generated-source --output {{printf "type=local,dest=%s" .DESTINATION |
+      shellQuote}} packages/provider-ldap

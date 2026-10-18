@@ -8,13 +8,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=users,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -29,13 +22,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=system,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -50,13 +36,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=groups,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -71,13 +50,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=policies,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -92,13 +64,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=oauth,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -113,13 +78,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=clients,ou=oauth,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -134,13 +92,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=authorizations,ou=oauth,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -155,13 +106,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=consents,ou=oauth,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -176,13 +120,6 @@ metadata:
   annotations:
     crossplane.io/external-name: ou=tokens,ou=oauth,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -197,13 +134,6 @@ metadata:
   annotations:
     crossplane.io/external-name: cn=password,ou=policies,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -225,13 +155,6 @@ metadata:
   annotations:
     crossplane.io/external-name: cn=system,ou=policies,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -252,13 +175,6 @@ metadata:
   annotations:
     crossplane.io/external-name: uid=admin,ou=users,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -276,13 +192,6 @@ metadata:
   annotations:
     crossplane.io/external-name: uid=auth,ou=system,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
@@ -294,26 +203,25 @@ spec:
       name: directory-foundation-attributes
       key: auth-user-defaults.json
 ---
+apiVersion: identity.ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: directory-admin-group
+spec:
+  backendRef:
+    kind: ProviderConfig
+    name: directory-admin
+  cn: admin
+---
 apiVersion: ldap.ops.finnes.dev/v1alpha1
 kind: Entry
 metadata:
-  name: directory-admin-group
+  name: directory-group-sentinel
   annotations:
-    crossplane.io/external-name: cn=admin,ou=groups,dc=finnes,dc=dev
+    crossplane.io/external-name: uid=group-sentinel,ou=users,dc=finnes,dc=dev
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: directory-admin
   forProvider:
     dataJsonSecretRef:
       name: directory-foundation-attributes
-      key: admin-group.json
-    restrictAttributes:
-      - objectClass
-    dataJsonCreateDefaultsSecretRef:
-      name: directory-foundation-attributes
-      key: admin-group-defaults.json
+      key: group-sentinel.json
+    restrictAttributes: [objectClass, cn, sn, userPassword, description]

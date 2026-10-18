@@ -11,3 +11,5 @@ resources:
   - ./httproute.yaml
   - ./pvc.yaml
   - ./storage-alerts.yaml
+  - ./media-storage.yaml
+  - ./media-admission.yaml

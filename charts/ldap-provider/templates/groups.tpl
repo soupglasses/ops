@@ -23,7 +23,7 @@ spec:
           properties:
             spec:
               type: object
-              required: [backendRef, cn, initialMembers]
+              required: [backendRef, cn]
               properties:
                 backendRef:
                   type: object
@@ -47,21 +47,7 @@ spec:
                       message: The group name is immutable.
                 description:
                   type: string
-                initialOwners:
-                  description: Initial owner DNs; later ownership changes belong to directory administrators.
-                  type: array
-                  x-kubernetes-list-type: set
-                  items:
-                    type: string
-                    minLength: 1
-                initialMembers:
-                  description: Required only for creation; existing membership belongs to directory administrators.
-                  type: array
-                  minItems: 1
-                  x-kubernetes-list-type: set
-                  items:
-                    type: string
-                    minLength: 1
+
 ---
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
@@ -82,5 +68,5 @@ spec:
         source: Inline
         inline:
           template: |
-{{ .Files.Get "files/groupofnames.gotmpl" | replace "__GROUPS_DN_JSON__" (toJson .Values.groups.baseDN) | indent 12 }}
+{{ .Files.Get "files/groupofnames.gotmpl" | replace "__GROUPS_DN_JSON__" (toJson .Values.groups.baseDN) | replace "__SENTINEL_DN_JSON__" (toJson .Values.groups.sentinelDN) | indent 12 }}
 {{- end }}

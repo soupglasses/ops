@@ -26,7 +26,9 @@ A local `ProviderConfig` is available for directories with their own credentials
 
 `GroupOfNames` is a typed LDAP group API. Set `groups.enabled=true` to install
 its XRD and composition. It can be enabled independently of OAuth2; both use the
-same function and namespace permissions configured under `composition`.
+same composition function. Because the LDAP API is installed through Helm, the
+chart grants Crossplane access to Entries through one aggregated ClusterRole.
+Crossplane already has permission to manage the generated Secrets.
 
 ```yaml
 apiVersion: identity.ops.finnes.dev/v1alpha1
@@ -39,11 +41,15 @@ spec:
     name: directory-admin
   cn: example.users
   description: Users permitted to access Example
-  initialMembers:
-    - uid=admin,ou=users,dc=example,dc=test
 ```
 
-Existing membership and owners remain managed in Canaille. Keep the group CR
+Membership and owners are managed only in Canaille. The platform uses the
+non-login account at `groups.sentinelDN` to satisfy LDAP's required `member`
+attribute when creating a group. Provision this account before group resources;
+the directory foundation does this in production. Keep it in otherwise empty
+groups so the last human member can be removed without violating LDAP's schema.
+No human account receives access or ownership from the group declaration.
+Existing groups are adopted without changing members or owners. Keep the group CR
 with its application's Kubernetes configuration; it need not be stored in the
 provider installation. An administrative ProviderConfig can be reused within
 its namespace. Tenant-facing ClusterProviderConfig restrictions remain enforced.
@@ -52,7 +58,7 @@ Generated CRDs retain their upstream Apache license. From the repository root:
 
 ```sh
 task ldap:generate
-task ldap:export-generated OUTPUT=/tmp/ldap-generated-source
+task ldap:export-generated DESTINATION=/tmp/ldap-generated-source
 ```
 
 See [provider development](../../packages/provider-ldap/README.md) for the source

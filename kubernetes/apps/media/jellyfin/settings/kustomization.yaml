@@ -9,4 +9,16 @@ resources:
   - ./configuration.yaml
   - ./libraries.yaml
   - ./ldap.yaml
-  - ./permissions.yaml
+patches:
+  - target:
+      group: jellyfin.ops.finnes.dev
+      kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library
+    patch: |-
+      - op: add
+        path: /spec/managementPolicies
+        value: [Observe, Create, Update]
+      - op: add
+        path: /spec/providerConfigRef
+        value:
+          kind: ProviderConfig
+          name: jellyfin

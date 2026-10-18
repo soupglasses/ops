@@ -34,51 +34,15 @@ spec:
   runtimeConfigRef:
     name: {{ .Release.Namespace }}-{{ .Release.Name }}-function-restricted
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ .Release.Name }}-identity-composer
-rules:
-  - apiGroups: [ldap.ops.finnes.dev]
-    resources: [entries]
-    verbs: [get, list, watch, create, update, patch, delete]
-  - apiGroups: [""]
-    resources: [secrets]
-    verbs: [get, list, watch, create, update, patch, delete]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ .Release.Name }}-identity-composer
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ .Release.Name }}-identity-composer
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Values.composition.crossplaneServiceAccount }}
-    namespace: {{ .Values.composition.crossplaneNamespace }}
----
-# Crossplane's realtime informer watches composed Entry resources across namespaces.
+# This API is installed by Helm, so Crossplane's package RBAC manager does not grant access.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-identity-observer
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-identity-composer
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
 rules:
   - apiGroups: [ldap.ops.finnes.dev]
     resources: [entries]
-    verbs: [get, list, watch]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-identity-observer
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ .Release.Namespace }}-{{ .Release.Name }}-identity-observer
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Values.composition.crossplaneServiceAccount }}
-    namespace: {{ .Values.composition.crossplaneNamespace }}
+    verbs: [get, list, watch, create, update, patch, delete]
 {{- end }}

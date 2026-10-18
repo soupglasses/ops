@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
 
-"""Check that Canaille recognizes an LDAP-provisioned confidential client."""
+"""Check Canaille compatibility with provider-provisioned LDAP identities."""
 
 import base64
 import os
+import sys
 
 from canaille import create_app
 from canaille.oidc.provider import query_client
@@ -27,6 +28,29 @@ app = create_app(
     },
     init_backend=False,
 )
+
+if group_name := os.environ.get("LDAP_TEST_GROUP"):
+    from canaille.app import models
+
+    with app.test_request_context(), app.backend.session():
+        group = app.backend.get(models.Group, display_name=group_name)
+        sentinel = app.backend.get(models.User, user_name="group-sentinel")
+        human = app.backend.get(models.User, user_name="alice")
+        assert group is not None and sentinel is not None and human is not None
+        group.members = [sentinel, human]
+        group.owner = human
+        app.backend.save(group)
+        app.backend.reload(group)
+        assert set(group.members) == {sentinel, human}
+        assert group.owner == human
+        group.members = [sentinel]
+        group.owner = None
+        app.backend.save(group)
+        app.backend.reload(group)
+        assert group.members == [sentinel]
+        assert group.owner is None
+    print("Canaille adds and removes the last human member while retaining the sentinel")
+    sys.exit(0)
 
 secret = os.environ.get("LDAP_TEST_CLIENT_SECRET", "fixture-client-secret-2")
 with app.test_request_context():

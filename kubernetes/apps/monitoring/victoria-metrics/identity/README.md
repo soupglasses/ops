@@ -35,11 +35,11 @@ The patch adds a nullable field to Grafana's disposable authentication database;
 no directory data or credentials change. To roll back, remove the image override
 and let Flux restore the chart's stock image; users sign in again.
 
-The group initially contains `admin` and `sofie`. Subsequent membership changes
-belong to directory administrators: reconciliation owns the group's class and
-description, not its members. The namespace opts into the central backend, and
-Crossplane's namespace Role permits composing the client Secret and Entry; this
-is a trusted identity-control-plane permission.
+Manage group membership and ownership in Canaille. Git declares the group and
+its description without granting human access. The platform sentinel satisfies
+LDAP's required member attribute for new groups. The namespace opts into the
+central backend. Crossplane supplies Secret permissions; the LDAP chart supplies
+the Entry permission once for all identity compositions.
 
 The normal Grafana login page remains available. Its existing `grafana-auth`
 Secret supplies the local recovery administrator independently of OIDC. There is

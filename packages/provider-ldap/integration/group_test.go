@@ -62,6 +62,8 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	t.Cleanup(func() {
 		_ = dyn.Resource(pcGVR).Namespace(ns).Delete(context.Background(), name, metav1.DeleteOptions{})
 	})
+	sentinel := "uid=group-sentinel,ou=users," + baseDN
+	add(t, f.conn, sentinel, map[string][]string{"objectClass": {"inetOrgPerson"}, "cn": {"Group sentinel (disabled)"}, "sn": {"Sentinel"}, "userPassword": {"{CRYPT}!"}})
 	memberA, memberB := "uid=alice,ou=users,"+baseDN, "uid=bob,ou=users,"+baseDN
 	for _, dn := range []string{memberA, memberB} {
 		add(t, f.conn, dn, map[string][]string{"objectClass": {"inetOrgPerson"}, "cn": {"Member"}, "sn": {"Fixture"}})
@@ -82,7 +84,7 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	}
 	uuid := uuidOf()
 	makeGroup := func(resourceName, cn string) *unstructured.Unstructured {
-		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "GroupOfNames", "metadata": map[string]any{"name": resourceName, "namespace": ns}, "spec": map[string]any{"backendRef": map[string]any{"kind": "ProviderConfig", "name": name}, "cn": cn, "description": "Managed description", "initialMembers": []any{memberB}, "initialOwners": []any{memberB}}}}
+		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "GroupOfNames", "metadata": map[string]any{"name": resourceName, "namespace": ns}, "spec": map[string]any{"backendRef": map[string]any{"kind": "ProviderConfig", "name": name}, "cn": cn, "description": "Managed description"}}}
 	}
 	create := func(xr *unstructured.Unstructured) *unstructured.Unstructured {
 		t.Helper()
@@ -141,17 +143,12 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	fresh := create(makeGroup(name+"-new", "created-users"))
 	ready(fresh.GetName())
 	created := read(t, f.conn, "cn=created-users,ou=groups,"+baseDN)
-	if created.GetAttributeValue("member") != memberB || created.GetAttributeValue("owner") != memberB {
-		t.Fatal("creation did not use explicit initial members and owners")
+	if !slices.Equal(created.GetAttributeValues("member"), []string{sentinel}) || len(created.GetAttributeValues("owner")) != 0 {
+		t.Fatal("new group granted human access or ownership instead of using only the sentinel")
 	}
 	invalid := makeGroup(name+"-invalid", "bad,ou=users")
 	if _, err := xrs.Create(ctx, invalid, metav1.CreateOptions{}); !apierrors.IsInvalid(err) {
 		t.Fatal("unsafe cn was accepted")
-	}
-	invalid = makeGroup(name+"-empty", "empty-users")
-	_ = unstructured.SetNestedSlice(invalid.Object, []any{}, "spec", "initialMembers")
-	if _, err := xrs.Create(ctx, invalid, metav1.CreateOptions{}); !apierrors.IsInvalid(err) {
-		t.Fatal("groupOfNames accepted empty bootstrap membership")
 	}
 	current, err := xrs.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {

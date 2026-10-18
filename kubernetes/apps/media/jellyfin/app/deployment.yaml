@@ -57,8 +57,9 @@ spec:
             failureThreshold: 3
             timeoutSeconds: 3
           livenessProbe:
-            exec:
-              command: [python3, /usr/local/lib/jellyfin/runtime.py, health]
+            httpGet:
+              path: /health
+              port: http
             periodSeconds: 30
             timeoutSeconds: 5
           resources:
@@ -75,8 +76,6 @@ spec:
               readOnly: false
             - name: cache
               mountPath: /cache
-            - name: runtime
-              mountPath: /run/jellyfin
             - name: temporary
               mountPath: /tmp
       volumes:
@@ -87,8 +86,6 @@ spec:
           persistentVolumeClaim:
             claimName: jellyfin-media
         - name: cache
-          emptyDir: {}
-        - name: runtime
           emptyDir: {}
         - name: temporary
           emptyDir: {}

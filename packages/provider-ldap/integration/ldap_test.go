@@ -301,11 +301,24 @@ func TestHumanMembershipAndPhotoSurvive(t *testing.T) {
 	if read(t, f.conn, humanDN).GetAttributeValue("cn") != "Alice" || read(t, f.conn, humanDN).GetAttributeValue("jpegPhoto") != photo.String() {
 		t.Fatal("person reconciliation failed to repair the name while preserving the binary JPEG")
 	}
+	sentinelDN := "uid=group-sentinel,ou=users," + baseDN
+	add(t, f.conn, sentinelDN, map[string][]string{"objectClass": {"inetOrgPerson"}, "cn": {"Group sentinel (disabled)"}, "sn": {"Sentinel"}, "userPassword": {"{CRYPT}!"}})
+	anonymous, err := ldap.DialURL("ldap://127.0.0.1:" + strconv.Itoa(f.port))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer anonymous.Close()
+	if err := anonymous.Bind(sentinelDN, "any-password"); !ldap.IsErrorWithCode(err, ldap.LDAPResultInvalidCredentials) {
+		t.Fatalf("sentinel accepted authentication or failed unexpectedly: %v", err)
+	}
 	dn := "cn=immich-users,ou=groups," + baseDN
 	attrs := map[string][]string{"objectClass": {"groupOfNames"}, "description": {"Immich access"}}
-	want := desired(t, dn, attrs, map[string][]string{"member": {"cn=admin," + baseDN}}, []string{"objectClass", "description"})
+	want := desired(t, dn, attrs, map[string][]string{"member": {sentinelDN}}, []string{"objectClass", "description"})
 	state := f.apply(t, nil, want)
 	f.stable(t, state, want)
+	if members := read(t, f.conn, dn).GetAttributeValues("member"); len(members) != 1 || members[0] != sentinelDN {
+		t.Fatal("new group unexpectedly grants human access")
+	}
 	modify(t, f.conn, dn, map[string][]string{"member": {humanDN}, "description": {"wrong"}})
 	state = f.apply(t, f.refresh(t, state), want)
 	f.stable(t, state, want)
@@ -316,5 +329,27 @@ func TestHumanMembershipAndPhotoSurvive(t *testing.T) {
 	if read(t, f.conn, humanDN).GetAttributeValue("jpegPhoto") != photo.String() {
 		t.Fatal("human photo was changed")
 	}
-	t.Log("group bootstrap satisfies MUST member; human-managed membership and jpegPhoto survive drift repair")
+	t.Run("CanailleManagesGroupMembership", func(t *testing.T) {
+		python := os.Getenv("CANAILLE_TEST_PYTHON")
+		if python == "" {
+			python = "../venv/bin/python"
+		}
+		if _, err := os.Stat(python); err != nil {
+			t.Skip("set CANAILLE_TEST_PYTHON to a Canaille environment")
+		}
+		cmd := exec.Command(python, "../tests/verify_canaille.py")
+		cmd.Env = append(os.Environ(), "LDAP_TEST_URI=ldap://127.0.0.1:"+strconv.Itoa(f.port), "LDAP_TEST_GROUP=immich-users")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("Canaille group verification failed: %v: %s", err, out)
+		} else {
+			t.Log(string(out))
+		}
+		state = f.apply(t, f.refresh(t, state), want)
+		f.stable(t, state, want)
+		members := read(t, f.conn, dn).GetAttributeValues("member")
+		if len(members) != 1 || members[0] != sentinelDN {
+			t.Fatal("reconciliation changed Canaille's sentinel-only membership")
+		}
+	})
+	t.Log("sentinel cannot authenticate; human-managed membership and jpegPhoto survive drift repair")
 }

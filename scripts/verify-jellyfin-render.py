@@ -56,6 +56,7 @@ def verify(path):
     jellyfin = next(item for item in application["containers"] if item["name"] == "jellyfin")
     for probe in ("startupProbe", "readinessProbe"):
         assert jellyfin[probe]["exec"]["command"] == ["python3", "/usr/local/lib/jellyfin/health.py"]
+    assert jellyfin["livenessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
     assert not next(item for item in jellyfin["volumeMounts"] if item["name"] == "media").get("readOnly", False)
     gateway = get("Gateway", "private", "network")
     assert gateway["spec"]["infrastructure"]["labels"]["bgp"] == "enabled"

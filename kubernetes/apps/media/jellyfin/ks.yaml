@@ -8,32 +8,9 @@ metadata:
   namespace: media
 spec:
   path: ./kubernetes/apps/media/jellyfin/identity
-  targetNamespace: media
   dependsOn:
-    - name: ldap-directory
+    - name: ldap-system-users
       namespace: identity
-    - name: jellyfin-groups
-      namespace: media
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  interval: 10m
-  retryInterval: 2m
-  timeout: 10m
-  prune: false
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: jellyfin-media
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/media
-  dependsOn:
-    - name: csi-driver-nfs
-      namespace: kube-system
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -55,8 +32,8 @@ spec:
   dependsOn:
     - name: jellyfin-identity
       namespace: media
-    - name: jellyfin-media
-      namespace: media
+    - name: csi-driver-nfs
+      namespace: kube-system
     - name: cilium-private-gateway
       namespace: network
     - name: openebs
@@ -70,35 +47,6 @@ spec:
   timeout: 10m
   prune: false
   wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: jellyfin-groups
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/groups
-  targetNamespace: identity
-  dependsOn:
-    - name: ldap-system-users
-      namespace: identity
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  healthChecks:
-    - apiVersion: identity.ops.finnes.dev/v1alpha1
-      kind: GroupOfNames
-      name: jellyfin-user-group
-      namespace: identity
-    - apiVersion: identity.ops.finnes.dev/v1alpha1
-      kind: GroupOfNames
-      name: jellyfin-admin-group
-      namespace: identity
-  interval: 10m
-  retryInterval: 2m
-  timeout: 5m
-  prune: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -140,8 +88,6 @@ spec:
       namespace: media
     - name: jellyfin-provider
       namespace: media
-    - name: ldap-provider
-      namespace: identity
   sourceRef:
     kind: GitRepository
     name: flux-system

@@ -24,6 +24,10 @@ spec:
   healthChecks:
     - apiVersion: ldap.ops.finnes.dev/v1alpha1
       kind: Entry
+      name: directory-group-sentinel
+      namespace: identity
+    - apiVersion: ldap.ops.finnes.dev/v1alpha1
+      kind: Entry
       name: directory-users
       namespace: identity
     - apiVersion: ldap.ops.finnes.dev/v1alpha1
@@ -74,8 +78,8 @@ spec:
       kind: Entry
       name: directory-auth-user
       namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
+    - apiVersion: identity.ops.finnes.dev/v1alpha1
+      kind: GroupOfNames
       name: directory-admin-group
       namespace: identity
   interval: 10m

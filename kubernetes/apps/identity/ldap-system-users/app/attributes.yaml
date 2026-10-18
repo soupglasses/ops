@@ -7,6 +7,14 @@ metadata:
   name: directory-foundation-attributes
 type: Opaque
 stringData:
+  group-sentinel.json: |
+    {
+      "objectClass": ["inetOrgPerson"],
+      "cn": ["Group sentinel (disabled)"],
+      "sn": ["Sentinel"],
+      "userPassword": ["{CRYPT}!"],
+      "description": ["Non-login placeholder required by groupOfNames; retain in otherwise empty groups"]
+    }
   users.json: '{"objectClass":["organizationalUnit"]}'
   system.json: '{"objectClass":["organizationalUnit"]}'
   groups.json: '{"objectClass":["organizationalUnit"]}'
@@ -99,5 +107,3 @@ stringData:
       ]
     }
   auth-user-defaults.json: '{"cn":["System Auth User"],"sn":["Auth"],"userPassword":["${admin_user_password_hash}"]}'
-  admin-group.json: '{"objectClass":["groupOfNames"]}'
-  admin-group-defaults.json: '{"member":["cn=admin,dc=finnes,dc=dev","uid=admin,ou=users,dc=finnes,dc=dev"]}'

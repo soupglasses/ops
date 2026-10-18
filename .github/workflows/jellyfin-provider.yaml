@@ -54,11 +54,10 @@ jobs:
               or path == ".github/workflows/jellyfin-provider.yaml"
               for path in changed
           )
-          # Runtime configuration and RBAC still get the native-package kind test.
-          native = source or any(path in {
-              "kubernetes/apps/media/jellyfin/provider/provider.yaml",
-              "kubernetes/apps/media/jellyfin/settings/permissions.yaml",
-          } for path in changed)
+          native = source or any(path.startswith((
+              "kubernetes/apps/media/jellyfin/provider/",
+              "kubernetes/apps/media/jellyfin/settings/",
+          )) for path in changed)
           with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
               print(f"source={str(source).lower()}", file=output)
               print(f"native={str(native).lower()}", file=output)

@@ -41,6 +41,7 @@ helm upgrade --install ldap "$repo_dir/charts/ldap-provider" \
     --set tests.image.repository="${tests_image%:*}" --set tests.image.tag="${tests_image##*:}" \
     --set pollInterval=2s --set tests.enabled=true --set tests.mode=integration \
     --set-string tests.pattern="$test_pattern" \
+    --set groups.sentinelDN=uid=group-sentinel\\,ou=users\\,dc=example\\,dc=test \
     --set groups.enabled=true --set groups.baseDN=ou=groups\\,dc=example\\,dc=test \
     --set oauth2.enabled=true --set oauth2.clientsDN=ou=clients\\,ou=oauth\\,dc=example\\,dc=test \
     --wait --timeout 3m

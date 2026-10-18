@@ -11,3 +11,16 @@ resources:
   - ./attributes.yaml
   - ./entries.yaml
   - ./secret.sops.yaml
+patches:
+  - target:
+      group: ldap.ops.finnes.dev
+      kind: Entry
+    patch: |-
+      - op: add
+        path: /spec/managementPolicies
+        value: [Observe, Create, Update]
+      - op: add
+        path: /spec/providerConfigRef
+        value:
+          kind: ProviderConfig
+          name: directory-admin

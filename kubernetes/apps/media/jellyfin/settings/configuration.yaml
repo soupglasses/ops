@@ -8,13 +8,6 @@ metadata:
   annotations:
     crossplane.io/external-name: system
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     serverName: Jellyfin
     uiCulture: en-US
@@ -28,13 +21,6 @@ metadata:
   annotations:
     crossplane.io/external-name: network
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     enableUpnp: false
     enableRemoteAccess: true
@@ -46,12 +32,5 @@ metadata:
   annotations:
     crossplane.io/external-name: branding
 spec:
-  managementPolicies:
-    - Observe
-    - Create
-    - Update
-  providerConfigRef:
-    kind: ProviderConfig
-    name: jellyfin
   forProvider:
     loginDisclaimer: ''

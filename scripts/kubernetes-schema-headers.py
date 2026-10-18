@@ -27,11 +27,13 @@ def main():
     if not match:
         parser.error("Cannot find the Kubernetes version in the RKE2 inventory")
     version = match[1]
-    files = subprocess.check_output(["git", "ls-files", "-z", "--", "kubernetes"], cwd=root)
+    files = subprocess.check_output(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "kubernetes"], cwd=root)
     stale = []
     for filename in files.decode().split("\0"):
         path = Path(filename)
         if path.suffix not in {".yaml", ".yml"} or ".sops." in path.name:
+            continue
+        if not (root / path).is_file():
             continue
         source = (root / path).read_text()
         updated = HEADER.sub(lambda found: found[1] + version, source)

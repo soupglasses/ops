@@ -55,7 +55,7 @@ jobs:
           with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
               print(f"runtime={str(runtime).lower()}", file=output)
           PYTHON
-      - name: Test runtime recovery
+      - name: Test plugin launcher and health checks
         run: |
           python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
       - name: Build pinned Jellyfin and plugins

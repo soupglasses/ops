@@ -4,10 +4,7 @@ SPDX-License-Identifier: MIT */}}
 {{- $spec := $xr.spec -}}
 {{- $name := printf "group-%s" $xr.metadata.uid -}}
 {{- $attributes := dict "objectClass" (list "groupOfNames") -}}
-{{- $defaults := dict "member" $spec.initialMembers -}}
-{{- if $spec.initialOwners -}}
-{{- $_ := set $defaults "owner" $spec.initialOwners -}}
-{{- end -}}
+{{- $defaults := dict "member" (list __SENTINEL_DN_JSON__) -}}
 {{- if $spec.description -}}
 {{- $_ := set $attributes "description" (list $spec.description) -}}
 {{- end }}

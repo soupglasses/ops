@@ -184,6 +184,10 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         media = work / "media"
         for name in ("movies", "tv", "music"):
             (media / name).mkdir(parents=True)
+        config_volume = command("docker", "volume", "create").strip()
+        self.addCleanup(lambda: command("docker", "volume", "rm", config_volume))
+        command("docker", "run", "--rm", "--user", "0:0", "--volume", config_volume + ":/config",
+                "--entrypoint", "sh", image, "-c", "chown 1000:1000 /config")
         container = command(
             "docker",
             "run",
@@ -193,14 +197,10 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "--user",
             "1000:1000",
             "--read-only",
-            "--tmpfs",
-            "/config:uid=1000,gid=1000",
+            "--volume",
+            config_volume + ":/config",
             "--tmpfs",
             "/cache:uid=1000,gid=1000",
-            "--tmpfs",
-            "/backup:uid=1000,gid=1000",
-            "--tmpfs",
-            "/run/jellyfin:uid=1000,gid=1000",
             "--tmpfs",
             "/tmp:uid=1000,gid=1000",
             "--volume",
@@ -382,81 +382,8 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         )
 
         server_id = reconciler.request("GET", "/System/Info")["Id"]
-        command(
-            "docker",
-            "exec",
-            container,
-            "python3",
-            "/usr/local/lib/jellyfin/runtime.py",
-            "checkpoint",
-        )
-        restored_volume = command("docker", "volume", "create").strip()
-        self.addCleanup(lambda: command("docker", "volume", "rm", restored_volume))
-        command("docker", "exec", container, "test", "-s", "/backup/checkpoint.tar")
-        # Docker's archive endpoint does not expose this tmpfs-backed checkpoint.
-        archive = subprocess.check_output(
-            ["docker", "exec", container, "cat", "/backup/checkpoint.tar"]
-        )
-        # Model the PVC's ownership without depending on the host runner's UID.
-        command(
-            "docker",
-            "run",
-            "--rm",
-            "--interactive",
-            "--user",
-            "0:0",
-            "--volume",
-            restored_volume + ":/config",
-            "--entrypoint",
-            "sh",
-            image,
-            "-c",
-            "cat > /config/checkpoint.tar && chown 1000:1000 /config /config/checkpoint.tar",
-            input=archive,
-        )
-        command(
-            "docker",
-            "run",
-            "--rm",
-            "--user",
-            "1000:1000",
-            "--volume",
-            restored_volume + ":/config",
-            "--entrypoint",
-            "python3",
-            image,
-            "/usr/local/lib/jellyfin/runtime.py",
-            "restore",
-            "--source",
-            "/config",
-        )
-        restored_container = command(
-            "docker",
-            "run",
-            "--detach",
-            "--network",
-            network,
-            "--user",
-            "1000:1000",
-            "--read-only",
-            "--volume",
-            restored_volume + ":/config",
-            "--volume",
-            str(media) + ":/media:ro",
-            "--tmpfs",
-            "/cache:uid=1000,gid=1000",
-            "--tmpfs",
-            "/backup:uid=1000,gid=1000",
-            "--tmpfs",
-            "/run/jellyfin:uid=1000,gid=1000",
-            "--tmpfs",
-            "/tmp:uid=1000,gid=1000",
-            "--publish",
-            "127.0.0.1::8096",
-            image,
-        ).strip()
-        self.addCleanup(lambda: command("docker", "rm", "--force", restored_container))
-        binding = json.loads(command("docker", "inspect", restored_container))[0][
+        command("docker", "restart", "--timeout", "120", container)
+        binding = json.loads(command("docker", "inspect", container))[0][
             "NetworkSettings"
         ]["Ports"]["8096/tcp"][0]
         desired["baseURL"] = f"http://127.0.0.1:{binding['HostPort']}"
@@ -466,25 +393,25 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                 break
             time.sleep(0.5)
         else:
-            self.fail("restored Jellyfin did not become healthy")
-        restored = ProviderFixture(desired_path, credentials)
-        restored.authenticate()
-        self.assertEqual(restored.request("GET", "/System/Info")["Id"], server_id)
-        self.assertEqual(restored.request("GET", ldap_path)["LdapUsers"], before)
-        drifted = restored.request("GET", ldap_path)
+            self.fail("restarted Jellyfin did not become healthy")
+        restarted = ProviderFixture(desired_path, credentials)
+        restarted.authenticate()
+        self.assertEqual(restarted.request("GET", "/System/Info")["Id"], server_id)
+        self.assertEqual(restarted.request("GET", ldap_path)["LdapUsers"], before)
+        drifted = restarted.request("GET", ldap_path)
         drifted["LdapServer"] = "drift.invalid"
-        restored.request("POST", ldap_path, drifted)
-        restored.run_once()
-        restored.run_once(check_only=True)
-        self.assertEqual(restored.request("GET", ldap_path)["LdapUsers"], before)
+        restarted.request("POST", ldap_path, drifted)
+        restarted.run_once()
+        restarted.run_once(check_only=True)
+        self.assertEqual(restarted.request("GET", ldap_path)["LdapUsers"], before)
         self.assertEqual(
             {
                 item["Name"]: item["ItemId"]
-                for item in restored.request("GET", "/Library/VirtualFolders")
+                for item in restarted.request("GET", "/Library/VirtualFolders")
             },
             library_ids,
         )
-        authenticated = restored.request(
+        authenticated = restarted.request(
             "POST",
             "/Users/AuthenticateByName",
             {"Username": "alice", "Pw": PASSWORD},
@@ -494,7 +421,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         self.assertTrue(authenticated["User"]["Policy"]["IsAdministrator"])
         request = urllib.request.Request(
             desired["baseURL"] + f"/Users/{user_id}/Images/Primary",
-            headers={"Authorization": f'MediaBrowser Token="{restored.token}"'},
+            headers={"Authorization": f'MediaBrowser Token="{restarted.token}"'},
         )
         with urllib.request.urlopen(request, timeout=5) as response:
             self.assertEqual(response.read(), profile_image)

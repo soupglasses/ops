@@ -26,9 +26,9 @@ LDAP schema. Applications should consume that API without embedding directory sc
 or reconciliation workarounds in their own configuration. See
 [Grafana identity configuration](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
 
-Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/groups/groups.yaml)
-are application-owned and reconciled centrally. Initial membership seeds new groups;
-existing members and owners remain user-managed. The user group permits login and
+Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/identity/groups.yaml)
+are application-owned and reconciled centrally. New groups contain only the
+non-login platform sentinel; Canaille controls human membership and ownership. The user group permits login and
 the administrator group grants administrative privileges.
 
 Jellyfin accepts LDAP usernames and email aliases as the same directory identity.

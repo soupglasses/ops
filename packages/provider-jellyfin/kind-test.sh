@@ -17,6 +17,7 @@ cleanup() {
         kubectl get pods --namespace crossplane-system >&2 || true
         kubectl get systemconfigurations --namespace media -o yaml >&2 || true
         kubectl get pluginconfigurations --namespace media -o yaml >&2 || true
+        kubectl describe pod --namespace media jellyfin-fixture >&2 || true
         kubectl logs --namespace media jellyfin-fixture --tail=60 >&2 || true
         kubectl logs --namespace crossplane-system -l app.kubernetes.io/name=jellyfin-provider --tail=60 >&2 || true
     fi
@@ -29,6 +30,9 @@ trap cleanup EXIT
 [[ -s "$package_file" ]]
 kind create cluster --name "$cluster" --kubeconfig "$KUBECONFIG" \
     --image kindest/node:v1.34.11@sha256:44e222ee2132dab25ff87301682f89eb82c7880ea3a1bf543bfe9708fd08d67d
+if [[ -n "${JELLYFIN_TEST_IMAGE:-}" ]]; then
+    kind load docker-image --name "$cluster" "$JELLYFIN_TEST_IMAGE"
+fi
 docker run -d --name "$registry" --network kind "$registry_image" >/dev/null
 registry_ip=$(docker inspect "$registry" --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}')
 registry_address="$registry_ip:5000"
@@ -74,7 +78,6 @@ with open(sys.argv[1], 'w') as destination:
     json.dump(resources, destination)
 PY
 kubectl apply --filename "$work_dir/provider.json"
-kubectl apply --namespace media --filename "$repo_dir/kubernetes/apps/media/jellyfin/settings/permissions.yaml"
 kubectl wait provider/jellyfin --for=condition=Healthy --timeout=180s
 kubectl rollout status --namespace crossplane-system \
     deployment/"$(kubectl get provider jellyfin --output jsonpath='{.status.currentRevision}')" --timeout=90s
@@ -92,6 +95,12 @@ expect_permission() {
 # Native Crossplane providers receive cluster-wide Secret permissions, independently of CRD scope.
 for verb in get list create update delete; do
     expect_permission yes "$verb" secrets --all-namespaces
+done
+identity=system:serviceaccount:crossplane-system:crossplane
+for resource in secrets pluginconfigurations.jellyfin.ops.finnes.dev; do
+    for verb in get list watch create update patch delete; do
+        expect_permission yes "$verb" "$resource" --namespace media
+    done
 done
 for resource in providerconfigs brandingconfigurations libraries networkingconfigurations \
     pluginconfigurations pluginrepositories plugins scheduledtasks systemconfigurations; do
@@ -114,5 +123,5 @@ if [[ -n "${TEST_ARTIFACTS_DIR:-}" ]]; then
     cp -- "$work_dir/rbac.yaml" "$TEST_ARTIFACTS_DIR/rbac.yaml"
 fi
 ((failed == 0))
-printf 'Native Jellyfin provider installed under restricted PSA; APIs are namespaced, controller watches media, and standard cluster-wide Secret permissions are present.\n'
+printf 'Native Jellyfin provider installed under restricted PSA; APIs are namespaced, controller watches media, and Crossplane supplies the provider and composition permissions.\n'
 python3 "$repo_dir/packages/provider-jellyfin/tests/verify_kind_reconciliation.py"

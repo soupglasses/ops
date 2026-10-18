@@ -5,6 +5,7 @@ apiVersion: ldap.ops.finnes.dev/v1alpha1
 kind: Entry
 metadata:
   name: jellyfin-bind
+  namespace: media
   annotations:
     crossplane.io/external-name: uid=media.jellyfin,ou=system,dc=finnes,dc=dev
 spec:

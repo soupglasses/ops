@@ -73,12 +73,11 @@ class LocalSchemaTests(unittest.TestCase):
         self.assertNotEqual(invalid.returncode, 0)
         self.assertIn("grantTypes", invalid.stdout + invalid.stderr)
 
-    def test_group_of_names_schema_requires_valid_cn_and_initial_members(self):
+    def test_group_of_names_schema_requires_valid_cn_without_human_members(self):
         resource = {"apiVersion": "identity.ops.finnes.dev/v1alpha1",
                     "kind": "GroupOfNames", "metadata": {"name": "application-users"},
                     "spec": {"backendRef": {"name": "directory-admin", "kind": "ProviderConfig"},
-                             "cn": "application.users",
-                             "initialMembers": ["uid=admin,ou=users,dc=example,dc=test"]}}
+                             "cn": "application.users"}}
         valid = self.validate(resource)
         self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
         invalid = copy.deepcopy(resource)
@@ -86,11 +85,6 @@ class LocalSchemaTests(unittest.TestCase):
         rejected = self.validate(invalid)
         self.assertNotEqual(rejected.returncode, 0)
         self.assertIn("cn", rejected.stdout + rejected.stderr)
-        invalid = copy.deepcopy(resource)
-        invalid["spec"]["initialMembers"] = []
-        rejected = self.validate(invalid)
-        self.assertNotEqual(rejected.returncode, 0)
-        self.assertIn("initialMembers", rejected.stdout + rejected.stderr)
 
 
 if __name__ == "__main__":

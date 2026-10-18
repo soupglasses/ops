@@ -7,4 +7,3 @@ resources:
   - ./secret.sops.yaml
   - ./group.yaml
   - ./oauth2client.yaml
-  - ./rbac.yaml
