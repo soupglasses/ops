@@ -8,5 +8,4 @@ kind: Kustomization
 namespace: flux-system
 components:
   - ../../components/common
-resources:
-  - ./hermes-access/ks.yaml
+resources: []
