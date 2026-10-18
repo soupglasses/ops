@@ -1,0 +1,1113 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: systemconfigurations.jellyfin.ops.finnes.dev
+spec:
+  group: jellyfin.ops.finnes.dev
+  names:
+    categories:
+      - crossplane
+      - managed
+      - jellyfin
+    kind: SystemConfiguration
+    listKind: SystemConfigurationList
+    plural: systemconfigurations
+    singular: systemconfiguration
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .metadata.annotations.crossplane\.io/external-name
+          name: EXTERNAL-NAME
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: SystemConfiguration is the Schema for the SystemConfigurations API. <no value>
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: SystemConfigurationSpec defines the desired state of SystemConfiguration
+              properties:
+                forProvider:
+                  properties:
+                    activityLogRetentionDays:
+                      description: Activity log retention days.
+                      type: number
+                    allowClientLogUpload:
+                      description: Allow client log upload.
+                      type: boolean
+                    cachePath:
+                      description: Cache path.
+                      type: string
+                    cacheSize:
+                      description: Cache size.
+                      type: number
+                    castReceiverApplications:
+                      items:
+                        properties:
+                          id:
+                            description: Application ID. Must be set in every entry.
+                            type: string
+                          name:
+                            description: Application name. Must be set in every entry.
+                            type: string
+                        type: object
+                      type: array
+                    chapterImageResolution:
+                      description: Chapter image resolution. One of `MatchSource`, `P144`, `P240`, `P360`,
+                        `P480`, `P720`, `P1080`, `P1440`, `P2160`.
+                      type: string
+                    codecsUsed:
+                      description: Codecs used.
+                      items:
+                        type: string
+                      type: array
+                    contentTypes:
+                      items:
+                        properties:
+                          name:
+                            description: Name.
+                            type: string
+                          value:
+                            description: Value.
+                            type: string
+                        type: object
+                      type: array
+                    corsHosts:
+                      description: CORS hosts.
+                      items:
+                        type: string
+                      type: array
+                    disableLiveTvChannelUserDataName:
+                      description: Disable live TV channel user data name.
+                      type: boolean
+                    displaySpecialsWithinSeasons:
+                      description: Display specials within seasons.
+                      type: boolean
+                    dummyChapterDuration:
+                      description: Dummy chapter duration.
+                      type: number
+                    enableCaseSensitiveItemIds:
+                      description: Enable case sensitive item IDs.
+                      type: boolean
+                    enableExternalContentInSuggestions:
+                      description: Enable external content in suggestions.
+                      type: boolean
+                    enableFolderView:
+                      description: Enable folder view.
+                      type: boolean
+                    enableGroupingMoviesIntoCollections:
+                      description: Enable grouping movies into collections.
+                      type: boolean
+                    enableGroupingShowsIntoCollections:
+                      description: Enable grouping shows into collections.
+                      type: boolean
+                    enableLegacyAuthorization:
+                      description: Enable legacy authorization.
+                      type: boolean
+                    enableMetrics:
+                      description: Enable metrics.
+                      type: boolean
+                    enableNormalizedItemByNameIds:
+                      description: Enable normalized item by name IDs.
+                      type: boolean
+                    enableSlowResponseWarning:
+                      description: Enable slow response warning.
+                      type: boolean
+                    imageExtractionTimeoutMs:
+                      description: Image extraction timeout in milliseconds.
+                      type: number
+                    imageSavingConvention:
+                      description: Image saving convention. One of `Legacy`, `Compatible`.
+                      type: string
+                    inactiveSessionThreshold:
+                      description: Inactive session threshold.
+                      type: number
+                    isPortAuthorized:
+                      description: Is port authorized.
+                      type: boolean
+                    libraryMetadataRefreshConcurrency:
+                      description: Library metadata refresh concurrency.
+                      type: number
+                    libraryMonitorDelay:
+                      description: Library monitor delay.
+                      type: number
+                    libraryScanFanoutConcurrency:
+                      description: Library scan fanout concurrency.
+                      type: number
+                    libraryUpdateDuration:
+                      description: Library update duration.
+                      type: number
+                    logFileRetentionDays:
+                      description: Log file retention days.
+                      type: number
+                    maxAudiobookResume:
+                      description: Maximum audiobook resume.
+                      type: number
+                    maxResumePct:
+                      description: Maximum resume percentage.
+                      type: number
+                    metadataCountryCode:
+                      description: Metadata country code.
+                      type: string
+                    metadataOptions:
+                      items:
+                        properties:
+                          disabledImageFetchers:
+                            description: 'Disabled image fetchers. Deprecated: list the enabled image
+                              fetchers in priority order in `image_fetchers` instead, which disables the
+                              rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataFetchers:
+                            description: 'Disabled metadata fetchers. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataSavers:
+                            description: Disabled metadata savers.
+                            items:
+                              type: string
+                            type: array
+                          imageFetcherOrder:
+                            description: 'Image fetcher order. Deprecated: list the enabled image fetchers
+                              in priority order in `image_fetchers` instead, which disables the rest.
+                              It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          imageFetchers:
+                            description: 'Enabled image fetchers for `item_type`, in priority order: Jellyfin
+                              asks the first one first and disables every other image fetcher it offers
+                              for the item type. Jellyfin applies them to items whose library has no `type_options`
+                              entry for their type. Each name must match one the server offers exactly,
+                              so it works only for an item type whose fetchers Jellyfin lists, such as
+                              Movie or Series; for any other, such as Person, it reads as null and setting
+                              it is an error, and `disabled_image_fetchers` and `image_fetcher_order`
+                              still apply. Jellyfin enables any image fetcher installed later, which then
+                              shows up as a change to this list. Conflicts with `disabled_image_fetchers`
+                              and `image_fetcher_order`, which it replaces.'
+                            items:
+                              type: string
+                            type: array
+                          itemType:
+                            description: Item type.
+                            type: string
+                          localMetadataReaderOrder:
+                            description: Local metadata reader order.
+                            items:
+                              type: string
+                            type: array
+                          metadataFetcherOrder:
+                            description: 'Metadata fetcher order. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          metadataFetchers:
+                            description: 'Enabled metadata fetchers for `item_type`, in priority order:
+                              Jellyfin asks the first one first and disables every other metadata fetcher
+                              it offers for the item type. Jellyfin applies them to items whose library
+                              has no `type_options` entry for their type. Each name must match one the
+                              server offers exactly, so it works only for an item type whose fetchers
+                              Jellyfin lists, such as Movie or Series; for any other, such as Person,
+                              it reads as null and setting it is an error, and `disabled_metadata_fetchers`
+                              and `metadata_fetcher_order` still apply. Jellyfin enables any metadata
+                              fetcher installed later, which then shows up as a change to this list. Conflicts
+                              with `disabled_metadata_fetchers` and `metadata_fetcher_order`, which it
+                              replaces.'
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    metadataPath:
+                      description: Metadata path.
+                      type: string
+                    minAudiobookResume:
+                      description: Minimum audiobook resume.
+                      type: number
+                    minResumeDurationSeconds:
+                      description: Minimum resume duration seconds.
+                      type: number
+                    minResumePct:
+                      description: Minimum resume percentage.
+                      type: number
+                    parallelImageEncodingLimit:
+                      description: Parallel image encoding limit.
+                      type: number
+                    pathSubstitutions:
+                      items:
+                        properties:
+                          from:
+                            description: From path.
+                            type: string
+                          to:
+                            description: To path.
+                            type: string
+                        type: object
+                      type: array
+                    preferredMetadataLanguage:
+                      description: Preferred metadata language.
+                      type: string
+                    quickConnectAvailable:
+                      description: Quick connect available.
+                      type: boolean
+                    remoteClientBitrateLimit:
+                      description: Remote client bitrate limit.
+                      type: number
+                    saveMetadataHidden:
+                      description: Save metadata hidden.
+                      type: boolean
+                    serverName:
+                      description: Server display name.
+                      type: string
+                    skipDeserializationForBasicTypes:
+                      description: Skip deserialization for basic types.
+                      type: boolean
+                    slowResponseThresholdMs:
+                      description: Slow response threshold in milliseconds.
+                      type: number
+                    sortRemoveCharacters:
+                      description: Sort remove characters.
+                      items:
+                        type: string
+                      type: array
+                    sortRemoveWords:
+                      description: Sort remove words.
+                      items:
+                        type: string
+                      type: array
+                    sortReplaceCharacters:
+                      description: Sort replace characters.
+                      items:
+                        type: string
+                      type: array
+                    trickplayOptions:
+                      properties:
+                        enableHwAcceleration:
+                          description: Enable hardware acceleration.
+                          type: boolean
+                        enableHwEncoding:
+                          description: Enable hardware encoding.
+                          type: boolean
+                        enableKeyFrameOnlyExtraction:
+                          description: Enable key frame only extraction.
+                          type: boolean
+                        interval:
+                          description: Interval.
+                          type: number
+                        jpegQuality:
+                          description: JPEG quality.
+                          type: number
+                        processPriority:
+                          description: Process priority class. One of `Normal`, `Idle`, `High`, `RealTime`,
+                            `BelowNormal`, `AboveNormal`.
+                          type: string
+                        processThreads:
+                          description: Process threads.
+                          type: number
+                        qscale:
+                          description: Qscale.
+                          type: number
+                        scanBehavior:
+                          description: Scan behavior. One of `Blocking`, `NonBlocking`.
+                          type: string
+                        tileHeight:
+                          description: Tile height.
+                          type: number
+                        tileWidth:
+                          description: Tile width.
+                          type: number
+                        widthResolutions:
+                          description: Width resolutions.
+                          items:
+                            type: number
+                          type: array
+                      type: object
+                    uiCulture:
+                      description: UI culture.
+                      type: string
+                  type: object
+                initProvider:
+                  description: |-
+                    THIS IS A BETA FIELD. It will be honored
+                    unless the Management Policies feature flag is disabled.
+                    InitProvider holds the same fields as ForProvider, with the exception
+                    of Identifier and other resource reference fields. The fields that are
+                    in InitProvider are merged into ForProvider when the resource is created.
+                    The same fields are also added to the terraform ignore_changes hook, to
+                    avoid updating them after creation. This is useful for fields that are
+                    required on creation, but we do not desire to update them after creation,
+                    for example because of an external controller is managing them, like an
+                    autoscaler.
+                  properties:
+                    activityLogRetentionDays:
+                      description: Activity log retention days.
+                      type: number
+                    allowClientLogUpload:
+                      description: Allow client log upload.
+                      type: boolean
+                    cachePath:
+                      description: Cache path.
+                      type: string
+                    cacheSize:
+                      description: Cache size.
+                      type: number
+                    castReceiverApplications:
+                      items:
+                        properties:
+                          id:
+                            description: Application ID. Must be set in every entry.
+                            type: string
+                          name:
+                            description: Application name. Must be set in every entry.
+                            type: string
+                        type: object
+                      type: array
+                    chapterImageResolution:
+                      description: Chapter image resolution. One of `MatchSource`, `P144`, `P240`, `P360`,
+                        `P480`, `P720`, `P1080`, `P1440`, `P2160`.
+                      type: string
+                    codecsUsed:
+                      description: Codecs used.
+                      items:
+                        type: string
+                      type: array
+                    contentTypes:
+                      items:
+                        properties:
+                          name:
+                            description: Name.
+                            type: string
+                          value:
+                            description: Value.
+                            type: string
+                        type: object
+                      type: array
+                    corsHosts:
+                      description: CORS hosts.
+                      items:
+                        type: string
+                      type: array
+                    disableLiveTvChannelUserDataName:
+                      description: Disable live TV channel user data name.
+                      type: boolean
+                    displaySpecialsWithinSeasons:
+                      description: Display specials within seasons.
+                      type: boolean
+                    dummyChapterDuration:
+                      description: Dummy chapter duration.
+                      type: number
+                    enableCaseSensitiveItemIds:
+                      description: Enable case sensitive item IDs.
+                      type: boolean
+                    enableExternalContentInSuggestions:
+                      description: Enable external content in suggestions.
+                      type: boolean
+                    enableFolderView:
+                      description: Enable folder view.
+                      type: boolean
+                    enableGroupingMoviesIntoCollections:
+                      description: Enable grouping movies into collections.
+                      type: boolean
+                    enableGroupingShowsIntoCollections:
+                      description: Enable grouping shows into collections.
+                      type: boolean
+                    enableLegacyAuthorization:
+                      description: Enable legacy authorization.
+                      type: boolean
+                    enableMetrics:
+                      description: Enable metrics.
+                      type: boolean
+                    enableNormalizedItemByNameIds:
+                      description: Enable normalized item by name IDs.
+                      type: boolean
+                    enableSlowResponseWarning:
+                      description: Enable slow response warning.
+                      type: boolean
+                    imageExtractionTimeoutMs:
+                      description: Image extraction timeout in milliseconds.
+                      type: number
+                    imageSavingConvention:
+                      description: Image saving convention. One of `Legacy`, `Compatible`.
+                      type: string
+                    inactiveSessionThreshold:
+                      description: Inactive session threshold.
+                      type: number
+                    isPortAuthorized:
+                      description: Is port authorized.
+                      type: boolean
+                    libraryMetadataRefreshConcurrency:
+                      description: Library metadata refresh concurrency.
+                      type: number
+                    libraryMonitorDelay:
+                      description: Library monitor delay.
+                      type: number
+                    libraryScanFanoutConcurrency:
+                      description: Library scan fanout concurrency.
+                      type: number
+                    libraryUpdateDuration:
+                      description: Library update duration.
+                      type: number
+                    logFileRetentionDays:
+                      description: Log file retention days.
+                      type: number
+                    maxAudiobookResume:
+                      description: Maximum audiobook resume.
+                      type: number
+                    maxResumePct:
+                      description: Maximum resume percentage.
+                      type: number
+                    metadataCountryCode:
+                      description: Metadata country code.
+                      type: string
+                    metadataOptions:
+                      items:
+                        properties:
+                          disabledImageFetchers:
+                            description: 'Disabled image fetchers. Deprecated: list the enabled image
+                              fetchers in priority order in `image_fetchers` instead, which disables the
+                              rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataFetchers:
+                            description: 'Disabled metadata fetchers. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataSavers:
+                            description: Disabled metadata savers.
+                            items:
+                              type: string
+                            type: array
+                          imageFetcherOrder:
+                            description: 'Image fetcher order. Deprecated: list the enabled image fetchers
+                              in priority order in `image_fetchers` instead, which disables the rest.
+                              It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          imageFetchers:
+                            description: 'Enabled image fetchers for `item_type`, in priority order: Jellyfin
+                              asks the first one first and disables every other image fetcher it offers
+                              for the item type. Jellyfin applies them to items whose library has no `type_options`
+                              entry for their type. Each name must match one the server offers exactly,
+                              so it works only for an item type whose fetchers Jellyfin lists, such as
+                              Movie or Series; for any other, such as Person, it reads as null and setting
+                              it is an error, and `disabled_image_fetchers` and `image_fetcher_order`
+                              still apply. Jellyfin enables any image fetcher installed later, which then
+                              shows up as a change to this list. Conflicts with `disabled_image_fetchers`
+                              and `image_fetcher_order`, which it replaces.'
+                            items:
+                              type: string
+                            type: array
+                          itemType:
+                            description: Item type.
+                            type: string
+                          localMetadataReaderOrder:
+                            description: Local metadata reader order.
+                            items:
+                              type: string
+                            type: array
+                          metadataFetcherOrder:
+                            description: 'Metadata fetcher order. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          metadataFetchers:
+                            description: 'Enabled metadata fetchers for `item_type`, in priority order:
+                              Jellyfin asks the first one first and disables every other metadata fetcher
+                              it offers for the item type. Jellyfin applies them to items whose library
+                              has no `type_options` entry for their type. Each name must match one the
+                              server offers exactly, so it works only for an item type whose fetchers
+                              Jellyfin lists, such as Movie or Series; for any other, such as Person,
+                              it reads as null and setting it is an error, and `disabled_metadata_fetchers`
+                              and `metadata_fetcher_order` still apply. Jellyfin enables any metadata
+                              fetcher installed later, which then shows up as a change to this list. Conflicts
+                              with `disabled_metadata_fetchers` and `metadata_fetcher_order`, which it
+                              replaces.'
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    metadataPath:
+                      description: Metadata path.
+                      type: string
+                    minAudiobookResume:
+                      description: Minimum audiobook resume.
+                      type: number
+                    minResumeDurationSeconds:
+                      description: Minimum resume duration seconds.
+                      type: number
+                    minResumePct:
+                      description: Minimum resume percentage.
+                      type: number
+                    parallelImageEncodingLimit:
+                      description: Parallel image encoding limit.
+                      type: number
+                    pathSubstitutions:
+                      items:
+                        properties:
+                          from:
+                            description: From path.
+                            type: string
+                          to:
+                            description: To path.
+                            type: string
+                        type: object
+                      type: array
+                    preferredMetadataLanguage:
+                      description: Preferred metadata language.
+                      type: string
+                    quickConnectAvailable:
+                      description: Quick connect available.
+                      type: boolean
+                    remoteClientBitrateLimit:
+                      description: Remote client bitrate limit.
+                      type: number
+                    saveMetadataHidden:
+                      description: Save metadata hidden.
+                      type: boolean
+                    serverName:
+                      description: Server display name.
+                      type: string
+                    skipDeserializationForBasicTypes:
+                      description: Skip deserialization for basic types.
+                      type: boolean
+                    slowResponseThresholdMs:
+                      description: Slow response threshold in milliseconds.
+                      type: number
+                    sortRemoveCharacters:
+                      description: Sort remove characters.
+                      items:
+                        type: string
+                      type: array
+                    sortRemoveWords:
+                      description: Sort remove words.
+                      items:
+                        type: string
+                      type: array
+                    sortReplaceCharacters:
+                      description: Sort replace characters.
+                      items:
+                        type: string
+                      type: array
+                    trickplayOptions:
+                      properties:
+                        enableHwAcceleration:
+                          description: Enable hardware acceleration.
+                          type: boolean
+                        enableHwEncoding:
+                          description: Enable hardware encoding.
+                          type: boolean
+                        enableKeyFrameOnlyExtraction:
+                          description: Enable key frame only extraction.
+                          type: boolean
+                        interval:
+                          description: Interval.
+                          type: number
+                        jpegQuality:
+                          description: JPEG quality.
+                          type: number
+                        processPriority:
+                          description: Process priority class. One of `Normal`, `Idle`, `High`, `RealTime`,
+                            `BelowNormal`, `AboveNormal`.
+                          type: string
+                        processThreads:
+                          description: Process threads.
+                          type: number
+                        qscale:
+                          description: Qscale.
+                          type: number
+                        scanBehavior:
+                          description: Scan behavior. One of `Blocking`, `NonBlocking`.
+                          type: string
+                        tileHeight:
+                          description: Tile height.
+                          type: number
+                        tileWidth:
+                          description: Tile width.
+                          type: number
+                        widthResolutions:
+                          description: Width resolutions.
+                          items:
+                            type: number
+                          type: array
+                      type: object
+                    uiCulture:
+                      description: UI culture.
+                      type: string
+                  type: object
+                managementPolicies:
+                  default:
+                    - '*'
+                  description: |-
+                    THIS IS A BETA FIELD. It is on by default but can be opted out
+                    through a Crossplane feature flag.
+                    ManagementPolicies specify the array of actions Crossplane is allowed to
+                    take on the managed and external resources.
+                    See the design doc for more information: https://github.com/crossplane/crossplane/blob/499895a25d1a1a0ba1604944ef98ac7a1a71f197/design/design-doc-observe-only-resources.md?plain=1#L223
+                    and this one: https://github.com/crossplane/crossplane/blob/444267e84783136daa93568b364a5f01228cacbe/design/one-pager-ignore-changes.md
+                  items:
+                    description: |-
+                      A ManagementAction represents an action that the Crossplane controllers
+                      can take on an external resource.
+                    enum:
+                      - Observe
+                      - Create
+                      - Update
+                      - Delete
+                      - LateInitialize
+                      - '*'
+                    type: string
+                  type: array
+                providerConfigRef:
+                  default:
+                    kind: ClusterProviderConfig
+                    name: default
+                  description: |-
+                    ProviderConfigReference specifies how the provider that will be used to
+                    create, observe, update, and delete this managed resource should be
+                    configured.
+                  properties:
+                    kind:
+                      description: Kind of the referenced object.
+                      type: string
+                    name:
+                      description: Name of the referenced object.
+                      type: string
+                  required:
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  description: |-
+                    WriteConnectionSecretToReference specifies the namespace and name of a
+                    Secret to which any connection details for this managed resource should
+                    be written. Connection details frequently include the endpoint, username,
+                    and password required to connect to the managed resource.
+                  properties:
+                    name:
+                      description: Name of the secret.
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - forProvider
+              type: object
+            status:
+              description: SystemConfigurationStatus defines the observed state of SystemConfiguration.
+              properties:
+                atProvider:
+                  properties:
+                    activityLogRetentionDays:
+                      description: Activity log retention days.
+                      type: number
+                    allowClientLogUpload:
+                      description: Allow client log upload.
+                      type: boolean
+                    cachePath:
+                      description: Cache path.
+                      type: string
+                    cacheSize:
+                      description: Cache size.
+                      type: number
+                    castReceiverApplications:
+                      items:
+                        properties:
+                          id:
+                            description: Application ID. Must be set in every entry.
+                            type: string
+                          name:
+                            description: Application name. Must be set in every entry.
+                            type: string
+                        type: object
+                      type: array
+                    chapterImageResolution:
+                      description: Chapter image resolution. One of `MatchSource`, `P144`, `P240`, `P360`,
+                        `P480`, `P720`, `P1080`, `P1440`, `P2160`.
+                      type: string
+                    codecsUsed:
+                      description: Codecs used.
+                      items:
+                        type: string
+                      type: array
+                    contentTypes:
+                      items:
+                        properties:
+                          name:
+                            description: Name.
+                            type: string
+                          value:
+                            description: Value.
+                            type: string
+                        type: object
+                      type: array
+                    corsHosts:
+                      description: CORS hosts.
+                      items:
+                        type: string
+                      type: array
+                    disableLiveTvChannelUserDataName:
+                      description: Disable live TV channel user data name.
+                      type: boolean
+                    displaySpecialsWithinSeasons:
+                      description: Display specials within seasons.
+                      type: boolean
+                    dummyChapterDuration:
+                      description: Dummy chapter duration.
+                      type: number
+                    enableCaseSensitiveItemIds:
+                      description: Enable case sensitive item IDs.
+                      type: boolean
+                    enableExternalContentInSuggestions:
+                      description: Enable external content in suggestions.
+                      type: boolean
+                    enableFolderView:
+                      description: Enable folder view.
+                      type: boolean
+                    enableGroupingMoviesIntoCollections:
+                      description: Enable grouping movies into collections.
+                      type: boolean
+                    enableGroupingShowsIntoCollections:
+                      description: Enable grouping shows into collections.
+                      type: boolean
+                    enableLegacyAuthorization:
+                      description: Enable legacy authorization.
+                      type: boolean
+                    enableMetrics:
+                      description: Enable metrics.
+                      type: boolean
+                    enableNormalizedItemByNameIds:
+                      description: Enable normalized item by name IDs.
+                      type: boolean
+                    enableSlowResponseWarning:
+                      description: Enable slow response warning.
+                      type: boolean
+                    id:
+                      type: string
+                    imageExtractionTimeoutMs:
+                      description: Image extraction timeout in milliseconds.
+                      type: number
+                    imageSavingConvention:
+                      description: Image saving convention. One of `Legacy`, `Compatible`.
+                      type: string
+                    inactiveSessionThreshold:
+                      description: Inactive session threshold.
+                      type: number
+                    isPortAuthorized:
+                      description: Is port authorized.
+                      type: boolean
+                    libraryMetadataRefreshConcurrency:
+                      description: Library metadata refresh concurrency.
+                      type: number
+                    libraryMonitorDelay:
+                      description: Library monitor delay.
+                      type: number
+                    libraryScanFanoutConcurrency:
+                      description: Library scan fanout concurrency.
+                      type: number
+                    libraryUpdateDuration:
+                      description: Library update duration.
+                      type: number
+                    logFileRetentionDays:
+                      description: Log file retention days.
+                      type: number
+                    maxAudiobookResume:
+                      description: Maximum audiobook resume.
+                      type: number
+                    maxResumePct:
+                      description: Maximum resume percentage.
+                      type: number
+                    metadataCountryCode:
+                      description: Metadata country code.
+                      type: string
+                    metadataOptions:
+                      items:
+                        properties:
+                          disabledImageFetchers:
+                            description: 'Disabled image fetchers. Deprecated: list the enabled image
+                              fetchers in priority order in `image_fetchers` instead, which disables the
+                              rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataFetchers:
+                            description: 'Disabled metadata fetchers. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          disabledMetadataSavers:
+                            description: Disabled metadata savers.
+                            items:
+                              type: string
+                            type: array
+                          imageFetcherOrder:
+                            description: 'Image fetcher order. Deprecated: list the enabled image fetchers
+                              in priority order in `image_fetchers` instead, which disables the rest.
+                              It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          imageFetchers:
+                            description: 'Enabled image fetchers for `item_type`, in priority order: Jellyfin
+                              asks the first one first and disables every other image fetcher it offers
+                              for the item type. Jellyfin applies them to items whose library has no `type_options`
+                              entry for their type. Each name must match one the server offers exactly,
+                              so it works only for an item type whose fetchers Jellyfin lists, such as
+                              Movie or Series; for any other, such as Person, it reads as null and setting
+                              it is an error, and `disabled_image_fetchers` and `image_fetcher_order`
+                              still apply. Jellyfin enables any image fetcher installed later, which then
+                              shows up as a change to this list. Conflicts with `disabled_image_fetchers`
+                              and `image_fetcher_order`, which it replaces.'
+                            items:
+                              type: string
+                            type: array
+                          itemType:
+                            description: Item type.
+                            type: string
+                          localMetadataReaderOrder:
+                            description: Local metadata reader order.
+                            items:
+                              type: string
+                            type: array
+                          metadataFetcherOrder:
+                            description: 'Metadata fetcher order. Deprecated: list the enabled metadata
+                              fetchers in priority order in `metadata_fetchers` instead, which disables
+                              the rest. It will be removed in a future release.'
+                            items:
+                              type: string
+                            type: array
+                          metadataFetchers:
+                            description: 'Enabled metadata fetchers for `item_type`, in priority order:
+                              Jellyfin asks the first one first and disables every other metadata fetcher
+                              it offers for the item type. Jellyfin applies them to items whose library
+                              has no `type_options` entry for their type. Each name must match one the
+                              server offers exactly, so it works only for an item type whose fetchers
+                              Jellyfin lists, such as Movie or Series; for any other, such as Person,
+                              it reads as null and setting it is an error, and `disabled_metadata_fetchers`
+                              and `metadata_fetcher_order` still apply. Jellyfin enables any metadata
+                              fetcher installed later, which then shows up as a change to this list. Conflicts
+                              with `disabled_metadata_fetchers` and `metadata_fetcher_order`, which it
+                              replaces.'
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    metadataPath:
+                      description: Metadata path.
+                      type: string
+                    minAudiobookResume:
+                      description: Minimum audiobook resume.
+                      type: number
+                    minResumeDurationSeconds:
+                      description: Minimum resume duration seconds.
+                      type: number
+                    minResumePct:
+                      description: Minimum resume percentage.
+                      type: number
+                    parallelImageEncodingLimit:
+                      description: Parallel image encoding limit.
+                      type: number
+                    pathSubstitutions:
+                      items:
+                        properties:
+                          from:
+                            description: From path.
+                            type: string
+                          to:
+                            description: To path.
+                            type: string
+                        type: object
+                      type: array
+                    preferredMetadataLanguage:
+                      description: Preferred metadata language.
+                      type: string
+                    quickConnectAvailable:
+                      description: Quick connect available.
+                      type: boolean
+                    remoteClientBitrateLimit:
+                      description: Remote client bitrate limit.
+                      type: number
+                    saveMetadataHidden:
+                      description: Save metadata hidden.
+                      type: boolean
+                    serverName:
+                      description: Server display name.
+                      type: string
+                    skipDeserializationForBasicTypes:
+                      description: Skip deserialization for basic types.
+                      type: boolean
+                    slowResponseThresholdMs:
+                      description: Slow response threshold in milliseconds.
+                      type: number
+                    sortRemoveCharacters:
+                      description: Sort remove characters.
+                      items:
+                        type: string
+                      type: array
+                    sortRemoveWords:
+                      description: Sort remove words.
+                      items:
+                        type: string
+                      type: array
+                    sortReplaceCharacters:
+                      description: Sort replace characters.
+                      items:
+                        type: string
+                      type: array
+                    trickplayOptions:
+                      properties:
+                        enableHwAcceleration:
+                          description: Enable hardware acceleration.
+                          type: boolean
+                        enableHwEncoding:
+                          description: Enable hardware encoding.
+                          type: boolean
+                        enableKeyFrameOnlyExtraction:
+                          description: Enable key frame only extraction.
+                          type: boolean
+                        interval:
+                          description: Interval.
+                          type: number
+                        jpegQuality:
+                          description: JPEG quality.
+                          type: number
+                        processPriority:
+                          description: Process priority class. One of `Normal`, `Idle`, `High`, `RealTime`,
+                            `BelowNormal`, `AboveNormal`.
+                          type: string
+                        processThreads:
+                          description: Process threads.
+                          type: number
+                        qscale:
+                          description: Qscale.
+                          type: number
+                        scanBehavior:
+                          description: Scan behavior. One of `Blocking`, `NonBlocking`.
+                          type: string
+                        tileHeight:
+                          description: Tile height.
+                          type: number
+                        tileWidth:
+                          description: Tile width.
+                          type: number
+                        widthResolutions:
+                          description: Width resolutions.
+                          items:
+                            type: number
+                          type: array
+                      type: object
+                    uiCulture:
+                      description: UI culture.
+                      type: string
+                  type: object
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          LastTransitionTime is the last time this condition transitioned from one
+                          status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          A Message containing details about this condition's last transition from
+                          one status to another, if any.
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        type: integer
+                      reason:
+                        description: A Reason for this condition's last transition from one status to
+                          another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: |-
+                          Type of this condition. At most one of each condition type may apply to
+                          a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                lastHandledReconcileAt:
+                  description: |-
+                    LastHandledReconcileAt holds the value of the most recent
+                    reconcile-requested-at annotation token that the controller has
+                    processed. Users can compare this to the annotation to determine
+                    whether a reconcile request has been handled.
+                  type: string
+                observedGeneration:
+                  description: |-
+                    ObservedGeneration is the latest metadata.generation
+                    which resulted in either a ready state, or stalled due to error
+                    it can not recover from without human intervention.
+                  format: int64
+                  type: integer
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

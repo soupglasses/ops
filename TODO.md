@@ -10,6 +10,17 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
+- [ ] Roll out the Jellyfin Upjet replacement after publishing and pinning the
+  provider image,
+  and satisfying security/resilience review. Reuse the existing `ops-recovery`
+  administrator. Verify observe-only adoption before
+  handing writes over from the sidecar. Local generated-connector tests and Flux
+  validation pass; live adoption and recovery evidence are still required.
+- [ ] Hand Jellyfin LDAP plugin installation over to the provider after removing
+  image seeding and proving repository, update-schedule and restart ordering.
+  The runtime currently overwrites plugin binaries on every start; adding a
+  competing managed Plugin before removing that behavior would be unsafe.
+
 - [x] Add structured Jellyfin reconciliation diagnostics: successful write counts,
   API resources, changed field names, library operations and request failure context.
   Keep setting values and credentials out of logs; preserve quiet idle polling.

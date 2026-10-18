@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: jellyfin-plugin-settings
+spec:
+  compositeTypeRef:
+    apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+    kind: PluginSettings
+  mode: Pipeline
+  pipeline:
+    - step: render-settings
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := getCompositeResource . -}}
+            {{- $spec := $xr.spec -}}
+            {{- $namespace := $xr.metadata.namespace -}}
+            {{- $name := $xr.metadata.name -}}
+            {{- $extra := get . "extraResources" | default dict -}}
+            {{- $secrets := $spec.secretValues | default dict -}}
+            {{- $configuration := deepCopy $spec.configuration -}}
+            {{- if $secrets }}
+            apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+            kind: ExtraResources
+            requirements:
+            {{- range $field, $ref := $secrets }}
+              {{ printf "secret-%s" (sha256sum $field) | quote }}:
+                apiVersion: v1
+                kind: Secret
+                matchName: {{ $ref.name | quote }}
+                namespace: {{ $namespace | quote }}
+            {{- end }}
+            {{ printf "\n---\n" }}
+            {{- end }}
+            {{- $ready := true -}}
+            {{- range $field, $ref := $secrets -}}
+            {{- $key := printf "secret-%s" (sha256sum $field) -}}
+            {{- if not (hasKey $extra $key) -}}
+            {{- $ready = false -}}
+            {{- else -}}
+            {{- $items := (index $extra $key).items | default list -}}
+            {{- if ne (len $items) 1 -}}{{ fail "A local configuration Secret is missing" }}{{- end -}}
+            {{- $encoded := get (index $items 0).resource.data $ref.key | default "" -}}
+            {{- if eq $encoded "" -}}{{ fail "A local configuration Secret key is missing or empty" }}{{- end -}}
+            {{- $_ := set $configuration $field ($encoded | b64dec) -}}
+            {{- end -}}
+            {{- end -}}
+            {{- if $ready }}
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: {{ printf "%s-settings" $name | quote }}
+              namespace: {{ $namespace | quote }}
+              annotations:
+                {{ setResourceNameAnnotation "settings" }}
+                gotemplating.fn.crossplane.io/ready: "True"
+            type: Opaque
+            data:
+              configuration.json: {{ $configuration | mustToJson | b64enc | quote }}
+            ---
+            apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+            kind: PluginConfiguration
+            metadata:
+              name: {{ $name | quote }}
+              namespace: {{ $namespace | quote }}
+              annotations:
+                {{ setResourceNameAnnotation "configuration" }}
+                crossplane.io/external-name: {{ $spec.pluginID | quote }}
+                gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (and (eq (getResourceCondition "Ready" (getComposedResource . "configuration")).Status "True") (eq (getResourceCondition "Synced" (getComposedResource . "configuration")).Status "True")) | quote }}
+            spec:
+              managementPolicies: {{ $spec.managementPolicies | default (list "Observe" "Create" "Update") | toJson }}
+              providerConfigRef:
+                kind: ProviderConfig
+                name: {{ $spec.providerConfigRef.name | quote }}
+              forProvider:
+                configurationJsonSecretRef:
+                  name: {{ printf "%s-settings" $name | quote }}
+                  key: configuration.json
+            {{- end }}

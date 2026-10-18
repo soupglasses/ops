@@ -1,0 +1,4222 @@
+{
+  "format_version": "1.0",
+  "provider_schemas": {
+    "registry.terraform.io/ThePhaseless/jellyfin": {
+      "resource_schemas": {
+        "jellyfin_api_key": {
+          "block": {
+            "attributes": {
+              "access_token": {
+                "computed": true,
+                "description": "The generated access token (API key). This is set by Jellyfin upon creation.",
+                "optional": false,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "app_name": {
+                "computed": true,
+                "description": "The application name for the API key. Defaults to `Terraform`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "The API key resource identifier.",
+                "optional": false,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_branding_configuration": {
+          "block": {
+            "attributes": {
+              "custom_css": {
+                "computed": true,
+                "description": "Custom CSS content.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `branding` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "login_disclaimer": {
+                "computed": true,
+                "description": "The login disclaimer text.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "splashscreen_enabled": {
+                "computed": true,
+                "description": "Whether the splash screen is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "splashscreen_location": {
+                "computed": false,
+                "description": "The splash screen location. Jellyfin ignores a splash screen location in the branding configuration, so setting it is an error. The attribute will be removed in a future release.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_encoding_configuration": {
+          "block": {
+            "attributes": {
+              "allow_av1_encoding": {
+                "computed": true,
+                "description": "Whether AV1 encoding is allowed.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_hevc_encoding": {
+                "computed": true,
+                "description": "Whether HEVC encoding is allowed.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_on_demand_metadata_based_keyframe_extraction_for_extensions": {
+                "computed": true,
+                "description": "Extensions allowing on-demand metadata-based keyframe extraction.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "deinterlace_double_rate": {
+                "computed": true,
+                "description": "Whether deinterlace double rate is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "deinterlace_method": {
+                "computed": true,
+                "description": "Deinterlace method. One of `yadif`, `bwdif`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "down_mix_audio_boost": {
+                "computed": true,
+                "description": "Down-mix audio boost.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "down_mix_stereo_algorithm": {
+                "computed": true,
+                "description": "Down-mix stereo algorithm. One of `None`, `Dave750`, `NightmodeDialogue`, `Rfc7845`, `Ac4`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "enable_audio_vbr": {
+                "computed": true,
+                "description": "Whether audio VBR is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_decoding_color_depth10_hevc": {
+                "computed": true,
+                "description": "Whether 10-bit HEVC decoding is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_decoding_color_depth10_hevc_rext": {
+                "computed": true,
+                "description": "Whether 10-bit HEVC RExt decoding is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_decoding_color_depth10_vp9": {
+                "computed": true,
+                "description": "Whether 10-bit VP9 decoding is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_decoding_color_depth12_hevc_rext": {
+                "computed": true,
+                "description": "Whether 12-bit HEVC RExt decoding is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_enhanced_nvdec_decoder": {
+                "computed": true,
+                "description": "Whether enhanced NVDEC decoder is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_fallback_font": {
+                "computed": true,
+                "description": "Whether fallback font is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_hardware_encoding": {
+                "computed": true,
+                "description": "Whether hardware encoding is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_intel_low_power_h264_hw_encoder": {
+                "computed": true,
+                "description": "Whether Intel low-power H264 hardware encoder is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_intel_low_power_hevc_hw_encoder": {
+                "computed": true,
+                "description": "Whether Intel low-power HEVC hardware encoder is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_segment_deletion": {
+                "computed": true,
+                "description": "Whether segment deletion is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_subtitle_extraction": {
+                "computed": true,
+                "description": "Whether subtitle extraction is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_throttling": {
+                "computed": true,
+                "description": "Whether throttling is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_tonemapping": {
+                "computed": true,
+                "description": "Whether tonemapping is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_video_toolbox_tonemapping": {
+                "computed": true,
+                "description": "Whether VideoToolbox tonemapping is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_vpp_tonemapping": {
+                "computed": true,
+                "description": "Whether VPP tonemapping is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "encoder_app_path": {
+                "computed": true,
+                "description": "Encoder application path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "encoder_app_path_display": {
+                "computed": true,
+                "description": "Encoder application display path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "encoder_preset": {
+                "computed": true,
+                "description": "Encoder preset. One of `auto`, `placebo`, `veryslow`, `slower`, `slow`, `medium`, `fast`, `faster`, `veryfast`, `superfast`, `ultrafast`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "encoding_thread_count": {
+                "computed": true,
+                "description": "Encoding thread count.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "fallback_font_path": {
+                "computed": true,
+                "description": "Fallback font path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "h264_crf": {
+                "computed": true,
+                "description": "H264 CRF.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "h265_crf": {
+                "computed": true,
+                "description": "H265 CRF.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "hardware_acceleration_type": {
+                "computed": true,
+                "description": "Hardware acceleration type. One of `none`, `amf`, `qsv`, `nvenc`, `v4l2m2m`, `vaapi`, `videotoolbox`, `rkmpp`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "hardware_decoding_codecs": {
+                "computed": true,
+                "description": "Hardware decoding codecs.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "hls_audio_seek_strategy": {
+                "computed": true,
+                "description": "Method used to seek the audio stream when transcoding HLS segments. One of `TrimCopiedAudio`, `TranscodeAudio`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `encoding` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "max_muxing_queue_size": {
+                "computed": true,
+                "description": "Max muxing queue size.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "prefer_system_native_hw_decoder": {
+                "computed": true,
+                "description": "Whether to prefer system native hardware decoder.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "qsv_device": {
+                "computed": true,
+                "description": "QSV device.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "segment_keep_seconds": {
+                "computed": true,
+                "description": "Segment keep time in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "subtitle_extraction_timeout_minutes": {
+                "computed": true,
+                "description": "Subtitle extraction timeout in minutes.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "throttle_delay_seconds": {
+                "computed": true,
+                "description": "Throttle delay in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "tonemapping_algorithm": {
+                "computed": true,
+                "description": "Tonemapping algorithm. One of `none`, `clip`, `linear`, `gamma`, `reinhard`, `hable`, `mobius`, `bt2390`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "tonemapping_desat": {
+                "computed": true,
+                "description": "Tonemapping desaturation.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "tonemapping_mode": {
+                "computed": true,
+                "description": "Tonemapping mode. One of `auto`, `max`, `rgb`, `lum`, `itp`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "tonemapping_param": {
+                "computed": true,
+                "description": "Tonemapping parameter.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "tonemapping_peak": {
+                "computed": true,
+                "description": "Tonemapping peak.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "tonemapping_range": {
+                "computed": true,
+                "description": "Tonemapping range. One of `auto`, `tv`, `pc`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "transcoding_temp_path": {
+                "computed": true,
+                "description": "Transcoding temporary path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "vaapi_device": {
+                "computed": true,
+                "description": "VAAPI device.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "vpp_tonemapping_brightness": {
+                "computed": true,
+                "description": "VPP tonemapping brightness.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "vpp_tonemapping_contrast": {
+                "computed": true,
+                "description": "VPP tonemapping contrast.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_library": {
+          "block": {
+            "attributes": {
+              "collection_type": {
+                "computed": false,
+                "description": "The collection type: one of `movies`, `tvshows`, `music`, `musicvideos`, `homevideos`, `boxsets`, `books`, `mixed`. A library without a collection type, which is how Jellyfin's web UI creates a Mixed Movies and Shows library, reads as `mixed`: Jellyfin treats the two the same.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "The library resource identifier.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "item_id": {
+                "computed": true,
+                "description": "The internal item ID assigned by Jellyfin.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "library_options": {
+                "computed": true,
+                "description": "Typed library options.",
+                "nested_type": {
+                  "attributes": {
+                    "cache_images_in_library": {
+                      "computed": false,
+                      "description": "Whether images are cached in the library. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "chapter_image_interval_seconds": {
+                      "computed": false,
+                      "description": "Chapter image interval in seconds. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "disabled": {
+                      "computed": true,
+                      "description": "Whether the library is disabled, the inverse of Jellyfin's `Enabled` option.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "disabled_image_fetchers": {
+                      "computed": false,
+                      "description": "Disabled image fetchers for the whole library; Jellyfin only has them per item type, where `image_fetchers` in `type_options` enables the fetchers it lists. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "disabled_metadata_fetchers": {
+                      "computed": false,
+                      "description": "Disabled metadata fetchers for the whole library; Jellyfin only has them per item type, where `metadata_fetchers` in `type_options` enables the fetchers it lists. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "disabled_metadata_savers": {
+                      "computed": false,
+                      "description": "Disabled metadata savers; Jellyfin only has the enabled ones, which `metadata_savers` sets. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "disabled_subtitle_fetchers": {
+                      "computed": true,
+                      "description": "Disabled subtitle fetchers. Deprecated: list the enabled subtitle fetchers in priority order in `subtitle_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "download_images_in_advance": {
+                      "computed": false,
+                      "description": "Whether images are downloaded in advance. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_automatic_series_grouping": {
+                      "computed": true,
+                      "description": "Whether automatic series grouping is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_chapter_image_extraction": {
+                      "computed": true,
+                      "description": "Whether chapter image extraction is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_emby_photos": {
+                      "computed": false,
+                      "description": "Whether Emby photos are enabled. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_media_conversion": {
+                      "computed": false,
+                      "description": "Whether media conversion is enabled. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_photo_subtitle": {
+                      "computed": false,
+                      "description": "Whether photo subtitles are enabled. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_photos": {
+                      "computed": true,
+                      "description": "Whether photos are enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_realtime_monitor": {
+                      "computed": true,
+                      "description": "Whether realtime monitoring is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_trickplay_image_extraction": {
+                      "computed": true,
+                      "description": "Whether trickplay images, the previews shown while seeking, are extracted.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "extract_chapters_during_library_scan": {
+                      "computed": true,
+                      "description": "Whether chapter images are extracted during the library scan.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "extract_media_information_during_library_scan": {
+                      "computed": false,
+                      "description": "Whether media information is extracted during library scan. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "extract_trickplay_images_during_library_scan": {
+                      "computed": true,
+                      "description": "Whether trickplay images are extracted during the library scan, instead of only by the trickplay scheduled task.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "image_fetcher_order": {
+                      "computed": false,
+                      "description": "Image fetcher order for the whole library; Jellyfin only has it per item type, which `image_fetchers` in `type_options` sets. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "import_missing_episodes": {
+                      "computed": false,
+                      "description": "Whether missing episodes are imported. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "local_metadata_reader_order": {
+                      "computed": true,
+                      "description": "Local metadata reader order.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "metadata_country_code": {
+                      "computed": true,
+                      "description": "Metadata country code.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "metadata_fetcher_order": {
+                      "computed": false,
+                      "description": "Metadata fetcher order for the whole library; Jellyfin only has it per item type, which `metadata_fetchers` in `type_options` sets. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "metadata_refresh_mode": {
+                      "computed": false,
+                      "description": "Metadata refresh mode. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "metadata_savers": {
+                      "computed": true,
+                      "description": "Enabled metadata savers, such as `Nfo`, which save metadata into the media folders.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "path_infos": {
+                      "computed": true,
+                      "description": "Path information entries.",
+                      "nested_type": {
+                        "attributes": {
+                          "network_path": {
+                            "computed": true,
+                            "description": "Network path. Jellyfin removed network paths, so setting it is an error. The attribute will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          },
+                          "password": {
+                            "computed": false,
+                            "description": "Password. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": true,
+                            "type": "string"
+                          },
+                          "path": {
+                            "computed": true,
+                            "description": "Local path.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          },
+                          "username": {
+                            "computed": false,
+                            "description": "Username. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          }
+                        },
+                        "nesting_mode": "list"
+                      },
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false
+                    },
+                    "preferred_metadata_language": {
+                      "computed": true,
+                      "description": "Preferred metadata language.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "save_local_metadata": {
+                      "computed": true,
+                      "description": "Whether local metadata is saved.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "save_local_thumbnail_sets": {
+                      "computed": false,
+                      "description": "Whether local thumbnail sets are saved. Jellyfin has no such library option, so setting it is an error. The attribute will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "save_trickplay_with_media": {
+                      "computed": true,
+                      "description": "Whether trickplay images are saved in the media folders, next to the media, instead of in Jellyfin's data folder.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "season_zero_display_name": {
+                      "computed": true,
+                      "description": "Season zero display name.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "subtitle_fetcher_order": {
+                      "computed": true,
+                      "description": "Subtitle fetcher order. Deprecated: list the enabled subtitle fetchers in priority order in `subtitle_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "subtitle_fetchers": {
+                      "computed": true,
+                      "description": "Enabled subtitle fetchers, in priority order: Jellyfin asks the first one first and disables every other subtitle fetcher it offers. Subtitle fetchers come from plugins, such as Open Subtitles, and each name must match one the server offers exactly. Jellyfin enables a subtitle fetcher installed later, which then shows up as a change to this list. Conflicts with `disabled_subtitle_fetchers` and `subtitle_fetcher_order`, which it replaces.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "type_options": {
+                      "computed": true,
+                      "description": "Type-specific options. The list replaces the server's list; each entry is applied over the server's entry with the same `type`, so attributes left unset keep the server's values.",
+                      "nested_type": {
+                        "attributes": {
+                          "image_fetcher_order": {
+                            "computed": true,
+                            "description": "Image fetcher order for this type. Deprecated: list the enabled image fetchers in priority order in `image_fetchers` instead, which then sets the order. Set, it still overrides that order; removed, the order it set stays until `image_fetchers` changes. It will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "image_fetchers": {
+                            "computed": true,
+                            "description": "Enabled image fetchers for this type, in priority order: Jellyfin asks the first one first. Unless `image_fetcher_order` is set, changing the list also sets Jellyfin's image fetcher order: these names, then the other names the server's order held. The list does not read that order back, so while it stays as it is, Jellyfin keeps the order it has, including one set by `image_fetcher_order` or outside Terraform.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "image_options": {
+                            "computed": true,
+                            "description": "Image options for this type. Each entry is applied over the server's entry with the same image `type`.",
+                            "nested_type": {
+                              "attributes": {
+                                "limit": {
+                                  "computed": true,
+                                  "description": "Image limit.",
+                                  "optional": true,
+                                  "required": false,
+                                  "sensitive": false,
+                                  "type": "number"
+                                },
+                                "min_width": {
+                                  "computed": true,
+                                  "description": "Minimum image width in pixels.",
+                                  "optional": true,
+                                  "required": false,
+                                  "sensitive": false,
+                                  "type": "number"
+                                },
+                                "type": {
+                                  "computed": true,
+                                  "description": "Image type: one of `Primary`, `Art`, `Backdrop`, `Banner`, `Logo`, `Thumb`, `Disc`, `Box`, `Screenshot`, `Menu`, `Chapter`, `BoxRear`, `Profile`.",
+                                  "optional": true,
+                                  "required": false,
+                                  "sensitive": false,
+                                  "type": "string"
+                                }
+                              },
+                              "nesting_mode": "list"
+                            },
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false
+                          },
+                          "metadata_fetcher_order": {
+                            "computed": true,
+                            "description": "Metadata fetcher order for this type. Deprecated: list the enabled metadata fetchers in priority order in `metadata_fetchers` instead, which then sets the order. Set, it still overrides that order; removed, the order it set stays until `metadata_fetchers` changes. It will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "metadata_fetchers": {
+                            "computed": true,
+                            "description": "Enabled metadata fetchers for this type, in priority order: Jellyfin asks the first one first. Unless `metadata_fetcher_order` is set, changing the list also sets Jellyfin's metadata fetcher order: these names, then the other names the server's order held. The list does not read that order back, so while it stays as it is, Jellyfin keeps the order it has, including one set by `metadata_fetcher_order` or outside Terraform.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "similar_item_provider_order": {
+                            "computed": true,
+                            "description": "Similar item provider order for this type. Deprecated: list the enabled similar item providers in priority order in `similar_item_providers` instead, which then sets the order. Set, it still overrides that order; removed, the order it set stays until `similar_item_providers` changes. It will be removed in a future release.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "similar_item_providers": {
+                            "computed": true,
+                            "description": "Enabled similar item providers for this type, in priority order; Jellyfin always uses its local ones, such as Local Genre/Tag, which the list only ranks. Unless `similar_item_provider_order` is set, changing the list also sets Jellyfin's similar item provider order: these names, then the other names the server's order held. The list does not read that order back, so while it stays as it is, Jellyfin keeps the order it has, including one set by `similar_item_provider_order` or outside Terraform.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "type": {
+                            "computed": true,
+                            "description": "Item type.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          }
+                        },
+                        "nesting_mode": "list"
+                      },
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false
+                    }
+                  },
+                  "nesting_mode": "single"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "name": {
+                "computed": false,
+                "description": "The library name.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "paths": {
+                "computed": false,
+                "description": "Paths of the library's media folders. Jellyfin looks them up on the server, so when it runs in a container they must be paths inside the container. Changing the paths replaces the library; changing only their order does not.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_livetv_configuration": {
+          "block": {
+            "attributes": {
+              "enable_original_audio_with_encoded_recordings": {
+                "computed": true,
+                "description": "Whether original audio is kept with encoded recordings.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_recording_subfolders": {
+                "computed": true,
+                "description": "Whether recording subfolders are enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "guide_days": {
+                "computed": true,
+                "description": "Number of guide days.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `livetv` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "listing_providers": {
+                "computed": true,
+                "description": "Listing providers. An entry keeps the settings it does not configure from the existing entry with the same `id`, else the same `type` and `listings_id`, else the same `type` and `path`, else the same `type`. Before the resource is in state, as on its first apply, only an entry with the `id` of an existing one keeps that one's settings; import the configuration first to keep them by the other keys.",
+                "nested_type": {
+                  "attributes": {
+                    "channel_mappings": {
+                      "computed": true,
+                      "description": "Channel mappings.",
+                      "nested_type": {
+                        "attributes": {
+                          "name": {
+                            "computed": true,
+                            "description": "Channel name.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          },
+                          "value": {
+                            "computed": true,
+                            "description": "Mapped value.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          }
+                        },
+                        "nesting_mode": "list"
+                      },
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false
+                    },
+                    "country": {
+                      "computed": true,
+                      "description": "Country.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "enable_all_tuners": {
+                      "computed": true,
+                      "description": "Enable all tuners.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enabled_tuners": {
+                      "computed": true,
+                      "description": "Enabled tuners.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "id": {
+                      "computed": true,
+                      "description": "Provider ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "kids_categories": {
+                      "computed": true,
+                      "description": "Kids categories.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "listings_id": {
+                      "computed": true,
+                      "description": "Listings ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "movie_categories": {
+                      "computed": true,
+                      "description": "Movie categories.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "movie_prefix": {
+                      "computed": true,
+                      "description": "Movie prefix.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "news_categories": {
+                      "computed": true,
+                      "description": "News categories.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "password": {
+                      "computed": true,
+                      "description": "Password.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": true,
+                      "type": "string"
+                    },
+                    "path": {
+                      "computed": true,
+                      "description": "Path.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "preferred_language": {
+                      "computed": true,
+                      "description": "Preferred language.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "sports_categories": {
+                      "computed": true,
+                      "description": "Sports categories.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "type": {
+                      "computed": true,
+                      "description": "Provider type.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "user_agent": {
+                      "computed": true,
+                      "description": "User agent.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "username": {
+                      "computed": true,
+                      "description": "Username.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "zip_code": {
+                      "computed": true,
+                      "description": "ZIP code.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "media_locations_created": {
+                "computed": true,
+                "description": "Recording folders Jellyfin has added as libraries. Jellyfin maintains this list itself when a recording path points at an existing directory, so it is usually left unset.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "movie_recording_path": {
+                "computed": true,
+                "description": "Movie recording path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "post_padding_seconds": {
+                "computed": true,
+                "description": "Post-padding seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "pre_padding_seconds": {
+                "computed": true,
+                "description": "Pre-padding seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "recording_path": {
+                "computed": true,
+                "description": "Recording path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "recording_post_processor": {
+                "computed": true,
+                "description": "Recording post processor.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "recording_post_processor_arguments": {
+                "computed": true,
+                "description": "Recording post processor arguments.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "save_recording_images": {
+                "computed": true,
+                "description": "Whether to save recording images.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "save_recording_nfo": {
+                "computed": true,
+                "description": "Whether to save recording NFO.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "series_recording_path": {
+                "computed": true,
+                "description": "Series recording path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "tuner_hosts": {
+                "computed": true,
+                "description": "Tuner hosts. An entry keeps the settings it does not configure from the existing entry with the same `id`, else the same `url`, else the same `type`. Before the resource is in state, as on its first apply, only an entry with the `id` of an existing one keeps that one's settings; import the configuration first to keep them by `url` or `type`.",
+                "nested_type": {
+                  "attributes": {
+                    "allow_fmp4_transcoding_container": {
+                      "computed": true,
+                      "description": "Allow fmp4 transcoding container.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "allow_hw_transcoding": {
+                      "computed": true,
+                      "description": "Allow hardware transcoding.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "allow_stream_sharing": {
+                      "computed": true,
+                      "description": "Allow stream sharing.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "device_id": {
+                      "computed": true,
+                      "description": "Device ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "enable_stream_looping": {
+                      "computed": true,
+                      "description": "Enable stream looping.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "fallback_max_streaming_bitrate": {
+                      "computed": true,
+                      "description": "Fallback max streaming bitrate.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "friendly_name": {
+                      "computed": true,
+                      "description": "Friendly name.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "id": {
+                      "computed": true,
+                      "description": "Tuner host ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "ignore_dts": {
+                      "computed": true,
+                      "description": "Ignore DTS.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "import_favorites_only": {
+                      "computed": true,
+                      "description": "Import favorites only.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "read_at_native_framerate": {
+                      "computed": true,
+                      "description": "Read at native framerate.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "source": {
+                      "computed": true,
+                      "description": "Source.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "tuner_count": {
+                      "computed": true,
+                      "description": "Tuner count.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "type": {
+                      "computed": true,
+                      "description": "Tuner host type.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "url": {
+                      "computed": true,
+                      "description": "Tuner host URL.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "user_agent": {
+                      "computed": true,
+                      "description": "User agent.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_metadata_configuration": {
+          "block": {
+            "attributes": {
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `metadata` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "use_file_creation_time_for_date_added": {
+                "computed": true,
+                "description": "Whether to use file creation time for date added.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_networking_configuration": {
+          "block": {
+            "attributes": {
+              "auto_discovery": {
+                "computed": true,
+                "description": "Whether auto discovery is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "base_url": {
+                "computed": true,
+                "description": "The base URL, such as `/jellyfin`: empty, or a path that starts with `/` and does not end with one, as Jellyfin stores it.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "certificate_password": {
+                "computed": true,
+                "description": "Password for the TLS certificate.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "certificate_path": {
+                "computed": true,
+                "description": "Path to the TLS certificate.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "enable_https": {
+                "computed": true,
+                "description": "Whether HTTPS is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_ipv4": {
+                "computed": true,
+                "description": "Whether IPv4 is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_ipv6": {
+                "computed": true,
+                "description": "Whether IPv6 is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_published_server_uri_by_request": {
+                "computed": true,
+                "description": "Whether published server URI by request is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_remote_access": {
+                "computed": true,
+                "description": "Whether remote access is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_upnp": {
+                "computed": true,
+                "description": "Whether UPnP is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `networking` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "ignore_virtual_interfaces": {
+                "computed": true,
+                "description": "Whether virtual interfaces are ignored.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "internal_http_port": {
+                "computed": true,
+                "description": "Internal HTTP port.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "internal_https_port": {
+                "computed": true,
+                "description": "Internal HTTPS port.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "is_remote_ip_filter_blacklist": {
+                "computed": true,
+                "description": "Whether the remote IP filter is a blacklist.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "known_proxies": {
+                "computed": true,
+                "description": "Known proxy addresses.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "local_network_addresses": {
+                "computed": true,
+                "description": "Local network addresses.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "local_network_subnets": {
+                "computed": true,
+                "description": "Local network subnets.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "public_http_port": {
+                "computed": true,
+                "description": "Public HTTP port.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "public_https_port": {
+                "computed": true,
+                "description": "Public HTTPS port.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "published_server_uri_by_subnet": {
+                "computed": true,
+                "description": "Published server URIs by subnet.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "remote_ip_filter": {
+                "computed": true,
+                "description": "Remote IP filter list.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "require_https": {
+                "computed": true,
+                "description": "Whether HTTPS is required.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "virtual_interface_names": {
+                "computed": true,
+                "description": "Virtual interface names.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_plugin": {
+          "block": {
+            "attributes": {
+              "id": {
+                "computed": true,
+                "description": "The plugin ID assigned by Jellyfin after installation.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "installed_version": {
+                "computed": true,
+                "description": "The version Jellyfin lists for the plugin, which can be newer than `version` while automatic plugin updates are on. While an update waits for a restart, this keeps the previous version, whose `status` reads `Superseded`. A version Jellyfin deletes at the next restart is ignored.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "name": {
+                "computed": false,
+                "description": "The plugin package name. Used as the import key (e.g. `terraform import jellyfin_plugin.x \"SSO-Auth\"`).",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "repository_url": {
+                "computed": true,
+                "description": "The repository URL from which to install the plugin. Required when creating the resource and resolved automatically on import when the exact package version is still available.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "status": {
+                "computed": true,
+                "description": "The status Jellyfin lists for `installed_version`: `Active` (loaded), `Restart` (waiting for a restart to load), `Superseded` (a newer version waits for a restart to replace it), `Disabled` (disabled on the dashboard's Plugins page), `NotSupported` (built for another Jellyfin version, so not loaded) or `Malfunctioned` (failed to load; the server log says why). Creating the resource fails if the version it installed is `NotSupported` or `Malfunctioned`, and the next apply replaces the tainted plugin.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "version": {
+                "computed": true,
+                "description": "The version to install, as the repository lists it (e.g. `13.0.0.0`), or `latest` (the newest offered) or `supported` (the Jellyfin Security release this provider was tested against). A keyword is resolved only at install or when set, stays in state as written, and accepts any version installed later. Omitted, it installs as `supported` for Jellyfin Security and `latest` otherwise, then tracks `installed_version`, as it also does after a keyword is removed. A version is a minimum while automatic plugin updates are on, else exact; see the resource description. Changing it reinstalls the plugin, replacing the resource, unless the installed version already satisfies the new value.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_plugin_configuration": {
+          "block": {
+            "attributes": {
+              "configuration_json": {
+                "computed": false,
+                "description": "A JSON object containing only the plugin settings to manage. Unspecified object keys are preserved; arrays are replaced whole. Sensitive values remain in Terraform state.",
+                "optional": false,
+                "required": true,
+                "sensitive": true,
+                "type": "string"
+              },
+              "configuration_keys": {
+                "computed": true,
+                "description": "Owned object keys, derived from configuration_json. Nested objects retain their structure; arrays, scalars and null are represented by null. This read-only ownership record survives remote field removal and type changes.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "The plugin configuration resource identifier.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "plugin_id": {
+                "computed": false,
+                "description": "The plugin ID (GUID), with or without dashes. Both spellings name the same plugin, so switching between them plans no change.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_plugin_repository": {
+          "block": {
+            "attributes": {
+              "enabled": {
+                "computed": true,
+                "description": "Whether the repository is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "id": {
+                "computed": true,
+                "description": "The plugin repository resource identifier, which is its name.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "name": {
+                "computed": false,
+                "description": "The repository name.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "url": {
+                "computed": false,
+                "description": "The repository URL.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_restart": {
+          "block": {
+            "attributes": {
+              "completed_at": {
+                "computed": true,
+                "description": "RFC3339 timestamp marking when the server was ready after the restart.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "id": {
+                "computed": true,
+                "description": "Unique identifier for this restart action.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "timeout": {
+                "computed": true,
+                "description": "Maximum number of seconds to wait for the server to come back up after restart. Defaults to 120.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "triggers": {
+                "computed": false,
+                "description": "Map of arbitrary string values that, when changed, force a new restart. Tie restarts to upstream changes, e.g. `triggers = { plugin_version = jellyfin_plugin.x.installed_version }`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "map",
+                  "string"
+                ]
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_scheduled_task": {
+          "block": {
+            "attributes": {
+              "id": {
+                "computed": true,
+                "description": "The resource identifier, matching the scheduled task ID.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "key": {
+                "computed": true,
+                "description": "The task's key, the readable name Jellyfin lists next to its ID in `GET /ScheduledTasks`, such as `RefreshLibrary` (*Scan Media Library*) or `PluginUpdates` (*Update Plugins*). It matches exactly, case included, and set without `task_id` must belong to one task only. Set `key`, `task_id`, or both naming the same task; with only `task_id` set, `key` reads the task's key. A key no task has fails the plan, `terraform destroy` included, so once its task is gone, such as after removing the plugin that added it, remove the resource from the configuration or destroy with `-refresh=false`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "task_id": {
+                "computed": true,
+                "description": "The task's ID, which Jellyfin derives from an MD5 hash of the full name of the .NET type that runs the task and matches ignoring case, such as `7738148ffcd07979c7ceb148e06b3aed` for *Scan Media Library*. Set `key`, `task_id`, or both naming the same task; with only `key` set, `task_id` reads the ID of the task the key selects.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "triggers": {
+                "computed": false,
+                "description": "The task triggers. This list replaces all of the task's triggers. Each trigger is sent exactly as configured, so an optional attribute left unset is removed from the server; declare every attribute an existing trigger should keep, such as the `max_runtime_ticks` some built-in tasks ship with.",
+                "nested_type": {
+                  "attributes": {
+                    "day_of_week": {
+                      "computed": false,
+                      "description": "Day of the week the task runs (`Sunday` through `Saturday`). Required for `WeeklyTrigger`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "interval_ticks": {
+                      "computed": false,
+                      "description": "Interval between runs, in ticks (100 ns). Required for `IntervalTrigger`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "max_runtime_ticks": {
+                      "computed": false,
+                      "description": "Maximum time the task may run before Jellyfin cancels it, in ticks (100 ns), from `0` to `42949672949999` (about 49.7 days). Jellyfin counts whole milliseconds, so a value below `10000` (1 ms), including `0`, cancels each run as soon as it starts; leave it unset for no limit.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "time_of_day_ticks": {
+                      "computed": false,
+                      "description": "Time of day the task runs, in ticks (100 ns) after midnight, from `0` to `863999999999`. Required for `DailyTrigger` and `WeeklyTrigger`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "type": {
+                      "computed": false,
+                      "description": "The trigger type (`DailyTrigger`, `WeeklyTrigger`, `IntervalTrigger`, `StartupTrigger`).",
+                      "optional": false,
+                      "required": true,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": false,
+                "required": true,
+                "sensitive": false
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_security_plugin_configuration": {
+          "block": {
+            "attributes": {
+              "allow_admin_password_login": {
+                "computed": true,
+                "description": "Allow password login for administrators.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_app_passwords_when_password_login_disabled": {
+                "computed": true,
+                "description": "While disable_password_login is on, still let users sign in with one of their app passwords, never the account password, for native apps that ask for a password. An app password keeps working after the identity provider stops letting its user in, until it is revoked. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_indefinite_trust": {
+                "computed": true,
+                "description": "Allow indefinite trust for devices.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_password_login_on_lan": {
+                "computed": true,
+                "description": "Allow password login on LAN.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "allow_private_notification_targets": {
+                "computed": true,
+                "description": "Allow private network notification targets.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "audit_log_max_entries": {
+                "computed": true,
+                "description": "Max audit log entries.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "bare_device_id_bypass_enabled": {
+                "computed": true,
+                "description": "Enable bypass for bare device IDs.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "block_empty_password_login": {
+                "computed": true,
+                "description": "Block login for users with empty passwords.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "bypass_for_external_auth_providers": {
+                "computed": true,
+                "description": "Bypass 2FA for external auth providers.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "challenge_token_ttl_seconds": {
+                "computed": true,
+                "description": "Challenge token time-to-live in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "default_language": {
+                "computed": true,
+                "description": "Default language code.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "default_max_concurrent_sessions": {
+                "computed": true,
+                "description": "Default max concurrent sessions per user (0 = unlimited).",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "disable_password_login": {
+                "computed": true,
+                "description": "Disable password login entirely.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "email_otp_enabled": {
+                "computed": true,
+                "description": "Enable email OTP.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "email_otp_ttl_seconds": {
+                "computed": true,
+                "description": "Email OTP time-to-live in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "enable_password_recovery": {
+                "computed": true,
+                "description": "Enable password recovery.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enabled": {
+                "computed": true,
+                "description": "Whether the plugin is enabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enforcement_scope": {
+                "computed": true,
+                "description": "2FA enforcement scope: Optional, Admins, or All.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "enrollment_deadline": {
+                "computed": true,
+                "description": "2FA enrollment deadline as an ISO 8601 date-time, e.g. `2030-01-01T00:00:00Z`, or an empty string for none, which clears a deadline set before.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "exempt_administrators_from_lockout": {
+                "computed": true,
+                "description": "Exempt administrators from lockout.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "geo_ip_asn_db_path": {
+                "computed": true,
+                "description": "Path to GeoIP ASN database.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "geo_ip_city_db_path": {
+                "computed": true,
+                "description": "Path to GeoIP city database.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "geo_ip_country_db_path": {
+                "computed": true,
+                "description": "Path to GeoIP country database.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "geo_protection_handled_externally": {
+                "computed": true,
+                "description": "Geographic checks are done outside the plugin (a WAF, CrowdSec, a firewall): the security score leaves impossible-travel detection out while it is off or has no city database, instead of counting it as failed. Turns no detector on or off. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "gotify_app_token": {
+                "computed": true,
+                "description": "Gotify app token.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "gotify_url": {
+                "computed": true,
+                "description": "Gotify notification URL.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "hibp_enabled": {
+                "computed": true,
+                "description": "Enable Have I Been Pwned password check.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "hide_builtin_forgot_password": {
+                "computed": true,
+                "description": "Hide the built-in forgot password link.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "hide_builtin_passkey_button": {
+                "computed": true,
+                "description": "Hide the built-in passkey login button.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "hide_builtin_two_factor_button": {
+                "computed": true,
+                "description": "Hide the built-in 2FA login button.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "hide_two_factor_setup_for_sso_users": {
+                "computed": true,
+                "description": "Hide the plugin's own two-factor setup on the account page from non-administrators with a linked identity provider. A factor the user already has stays visible so it can be removed. A UI gate only. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "id": {
+                "computed": true,
+                "description": "The plugin configuration resource identifier.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "impossible_travel_enabled": {
+                "computed": true,
+                "description": "Enable impossible travel detection.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "impossible_travel_max_kmh": {
+                "computed": true,
+                "description": "Impossible travel max speed in km/h.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "ip_ban_duration_hours": {
+                "computed": true,
+                "description": "IP ban duration in hours.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "ip_ban_enabled": {
+                "computed": true,
+                "description": "Enable IP banning.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "ip_ban_exempt_cidrs": {
+                "computed": true,
+                "description": "CIDR ranges exempt from IP banning.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "ip_ban_failure_threshold": {
+                "computed": true,
+                "description": "IP ban failure threshold.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "ip_ban_failure_window_minutes": {
+                "computed": true,
+                "description": "IP ban failure window in minutes.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "lan_bypass_cidrs": {
+                "computed": true,
+                "description": "CIDR ranges that bypass 2FA on LAN.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "lan_bypass_enabled": {
+                "computed": true,
+                "description": "Enable LAN bypass for 2FA.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "lockout_duration_minutes": {
+                "computed": true,
+                "description": "Lockout duration in minutes.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "login_links_below_quick_connect": {
+                "computed": true,
+                "description": "Show login links below Quick Connect.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "max_failed_attempts": {
+                "computed": true,
+                "description": "Max failed auth attempts before lockout.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "nat_hairpin_self_ip_bypass": {
+                "computed": true,
+                "description": "Enable NAT hairpin self-IP bypass.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "notify_email_addresses": {
+                "computed": true,
+                "description": "Email addresses to notify.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "ntfy_password": {
+                "computed": true,
+                "description": "ntfy password for HTTP Basic auth.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "ntfy_token": {
+                "computed": true,
+                "description": "ntfy access token; takes precedence over ntfy_username/ntfy_password.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "ntfy_topic": {
+                "computed": true,
+                "description": "ntfy notification topic.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "ntfy_url": {
+                "computed": true,
+                "description": "ntfy notification URL.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "ntfy_username": {
+                "computed": true,
+                "description": "ntfy username for HTTP Basic auth; used only when ntfy_token is empty.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "oidc_providers": {
+                "computed": true,
+                "description": "List of OIDC provider configurations.",
+                "nested_type": {
+                  "attributes": {
+                    "acr_values": {
+                      "computed": true,
+                      "description": "OIDC ACR values (space-delimited on wire).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "additional_allowed_cidrs": {
+                      "computed": true,
+                      "description": "Additional allowed CIDRs (comma-delimited on wire).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "admin_groups": {
+                      "computed": true,
+                      "description": "Groups granted admin (comma-delimited on wire).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "allow_admin_group_elevation": {
+                      "computed": true,
+                      "description": "Allow admin group elevation.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "allow_private_networks": {
+                      "computed": true,
+                      "description": "Allow private network redirect URIs.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "allowed_groups": {
+                      "computed": true,
+                      "description": "Groups allowed to log in (comma-delimited on wire).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "apply_role_library_access": {
+                      "computed": true,
+                      "description": "Apply role-based library access.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "auto_create_users": {
+                      "computed": true,
+                      "description": "Auto-create users on first login.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "button_icon_url": {
+                      "computed": true,
+                      "description": "Login button icon URL.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "button_text": {
+                      "computed": true,
+                      "description": "Login button text.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "bypass_plugin_two_fa": {
+                      "computed": true,
+                      "description": "Bypass plugin 2FA for this provider.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "client_id": {
+                      "computed": true,
+                      "description": "OIDC client ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "client_secret": {
+                      "computed": true,
+                      "description": "OIDC client secret.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "computed": true,
+                      "description": "Creation timestamp (server-managed).",
+                      "optional": false,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "discovery_url": {
+                      "computed": true,
+                      "description": "OIDC discovery URL.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "computed": true,
+                      "description": "Display name for the provider.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "email_claim": {
+                      "computed": true,
+                      "description": "JWT claim for email.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "computed": true,
+                      "description": "Whether this provider is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "force_https": {
+                      "computed": true,
+                      "description": "Force HTTPS for redirect URI.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "force_password_setup": {
+                      "computed": true,
+                      "description": "Force password setup on first login.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "id": {
+                      "computed": true,
+                      "description": "Provider ID (callback URL slug).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "link_existing_users_by_username": {
+                      "computed": true,
+                      "description": "Link an unlinked identity to an existing non-administrator user with the same username.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "omit_prompt_login": {
+                      "computed": true,
+                      "description": "Omit prompt=login from auth request.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "picture_claim": {
+                      "computed": true,
+                      "description": "JWT claim for profile picture.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "preset": {
+                      "computed": true,
+                      "description": "Provider preset (e.g. generic, authentik).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "prompt_select_account": {
+                      "computed": true,
+                      "description": "Prompt for account selection.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "require_idp_mfa": {
+                      "computed": true,
+                      "description": "Require IdP MFA.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "role_library_mappings": {
+                      "computed": true,
+                      "description": "Role-to-library access mappings.",
+                      "nested_type": {
+                        "attributes": {
+                          "library_ids": {
+                            "computed": true,
+                            "description": "Library IDs (comma-delimited on wire).",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": [
+                              "list",
+                              "string"
+                            ]
+                          },
+                          "role": {
+                            "computed": true,
+                            "description": "Role name.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          }
+                        },
+                        "nesting_mode": "list"
+                      },
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false
+                    },
+                    "rp_initiated_logout_enabled": {
+                      "computed": true,
+                      "description": "End the provider session on Jellyfin sign-out (OIDC RP-Initiated Logout).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "rp_initiated_logout_redirect_uri": {
+                      "computed": true,
+                      "description": "Absolute https post_logout_redirect_uri; must be registered at the IdP.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "scopes": {
+                      "computed": true,
+                      "description": "OIDC scopes (space-delimited on wire).",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "show_login_button": {
+                      "computed": true,
+                      "description": "Show login button for this provider.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "sync_email_from_claim": {
+                      "computed": true,
+                      "description": "Sync email from claim.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "sync_profile_picture": {
+                      "computed": true,
+                      "description": "Sync profile picture from IdP.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "template_user_id": {
+                      "computed": true,
+                      "description": "Template user ID for auto-created users.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "username_claim": {
+                      "computed": true,
+                      "description": "JWT claim for username.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "onboarding_password_min_length": {
+                "computed": true,
+                "description": "Onboarding password minimum length.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "onboarding_password_require_digit": {
+                "computed": true,
+                "description": "Require digit in onboarding passwords.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "onboarding_password_require_lowercase": {
+                "computed": true,
+                "description": "Require lowercase in onboarding passwords.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "onboarding_password_require_symbol": {
+                "computed": true,
+                "description": "Require symbol in onboarding passwords.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "onboarding_password_require_uppercase": {
+                "computed": true,
+                "description": "Require uppercase in onboarding passwords.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "pair_device_on_second_screen_approval": {
+                "computed": true,
+                "description": "Remember a device signed in through a second-screen approval (OIDC device flow or Quick Connect) in the user's paired devices. Requires plugin 2.6.3 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "pairing_code_ttl_seconds": {
+                "computed": true,
+                "description": "Pairing code time-to-live in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "password_login_exempt_cidrs": {
+                "computed": true,
+                "description": "CIDR ranges exempt from password login disable.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "plugin_id": {
+                "computed": false,
+                "description": "The plugin ID (GUID), with or without dashes. Both spellings name the same plugin, so switching between them plans no change.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "pre_verify_window_seconds": {
+                "computed": true,
+                "description": "Pre-verify window in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "public_base_url": {
+                "computed": true,
+                "description": "Public base URL of the server, used for OIDC redirect URIs, pairing QR codes and password reset links. Empty uses the request host. Requires plugin 2.6.3 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "registered_device_max_age_days": {
+                "computed": true,
+                "description": "Max age in days for registered devices.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "require_challenge_ip_match": {
+                "computed": true,
+                "description": "Require challenge token IP to match request IP.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "require_two_factor_to_disable": {
+                "computed": true,
+                "description": "Require 2FA to disable the plugin.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "self_service_step_up_mode": {
+                "computed": true,
+                "description": "Self-service step-up mode: Off, UserChoice, or Forced.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "smtp_from_address": {
+                "computed": true,
+                "description": "SMTP from address.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "smtp_from_name": {
+                "computed": true,
+                "description": "SMTP from name.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "smtp_host": {
+                "computed": true,
+                "description": "SMTP server host.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "smtp_password": {
+                "computed": true,
+                "description": "SMTP password.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "smtp_port": {
+                "computed": true,
+                "description": "SMTP server port.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "smtp_use_ssl": {
+                "computed": true,
+                "description": "Use SSL for SMTP.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "smtp_username": {
+                "computed": true,
+                "description": "SMTP username.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "step_up_level": {
+                "computed": true,
+                "description": "Step-up level: Off, Destructive, AllConfigChanges, or Everything.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "step_up_window_seconds": {
+                "computed": true,
+                "description": "Step-up authentication window in seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "suspicious_login_enabled": {
+                "computed": true,
+                "description": "Run the suspicious-login detector when an ASN or country database is configured. Off keeps the database paths and does not stop impossible-travel alerts. The plugin defaults to on. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "telegram_bot_token": {
+                "computed": true,
+                "description": "Telegram bot token from @BotFather. With telegram_chat_id also set, security alerts go to that chat. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "telegram_chat_id": {
+                "computed": true,
+                "description": "Telegram chat that receives security alerts: a user or group ID (group and channel IDs are negative) or a public channel's @username. Requires plugin 2.6.4 or later.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "totp_issuer_name": {
+                "computed": true,
+                "description": "TOTP issuer name.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "trust_cookie_ttl_days": {
+                "computed": true,
+                "description": "Trust cookie TTL in days.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "trust_forwarded_for": {
+                "computed": true,
+                "description": "Trust X-Forwarded-For header.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "trusted_proxy_cidrs": {
+                "computed": true,
+                "description": "Trusted proxy CIDR ranges.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "user_emails": {
+                "computed": true,
+                "description": "User email mappings.",
+                "nested_type": {
+                  "attributes": {
+                    "email": {
+                      "computed": true,
+                      "description": "User email address.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "computed": true,
+                      "description": "Jellyfin user ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "webauthn_origins": {
+                "computed": true,
+                "description": "WebAuthn allowed origins.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "webauthn_rp_id": {
+                "computed": true,
+                "description": "WebAuthn relying party ID.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "webhook_ed25519_private_key": {
+                "computed": true,
+                "description": "Webhook Ed25519 private key.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "webhook_headers": {
+                "computed": true,
+                "description": "Extra webhook headers, one \"Name: Value\" entry each. Sensitive, as receivers authenticate with a header such as Authorization.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "webhook_secret": {
+                "computed": true,
+                "description": "Webhook signing secret.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "webhook_url": {
+                "computed": true,
+                "description": "Webhook notification URL. Sensitive, as receivers such as Discord and Slack take a token in the URL.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_system_configuration": {
+          "block": {
+            "attributes": {
+              "activity_log_retention_days": {
+                "computed": true,
+                "description": "Activity log retention days.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "allow_client_log_upload": {
+                "computed": true,
+                "description": "Allow client log upload.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "cache_path": {
+                "computed": true,
+                "description": "Cache path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "cache_size": {
+                "computed": true,
+                "description": "Cache size.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "cast_receiver_applications": {
+                "computed": true,
+                "description": "Cast receiver applications.",
+                "nested_type": {
+                  "attributes": {
+                    "id": {
+                      "computed": true,
+                      "description": "Application ID. Must be set in every entry.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "name": {
+                      "computed": true,
+                      "description": "Application name. Must be set in every entry.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "chapter_image_resolution": {
+                "computed": true,
+                "description": "Chapter image resolution. One of `MatchSource`, `P144`, `P240`, `P360`, `P480`, `P720`, `P1080`, `P1440`, `P2160`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "codecs_used": {
+                "computed": true,
+                "description": "Codecs used.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "content_types": {
+                "computed": true,
+                "description": "Content types.",
+                "nested_type": {
+                  "attributes": {
+                    "name": {
+                      "computed": true,
+                      "description": "Name.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "value": {
+                      "computed": true,
+                      "description": "Value.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "cors_hosts": {
+                "computed": true,
+                "description": "CORS hosts.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "disable_live_tv_channel_user_data_name": {
+                "computed": true,
+                "description": "Disable live TV channel user data name.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "display_specials_within_seasons": {
+                "computed": true,
+                "description": "Display specials within seasons.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "dummy_chapter_duration": {
+                "computed": true,
+                "description": "Dummy chapter duration.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "enable_case_sensitive_item_ids": {
+                "computed": true,
+                "description": "Enable case sensitive item IDs.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_external_content_in_suggestions": {
+                "computed": true,
+                "description": "Enable external content in suggestions.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_folder_view": {
+                "computed": true,
+                "description": "Enable folder view.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_grouping_movies_into_collections": {
+                "computed": true,
+                "description": "Enable grouping movies into collections.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_grouping_shows_into_collections": {
+                "computed": true,
+                "description": "Enable grouping shows into collections.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_legacy_authorization": {
+                "computed": true,
+                "description": "Enable legacy authorization.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_metrics": {
+                "computed": true,
+                "description": "Enable metrics.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_normalized_item_by_name_ids": {
+                "computed": true,
+                "description": "Enable normalized item by name IDs.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "enable_slow_response_warning": {
+                "computed": true,
+                "description": "Enable slow response warning.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "id": {
+                "computed": true,
+                "description": "Resource identifier. Always set to `system` for this singleton resource.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "image_extraction_timeout_ms": {
+                "computed": true,
+                "description": "Image extraction timeout in milliseconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "image_saving_convention": {
+                "computed": true,
+                "description": "Image saving convention. One of `Legacy`, `Compatible`.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "inactive_session_threshold": {
+                "computed": true,
+                "description": "Inactive session threshold.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "is_port_authorized": {
+                "computed": true,
+                "description": "Is port authorized.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "library_metadata_refresh_concurrency": {
+                "computed": true,
+                "description": "Library metadata refresh concurrency.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "library_monitor_delay": {
+                "computed": true,
+                "description": "Library monitor delay.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "library_scan_fanout_concurrency": {
+                "computed": true,
+                "description": "Library scan fanout concurrency.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "library_update_duration": {
+                "computed": true,
+                "description": "Library update duration.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "log_file_retention_days": {
+                "computed": true,
+                "description": "Log file retention days.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "max_audiobook_resume": {
+                "computed": true,
+                "description": "Maximum audiobook resume.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "max_resume_pct": {
+                "computed": true,
+                "description": "Maximum resume percentage.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "metadata_country_code": {
+                "computed": true,
+                "description": "Metadata country code.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "metadata_options": {
+                "computed": true,
+                "description": "Metadata options, one entry per item type. The list replaces the server's list, so an item type it leaves out loses its entry, and Jellyfin then uses its defaults for that type, which enable every fetcher.",
+                "nested_type": {
+                  "attributes": {
+                    "disabled_image_fetchers": {
+                      "computed": true,
+                      "description": "Disabled image fetchers. Deprecated: list the enabled image fetchers in priority order in `image_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "disabled_metadata_fetchers": {
+                      "computed": true,
+                      "description": "Disabled metadata fetchers. Deprecated: list the enabled metadata fetchers in priority order in `metadata_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "disabled_metadata_savers": {
+                      "computed": true,
+                      "description": "Disabled metadata savers.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "image_fetcher_order": {
+                      "computed": true,
+                      "description": "Image fetcher order. Deprecated: list the enabled image fetchers in priority order in `image_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "image_fetchers": {
+                      "computed": true,
+                      "description": "Enabled image fetchers for `item_type`, in priority order: Jellyfin asks the first one first and disables every other image fetcher it offers for the item type. Jellyfin applies them to items whose library has no `type_options` entry for their type. Each name must match one the server offers exactly, so it works only for an item type whose fetchers Jellyfin lists, such as Movie or Series; for any other, such as Person, it reads as null and setting it is an error, and `disabled_image_fetchers` and `image_fetcher_order` still apply. Jellyfin enables any image fetcher installed later, which then shows up as a change to this list. Conflicts with `disabled_image_fetchers` and `image_fetcher_order`, which it replaces.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "item_type": {
+                      "computed": true,
+                      "description": "Item type.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "local_metadata_reader_order": {
+                      "computed": true,
+                      "description": "Local metadata reader order.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "metadata_fetcher_order": {
+                      "computed": true,
+                      "description": "Metadata fetcher order. Deprecated: list the enabled metadata fetchers in priority order in `metadata_fetchers` instead, which disables the rest. It will be removed in a future release.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "metadata_fetchers": {
+                      "computed": true,
+                      "description": "Enabled metadata fetchers for `item_type`, in priority order: Jellyfin asks the first one first and disables every other metadata fetcher it offers for the item type. Jellyfin applies them to items whose library has no `type_options` entry for their type. Each name must match one the server offers exactly, so it works only for an item type whose fetchers Jellyfin lists, such as Movie or Series; for any other, such as Person, it reads as null and setting it is an error, and `disabled_metadata_fetchers` and `metadata_fetcher_order` still apply. Jellyfin enables any metadata fetcher installed later, which then shows up as a change to this list. Conflicts with `disabled_metadata_fetchers` and `metadata_fetcher_order`, which it replaces.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "metadata_path": {
+                "computed": true,
+                "description": "Metadata path.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "min_audiobook_resume": {
+                "computed": true,
+                "description": "Minimum audiobook resume.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "min_resume_duration_seconds": {
+                "computed": true,
+                "description": "Minimum resume duration seconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "min_resume_pct": {
+                "computed": true,
+                "description": "Minimum resume percentage.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "parallel_image_encoding_limit": {
+                "computed": true,
+                "description": "Parallel image encoding limit.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "path_substitutions": {
+                "computed": true,
+                "description": "Path substitutions.",
+                "nested_type": {
+                  "attributes": {
+                    "from": {
+                      "computed": true,
+                      "description": "From path.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "to": {
+                      "computed": true,
+                      "description": "To path.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "list"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "preferred_metadata_language": {
+                "computed": true,
+                "description": "Preferred metadata language.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "quick_connect_available": {
+                "computed": true,
+                "description": "Quick connect available.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "remote_client_bitrate_limit": {
+                "computed": true,
+                "description": "Remote client bitrate limit.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "save_metadata_hidden": {
+                "computed": true,
+                "description": "Save metadata hidden.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "server_name": {
+                "computed": true,
+                "description": "Server display name.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "skip_deserialization_for_basic_types": {
+                "computed": true,
+                "description": "Skip deserialization for basic types.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "slow_response_threshold_ms": {
+                "computed": true,
+                "description": "Slow response threshold in milliseconds.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "number"
+              },
+              "sort_remove_characters": {
+                "computed": true,
+                "description": "Sort remove characters.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "sort_remove_words": {
+                "computed": true,
+                "description": "Sort remove words.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "sort_replace_characters": {
+                "computed": true,
+                "description": "Sort replace characters.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": [
+                  "list",
+                  "string"
+                ]
+              },
+              "trickplay_options": {
+                "computed": true,
+                "description": "Trickplay options.",
+                "nested_type": {
+                  "attributes": {
+                    "enable_hw_acceleration": {
+                      "computed": true,
+                      "description": "Enable hardware acceleration.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_hw_encoding": {
+                      "computed": true,
+                      "description": "Enable hardware encoding.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_key_frame_only_extraction": {
+                      "computed": true,
+                      "description": "Enable key frame only extraction.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "interval": {
+                      "computed": true,
+                      "description": "Interval.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "jpeg_quality": {
+                      "computed": true,
+                      "description": "JPEG quality.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "process_priority": {
+                      "computed": true,
+                      "description": "Process priority class. One of `Normal`, `Idle`, `High`, `RealTime`, `BelowNormal`, `AboveNormal`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "process_threads": {
+                      "computed": true,
+                      "description": "Process threads.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "qscale": {
+                      "computed": true,
+                      "description": "Qscale.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "scan_behavior": {
+                      "computed": true,
+                      "description": "Scan behavior. One of `Blocking`, `NonBlocking`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "tile_height": {
+                      "computed": true,
+                      "description": "Tile height.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "tile_width": {
+                      "computed": true,
+                      "description": "Tile width.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "width_resolutions": {
+                      "computed": true,
+                      "description": "Width resolutions.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "number"
+                      ]
+                    }
+                  },
+                  "nesting_mode": "single"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              },
+              "ui_culture": {
+                "computed": true,
+                "description": "UI culture.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              }
+            }
+          },
+          "version": 0
+        },
+        "jellyfin_user": {
+          "block": {
+            "attributes": {
+              "enable_all_folders": {
+                "computed": true,
+                "description": "Whether the user has access to all folders.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "id": {
+                "computed": true,
+                "description": "The unique user identifier.",
+                "optional": false,
+                "required": false,
+                "sensitive": false,
+                "type": "string"
+              },
+              "is_administrator": {
+                "computed": true,
+                "description": "Whether the user is an administrator.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "is_disabled": {
+                "computed": true,
+                "description": "Whether the user is disabled.",
+                "optional": true,
+                "required": false,
+                "sensitive": false,
+                "type": "bool"
+              },
+              "name": {
+                "computed": false,
+                "description": "The username.",
+                "optional": false,
+                "required": true,
+                "sensitive": false,
+                "type": "string"
+              },
+              "password": {
+                "computed": false,
+                "description": "The user password.",
+                "optional": true,
+                "required": false,
+                "sensitive": true,
+                "type": "string"
+              },
+              "policy": {
+                "computed": true,
+                "description": "Typed user policy settings. Excludes `IsAdministrator`, `IsDisabled`, `EnableAllFolders` (managed at the top level) and `InvalidLoginAttemptCount` (server-managed).",
+                "nested_type": {
+                  "attributes": {
+                    "access_schedules": {
+                      "computed": true,
+                      "description": "Access schedules restricting when the user can use the server.",
+                      "nested_type": {
+                        "attributes": {
+                          "day_of_week": {
+                            "computed": true,
+                            "description": "Day of week for the schedule.",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "string"
+                          },
+                          "end_hour": {
+                            "computed": true,
+                            "description": "End hour of the schedule (0-24).",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "number"
+                          },
+                          "start_hour": {
+                            "computed": true,
+                            "description": "Start hour of the schedule (0-24).",
+                            "optional": true,
+                            "required": false,
+                            "sensitive": false,
+                            "type": "number"
+                          }
+                        },
+                        "nesting_mode": "list"
+                      },
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false
+                    },
+                    "allowed_tags": {
+                      "computed": true,
+                      "description": "Tags that are explicitly allowed for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "authentication_provider_id": {
+                      "computed": true,
+                      "description": "Authentication provider ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "block_unrated_items": {
+                      "computed": true,
+                      "description": "Item types that are blocked when unrated.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "blocked_channels": {
+                      "computed": true,
+                      "description": "Channels that are blocked, by ID as Jellyfin lists it.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "blocked_media_folders": {
+                      "computed": true,
+                      "description": "Media folders that are blocked, by ID as Jellyfin lists it, such as a library's `item_id`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "blocked_tags": {
+                      "computed": true,
+                      "description": "Tags that are blocked for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "enable_all_channels": {
+                      "computed": true,
+                      "description": "Whether all channels are enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_all_devices": {
+                      "computed": true,
+                      "description": "Whether all devices are enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_audio_playback_transcoding": {
+                      "computed": true,
+                      "description": "Whether audio playback transcoding is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_collection_management": {
+                      "computed": true,
+                      "description": "Whether the user can manage collections.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_content_deletion": {
+                      "computed": true,
+                      "description": "Whether content deletion is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_content_deletion_from_folders": {
+                      "computed": true,
+                      "description": "Folders from which the user may delete content.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "enable_content_downloading": {
+                      "computed": true,
+                      "description": "Whether content downloading is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_live_tv_access": {
+                      "computed": true,
+                      "description": "Whether the user can access live TV.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_live_tv_management": {
+                      "computed": true,
+                      "description": "Whether the user can manage live TV.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_lyric_management": {
+                      "computed": true,
+                      "description": "Whether the user can manage lyrics.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_media_conversion": {
+                      "computed": true,
+                      "description": "Whether media conversion is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_media_playback": {
+                      "computed": true,
+                      "description": "Whether media playback is enabled for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_playback_remuxing": {
+                      "computed": true,
+                      "description": "Whether playback remuxing is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_public_sharing": {
+                      "computed": true,
+                      "description": "Whether public sharing is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_remote_access": {
+                      "computed": true,
+                      "description": "Whether remote access is enabled for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_remote_control_of_other_users": {
+                      "computed": true,
+                      "description": "Whether the user can remote-control other users' sessions.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_shared_device_control": {
+                      "computed": true,
+                      "description": "Whether shared device control is enabled for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_subtitle_management": {
+                      "computed": true,
+                      "description": "Whether the user can manage subtitles.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_sync_transcoding": {
+                      "computed": true,
+                      "description": "Whether sync transcoding is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_user_preference_access": {
+                      "computed": true,
+                      "description": "Whether the user can access their own preferences.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enable_video_playback_transcoding": {
+                      "computed": true,
+                      "description": "Whether video playback transcoding is enabled.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "enabled_channels": {
+                      "computed": true,
+                      "description": "Channels explicitly enabled for the user, by ID as Jellyfin lists it.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "enabled_devices": {
+                      "computed": true,
+                      "description": "Devices explicitly enabled for the user.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "enabled_folders": {
+                      "computed": true,
+                      "description": "Folders explicitly enabled for the user, by ID as Jellyfin lists it, such as a library's `item_id`.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": [
+                        "list",
+                        "string"
+                      ]
+                    },
+                    "force_remote_source_transcoding": {
+                      "computed": true,
+                      "description": "Whether remote source transcoding is forced.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "is_hidden": {
+                      "computed": true,
+                      "description": "Whether the user is hidden from login screens.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "bool"
+                    },
+                    "login_attempts_before_lockout": {
+                      "computed": true,
+                      "description": "Number of failed login attempts before the account is locked.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "max_active_sessions": {
+                      "computed": true,
+                      "description": "Maximum number of simultaneous sessions.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "max_parental_rating": {
+                      "computed": false,
+                      "description": "Maximum parental rating allowed for the user. When `policy` is set, leaving this unset or null means no limit.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "max_parental_sub_rating": {
+                      "computed": false,
+                      "description": "Maximum parental sub-rating allowed for the user. When `policy` is set, leaving this unset or null means no limit.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "password_reset_provider_id": {
+                      "computed": true,
+                      "description": "Password reset provider ID.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    },
+                    "remote_client_bitrate_limit": {
+                      "computed": true,
+                      "description": "Remote client bitrate limit.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "number"
+                    },
+                    "sync_play_access": {
+                      "computed": true,
+                      "description": "SyncPlay access level.",
+                      "optional": true,
+                      "required": false,
+                      "sensitive": false,
+                      "type": "string"
+                    }
+                  },
+                  "nesting_mode": "single"
+                },
+                "optional": true,
+                "required": false,
+                "sensitive": false
+              }
+            }
+          },
+          "version": 0
+        }
+      }
+    }
+  }
+}

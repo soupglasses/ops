@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from configuration import ConfigurationError, Reconciler
+from provider_fixture import ProviderFixture
 from health import ready
 
 LDAP_ID = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"
@@ -25,14 +25,18 @@ PASSWORD = "disposable-integration-credential"
 
 
 def command(*args, **kwargs):
-    return subprocess.run(
-        args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
-    ).stdout.decode()
+    try:
+        return subprocess.run(
+            args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+        ).stdout.decode()
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(error.stderr.decode(errors="replace")) from error
 
 
 @unittest.skipUnless(
-    os.getenv("JELLYFIN_INTEGRATION_IMAGE"),
-    "set JELLYFIN_INTEGRATION_IMAGE to run disposable Docker/OpenLDAP tests",
+    os.getenv("JELLYFIN_INTEGRATION_IMAGE")
+    and os.getenv("JELLYFIN_PROVIDER_TEST_IMAGE"),
+    "set JELLYFIN_INTEGRATION_IMAGE and JELLYFIN_PROVIDER_TEST_IMAGE for Docker/OpenLDAP tests",
 )
 class IdentityIntegration(unittest.TestCase):
     def test_ldap_password_login_and_upstream_scheduled_photo_sync(self):
@@ -194,6 +198,8 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "--tmpfs",
             "/cache:uid=1000,gid=1000",
             "--tmpfs",
+            "/backup:uid=1000,gid=1000",
+            "--tmpfs",
             "/run/jellyfin:uid=1000,gid=1000",
             "--tmpfs",
             "/tmp:uid=1000,gid=1000",
@@ -237,74 +243,39 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         desired = {
             "baseURL": url,
             "adminUsername": "ops-recovery",
-            "startup": {
-                "configuration": {
-                    "UICulture": "en-US",
-                    "MetadataCountryCode": "US",
-                    "PreferredMetadataLanguage": "en",
-                },
-                "remoteAccess": {
-                    "EnableRemoteAccess": True,
-                    "EnableAutomaticPortMapping": False,
-                },
+            "ldapConfiguration": {
+                "LdapServer": "ldap",
+                "LdapPort": 1389,
+                "UseSsl": False,
+                "UseStartTls": False,
+                "SkipSslVerify": False,
+                "LdapBaseDn": "ou=users,dc=example,dc=test",
+                "LdapBindUser": "cn=admin,dc=example,dc=test",
+                "LdapSearchFilter": "(objectClass=inetOrgPerson)",
+                "LdapSearchAttributes": "uid,mail",
+                "LdapUidAttribute": "uid",
+                "LdapUsernameAttribute": "uid",
+                "LdapAdminFilter": "(uid=alice)",
+                "CreateUsersFromLdap": True,
+                "AllowPassChange": False,
+                "EnableLdapProfileImageSync": True,
+                "LdapProfileImageAttribute": "jpegPhoto",
+                "LdapProfileImageFormat": "Binary",
+                "RemoveImagesNotInLdap": False,
             },
-            "resources": [
+            "libraries": [
                 {
-                    "path": f"/Plugins/{LDAP_ID}/Configuration",
-                    "values": {
-                        "LdapServer": "ldap",
-                        "LdapPort": 1389,
-                        "UseSsl": False,
-                        "UseStartTls": False,
-                        "SkipSslVerify": False,
-                        "LdapBaseDn": "ou=users,dc=example,dc=test",
-                        "LdapBindUser": "cn=admin,dc=example,dc=test",
-                        "LdapSearchFilter": "(objectClass=inetOrgPerson)",
-                        "LdapSearchAttributes": "uid,mail",
-                        "LdapUidAttribute": "uid",
-                        "LdapUsernameAttribute": "uid",
-                        "LdapAdminFilter": "(uid=alice)",
-                        "CreateUsersFromLdap": True,
-                        "AllowPassChange": False,
-                        "EnableLdapProfileImageSync": True,
-                        "LdapProfileImageAttribute": "jpegPhoto",
-                        "LdapProfileImageFormat": "Binary",
-                        "RemoveImagesNotInLdap": False,
-                    },
-                    "secretValues": [
-                        {"path": ["LdapBindPassword"], "file": "LDAP_BIND_PASSWORD"}
-                    ],
+                    "name": "Movies",
+                    "collectionType": "movies",
+                    "paths": ["/media/movies"],
                 },
+                {"name": "TV", "collectionType": "tvshows", "paths": ["/media/tv"]},
+                {"name": "Music", "collectionType": "music", "paths": ["/media/music"]},
             ],
         }
-        desired["libraries"] = [
-            {
-                "name": "Movies",
-                "collectionType": "movies",
-                "paths": ["/media/movies"],
-            },
-            {"name": "TV", "collectionType": "tvshows", "paths": ["/media/tv"]},
-            {"name": "Music", "collectionType": "music", "paths": ["/media/music"]},
-        ]
-        desired["resources"].extend(
-            [
-                {
-                    "path": "/System/Configuration",
-                    "values": {"PluginRepositories": []},
-                },
-                {
-                    "path": "/System/Configuration/network",
-                    "values": {"EnableUPnP": False, "EnableRemoteAccess": True},
-                },
-                {
-                    "path": "/System/Configuration/branding",
-                    "values": {"LoginDisclaimer": ""},
-                },
-            ]
-        )
         desired_path = work / "desired.json"
         desired_path.write_text(json.dumps(desired))
-        reconciler = Reconciler(desired_path, credentials)
+        reconciler = ProviderFixture(desired_path, credentials)
         for _ in range(240):
             if ready(url + "/health"):
                 break
@@ -316,17 +287,9 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             time.sleep(0.5)
         else:
             self.fail("Jellyfin did not finish startup (health body must be Healthy)")
-        for _ in range(120):
-            try:
-                reconciler.run_once()
-                break
-            except ConfigurationError as error:
-                if "503" not in str(error) and str(error) != "API request failed":
-                    raise
-                time.sleep(0.5)
-        else:
-            self.fail("Jellyfin startup APIs remained unavailable")
+        reconciler.run_once()
         libraries = reconciler.request("GET", "/Library/VirtualFolders")
+        library_ids = {item["Name"]: item["ItemId"] for item in libraries}
         self.assertEqual(
             {item["Name"]: item["Locations"] for item in libraries},
             {
@@ -351,7 +314,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
         tasks = reconciler.request("GET", "/ScheduledTasks")
         task = next(task for task in tasks if task["Key"] == "LdapProfileImageSync")
         reconciler.request("POST", f"/ScheduledTasks/Running/{task['Id']}")
-        image = None
+        profile_image = None
         for _ in range(120):
             try:
                 request = urllib.request.Request(
@@ -361,16 +324,16 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
                     },
                 )
                 with urllib.request.urlopen(request, timeout=2) as response:
-                    image = response.read()
-                if image:
+                    profile_image = response.read()
+                if profile_image:
                     break
             except urllib.error.HTTPError as error:
                 error.close()
             except OSError:
                 pass
             time.sleep(0.25)
-        self.assertIsNotNone(image, "LDAP user never received an LDAP photo")
-        self.assertEqual(image[:2], b"\xff\xd8")
+        self.assertIsNotNone(profile_image, "LDAP user never received an LDAP photo")
+        self.assertEqual(profile_image[:2], b"\xff\xd8")
         before = reconciler.request("GET", ldap_path)["LdapUsers"]
         self.assertEqual(len(before), 1)
         self.assertEqual(before[0]["LdapUid"], "alice")
@@ -398,7 +361,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             LDAP_PROVIDER,
         )
         for admin_filter, expected in (("(uid=nobody)", False), ("(uid=alice)", True)):
-            desired["resources"][0]["values"]["LdapAdminFilter"] = admin_filter
+            desired["ldapConfiguration"]["LdapAdminFilter"] = admin_filter
             desired_path.write_text(json.dumps(desired))
             reconciler.run_once()
             result = reconciler.request(
@@ -410,6 +373,131 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             self.assertEqual(result["User"]["Id"], user_id)
             self.assertEqual(result["User"]["Policy"]["IsAdministrator"], expected)
         reconciler.run_once(check_only=True)
+        self.assertEqual(
+            {
+                item["Name"]: item["ItemId"]
+                for item in reconciler.request("GET", "/Library/VirtualFolders")
+            },
+            library_ids,
+        )
+
+        server_id = reconciler.request("GET", "/System/Info")["Id"]
+        command(
+            "docker",
+            "exec",
+            container,
+            "python3",
+            "/usr/local/lib/jellyfin/runtime.py",
+            "checkpoint",
+        )
+        restored_volume = command("docker", "volume", "create").strip()
+        self.addCleanup(lambda: command("docker", "volume", "rm", restored_volume))
+        command("docker", "exec", container, "test", "-s", "/backup/checkpoint.tar")
+        # Docker's archive endpoint does not expose this tmpfs-backed checkpoint.
+        archive = subprocess.check_output(
+            ["docker", "exec", container, "cat", "/backup/checkpoint.tar"]
+        )
+        # Model the PVC's ownership without depending on the host runner's UID.
+        command(
+            "docker",
+            "run",
+            "--rm",
+            "--interactive",
+            "--user",
+            "0:0",
+            "--volume",
+            restored_volume + ":/config",
+            "--entrypoint",
+            "sh",
+            image,
+            "-c",
+            "cat > /config/checkpoint.tar && chown 1000:1000 /config /config/checkpoint.tar",
+            input=archive,
+        )
+        command(
+            "docker",
+            "run",
+            "--rm",
+            "--user",
+            "1000:1000",
+            "--volume",
+            restored_volume + ":/config",
+            "--entrypoint",
+            "python3",
+            image,
+            "/usr/local/lib/jellyfin/runtime.py",
+            "restore",
+            "--source",
+            "/config",
+        )
+        restored_container = command(
+            "docker",
+            "run",
+            "--detach",
+            "--network",
+            network,
+            "--user",
+            "1000:1000",
+            "--read-only",
+            "--volume",
+            restored_volume + ":/config",
+            "--volume",
+            str(media) + ":/media:ro",
+            "--tmpfs",
+            "/cache:uid=1000,gid=1000",
+            "--tmpfs",
+            "/backup:uid=1000,gid=1000",
+            "--tmpfs",
+            "/run/jellyfin:uid=1000,gid=1000",
+            "--tmpfs",
+            "/tmp:uid=1000,gid=1000",
+            "--publish",
+            "127.0.0.1::8096",
+            image,
+        ).strip()
+        self.addCleanup(lambda: command("docker", "rm", "--force", restored_container))
+        binding = json.loads(command("docker", "inspect", restored_container))[0][
+            "NetworkSettings"
+        ]["Ports"]["8096/tcp"][0]
+        desired["baseURL"] = f"http://127.0.0.1:{binding['HostPort']}"
+        desired_path.write_text(json.dumps(desired))
+        for _ in range(240):
+            if ready(desired["baseURL"] + "/health"):
+                break
+            time.sleep(0.5)
+        else:
+            self.fail("restored Jellyfin did not become healthy")
+        restored = ProviderFixture(desired_path, credentials)
+        restored.authenticate()
+        self.assertEqual(restored.request("GET", "/System/Info")["Id"], server_id)
+        self.assertEqual(restored.request("GET", ldap_path)["LdapUsers"], before)
+        drifted = restored.request("GET", ldap_path)
+        drifted["LdapServer"] = "drift.invalid"
+        restored.request("POST", ldap_path, drifted)
+        restored.run_once()
+        restored.run_once(check_only=True)
+        self.assertEqual(restored.request("GET", ldap_path)["LdapUsers"], before)
+        self.assertEqual(
+            {
+                item["Name"]: item["ItemId"]
+                for item in restored.request("GET", "/Library/VirtualFolders")
+            },
+            library_ids,
+        )
+        authenticated = restored.request(
+            "POST",
+            "/Users/AuthenticateByName",
+            {"Username": "alice", "Pw": PASSWORD},
+            authenticated=False,
+        )
+        self.assertEqual(authenticated["User"]["Id"], user_id)
+        self.assertTrue(authenticated["User"]["Policy"]["IsAdministrator"])
+        request = urllib.request.Request(
+            desired["baseURL"] + f"/Users/{user_id}/Images/Primary",
+            headers={"Authorization": f'MediaBrowser Token="{restored.token}"'},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.read(), profile_image)
 
 
 if __name__ == "__main__":

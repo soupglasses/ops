@@ -42,6 +42,9 @@ indent_style = tab
 [/packages/provider-ldap/config/schema.json]
 insert_final_newline = unset
 
+[/packages/provider-jellyfin/config/schema.json]
+insert_final_newline = unset
+
 # Encrypted native router backups are binary artifacts.
 [*.backup]
 indent_style = unset
