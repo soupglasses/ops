@@ -25,6 +25,7 @@ The controller watches one configured namespace and resolves credentials locally
 
 ```sh
 bash packages/provider-jellyfin/build.sh /tmp/provider-jellyfin.xpkg
+PROVIDER_PACKAGE=/tmp/provider-jellyfin.xpkg bash packages/provider-jellyfin/kind-test.sh
 docker build --target generated --output type=local,dest=/tmp/jellyfin-generated packages/provider-jellyfin
 ```
 
@@ -36,6 +37,9 @@ drift, unmanaged values, released ownership, missing fields, controller restarts
 and non-destructive deletion. Credential tests cover rotation and local Secret
 resolution. The real Jellyfin/OpenLDAP fixture uses the generated connector to
 verify library identity, LDAP login, role changes, profile photos and drift repair.
+The kind test installs the native package and a disposable Jellyfin Pod, then applies
+namespaced resources through Kubernetes. It verifies observation without writes,
+controller-driven settings updates and drift correction while preserving user identities.
 
 ## Configuration and adoption
 

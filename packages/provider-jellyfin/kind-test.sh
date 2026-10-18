@@ -15,6 +15,9 @@ cleanup() {
     if ((result != 0)); then
         kubectl get provider,providerrevision -o yaml >&2 || true
         kubectl get pods --namespace crossplane-system >&2 || true
+        kubectl get systemconfigurations --namespace media -o yaml >&2 || true
+        kubectl logs --namespace media jellyfin-fixture --tail=60 >&2 || true
+        kubectl logs --namespace crossplane-system -l app.kubernetes.io/name=jellyfin-provider --tail=60 >&2 || true
     fi
     kind delete cluster --name "$cluster" || true
     docker rm -f "$registry" >/dev/null 2>&1 || true
@@ -111,3 +114,4 @@ if [[ -n "${TEST_ARTIFACTS_DIR:-}" ]]; then
 fi
 ((failed == 0))
 printf 'Native Jellyfin provider installed under restricted PSA; APIs are namespaced, controller watches media, and standard cluster-wide Secret permissions are present.\n'
+python3 "$repo_dir/packages/provider-jellyfin/tests/verify_kind_reconciliation.py"

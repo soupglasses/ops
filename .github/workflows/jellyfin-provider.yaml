@@ -56,7 +56,7 @@ jobs:
           docker build --target generated --output type=local,dest=/tmp/jellyfin-generated packages/provider-jellyfin
           diff -r packages/provider-jellyfin/package/crds /tmp/jellyfin-generated/generated/crds
           diff packages/provider-jellyfin/config/schema.json /tmp/jellyfin-generated/generated/schema.json
-      - name: Install native provider and verify namespace scope
+      - name: Verify native provider scope and reconciliation in kind
         env:
           PROVIDER_PACKAGE: /tmp/provider-jellyfin.xpkg
         run: bash packages/provider-jellyfin/kind-test.sh
