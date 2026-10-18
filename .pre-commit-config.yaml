@@ -17,6 +17,7 @@ repos:
         # resolve before validation (e.g. ${VAR:=1000} -> 1000 satisfies
         # typed-int schema fields like runAsUser).
         entry: scripts/kubeconform.sh
+        require_serial: true
         language: system
         files: ^kubernetes/.*\.ya?ml$
         stages: [pre-commit]
