@@ -16,6 +16,7 @@ cleanup() {
         kubectl get provider,providerrevision -o yaml >&2 || true
         kubectl get pods --namespace crossplane-system >&2 || true
         kubectl get systemconfigurations --namespace media -o yaml >&2 || true
+        kubectl get pluginconfigurations --namespace media -o yaml >&2 || true
         kubectl logs --namespace media jellyfin-fixture --tail=60 >&2 || true
         kubectl logs --namespace crossplane-system -l app.kubernetes.io/name=jellyfin-provider --tail=60 >&2 || true
     fi

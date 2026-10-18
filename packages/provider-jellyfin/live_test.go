@@ -106,7 +106,7 @@ func TestLiveJellyfinSettings(t *testing.T) {
 	}
 	plugin := &api.PluginConfiguration{}
 	meta.SetExternalName(plugin, "958aad66-3784-4d2a-b89a-a7b6fab6e25c")
-	plugin.Spec.ForProvider.ConfigurationJSONSecretRef = xpv2.LocalSecretKeySelector{LocalSecretReference: xpv2.LocalSecretReference{Name: "settings"}, Key: "json"}
+	plugin.Spec.ForProvider.ConfigurationJSONSecretRef = &xpv2.LocalSecretKeySelector{LocalSecretReference: xpv2.LocalSecretReference{Name: "settings"}, Key: "json"}
 	reconcile("jellyfin_plugin_configuration", plugin)
 	serverName, culture, country, language := "Jellyfin", "en-US", "US", "en"
 	system := &api.SystemConfiguration{}

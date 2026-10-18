@@ -97,8 +97,6 @@ spec:
                         - key
                         - name
                       type: object
-                  required:
-                    - configurationJsonSecretRef
                   type: object
                 managementPolicies:
                   default:

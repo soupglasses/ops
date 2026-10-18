@@ -39,7 +39,8 @@ resolution. The real Jellyfin/OpenLDAP fixture uses the generated connector to
 verify library identity, LDAP login, role changes, profile photos and drift repair.
 The kind test installs the native package and a disposable Jellyfin Pod, then applies
 namespaced resources through Kubernetes. It verifies observation without writes,
-controller-driven settings updates and drift correction while preserving user identities.
+Secret-backed plugin configuration, controller-driven settings updates and drift correction
+while preserving user identities.
 
 ## Configuration and adoption
 

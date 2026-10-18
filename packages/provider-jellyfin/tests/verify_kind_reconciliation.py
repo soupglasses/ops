@@ -50,6 +50,11 @@ apply(
                 {
                     "name": "jellyfin",
                     "image": "jellyfin/jellyfin:12.2@sha256:357724bf0ae27a672c7cbaa899db2d9abeb13dbd8657ccce750258a4c059d037",
+                    "readinessProbe": {
+                        "httpGet": {"path": "/health", "port": 8096},
+                        "periodSeconds": 2,
+                        "timeoutSeconds": 2,
+                    },
                     "securityContext": {
                         "allowPrivilegeEscalation": False,
                         "capabilities": {"drop": ["ALL"]},
@@ -202,6 +207,45 @@ try:
     )
     for field in ("UICulture", "MetadataCountryCode", "PreferredMetadataLanguage"):
         assert api("/System/Configuration")[field] == baseline[field], field
+    plugin = next(item for item in api("/Plugins") if item["Name"] == "TMDb")
+    plugin_path = f"/Plugins/{plugin['Id']}/Configuration"
+    plugin_baseline = api(plugin_path)
+    apply(
+        {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {"name": "kind-plugin-settings"},
+            "stringData": {"configuration.json": "{}"},
+        }
+    )
+    apply(
+        {
+            "apiVersion": "jellyfin.ops.finnes.dev/v1alpha1",
+            "kind": "PluginConfiguration",
+            "metadata": {
+                "name": "kind-plugin",
+                "annotations": {"crossplane.io/external-name": plugin["Id"]},
+            },
+            "spec": {
+                "managementPolicies": ["Observe"],
+                "providerConfigRef": {"name": "kind-fixture", "kind": "ProviderConfig"},
+                "forProvider": {
+                    "configurationJsonSecretRef": {
+                        "name": "kind-plugin-settings",
+                        "key": "configuration.json",
+                    }
+                },
+            },
+        }
+    )
+    for condition in ("Ready", "Synced"):
+        kube(
+            "wait",
+            "pluginconfiguration/kind-plugin",
+            f"--for=condition={condition}",
+            "--timeout=120s",
+        )
+    assert api(plugin_path) == plugin_baseline, "Observe changed plugin configuration"
     assert [(u["Id"], u["Name"]) for u in api("/Users")] == [
         (u["Id"], u["Name"]) for u in users
     ]

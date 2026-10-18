@@ -29,6 +29,12 @@ func WithSchema(raw []byte, group string) *ujconfig.Provider {
 			"jellyfin_branding_configuration$", "jellyfin_scheduled_task$",
 		}), ujconfig.WithTerraformPluginFrameworkProvider(FrameworkProvider()))
 	p.BasePackages = ujconfig.BasePackages{}
+	p.AddResourceConfigurator("jellyfin_plugin_configuration", func(r *ujconfig.Resource) {
+		// Optional pointer selectors keep an unused initProvider from looking up an empty Secret.
+		field := r.TerraformResource.Schema["configuration_json"]
+		field.Required, field.Optional = false, true
+		r.MarkAsRequired("configuration_json")
+	})
 	for name, identifier := range map[string]string{
 		"plugin_configuration": "plugin_id", "plugin": "name", "plugin_repository": "url", "library": "name", "scheduled_task": "key",
 	} {

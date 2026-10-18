@@ -160,7 +160,7 @@ func TestGeneratedResourceReconciliation(t *testing.T) {
 	}
 	kube := clientfake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
 	obj := &api.PluginConfiguration{}
-	obj.Spec.ForProvider.ConfigurationJSONSecretRef = xpv2.LocalSecretKeySelector{
+	obj.Spec.ForProvider.ConfigurationJSONSecretRef = &xpv2.LocalSecretKeySelector{
 		LocalSecretReference: xpv2.LocalSecretReference{Name: "settings"}, Key: "json",
 	}
 	obj.SetNamespace("default")
