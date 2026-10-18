@@ -84,17 +84,23 @@ kube("wait", "pod/jellyfin-fixture", "--for=condition=Ready", "--timeout=180s")
 with socket.socket() as listener:
     listener.bind(("127.0.0.1", 0))
     port = listener.getsockname()[1]
-forward = subprocess.Popen(
-    [
-        "kubectl",
-        "-n",
-        "media",
-        "port-forward",
-        "service/jellyfin-fixture",
-        f"{port}:8096",
-    ],
-    stdout=subprocess.DEVNULL,
-)
+
+
+def start_forward():
+    return subprocess.Popen(
+        [
+            "kubectl",
+            "-n",
+            "media",
+            "port-forward",
+            "pod/jellyfin-fixture",
+            f"{port}:8096",
+        ],
+        stdout=subprocess.DEVNULL,
+    )
+
+
+forward = start_forward()
 token = None
 
 
@@ -119,8 +125,16 @@ def api(path, value=None):
         )
 
 
+def fixture_ready():
+    global forward
+    # Jellyfin can restart its listener during startup, which terminates port-forward.
+    if forward.poll() is not None:
+        forward = start_forward()
+    return api("/health") == b"Healthy"
+
+
 try:
-    eventually(lambda: api("/health") == b"Healthy", "Jellyfin did not start")
+    eventually(fixture_ready, "Jellyfin did not start")
     password = "disposable-kind-test-password"
     api(
         "/Startup/Configuration",
