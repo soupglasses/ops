@@ -38,48 +38,6 @@ spec:
         supplementalGroups: [2000]
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-        - name: restore-media
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:6947130a86a85e82a545c0206cde9740d9e24374b137d35037ae3cc2dbb75200
-          command: [python3, /usr/local/lib/jellyfin/media_restore.py]
-          args: [--root, /media]
-          envFrom:
-            - secretRef:
-                name: volsync-jellyfin-media
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              memory: 1Gi
-          volumeMounts:
-            - name: media
-              mountPath: /media
-            - name: temporary
-              mountPath: /tmp
-        - name: restore
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:6947130a86a85e82a545c0206cde9740d9e24374b137d35037ae3cc2dbb75200
-          command: [python3, /usr/local/lib/jellyfin/runtime.py]
-          args: [restore, --source, /config]
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              memory: 256Mi
-          volumeMounts:
-            - name: config
-              mountPath: /config
       containers:
         - name: jellyfin
           image: ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:6947130a86a85e82a545c0206cde9740d9e24374b137d35037ae3cc2dbb75200
@@ -117,8 +75,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
-            - name: checkpoint
-              mountPath: /backup
             - name: media
               mountPath: /media
               readOnly: false
@@ -161,9 +117,6 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: jellyfin
-        - name: checkpoint
-          persistentVolumeClaim:
-            claimName: jellyfin-checkpoint
         - name: media
           persistentVolumeClaim:
             claimName: jellyfin-media

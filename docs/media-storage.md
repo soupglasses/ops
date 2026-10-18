@@ -75,83 +75,19 @@ sudo mount -t nfs -o vers=4.2,hard,nosuid,nodev \
 Use a client user in group `2000` for writes. A client root user is squashed and does
 not gain administrator access. Import media into `movies`, `tv` or `music`, write
 uploads under temporary names, then atomically rename completed files into place.
-Avoid modifying published files during backup. If a full point-in-time view is needed,
-stop every writer before the backup; a live file-level backup cannot promise a single
-instant across independently modified files.
 
-## Independent backups
 
-Jellyfin's configuration checkpoint does **not** contain media. The media PVC needs a
-separate off-cluster restic repository and scheduled Direct backup because NFS has no
-CSI snapshot support. Use the existing off-cluster endpoint and independently retained
-recovery credentials, with application backup failure/age monitoring and sufficient
-capacity for the entire library and retention history. Local ZFS snapshots do not
-survive NAS or pool loss.
+## Backup policy
 
-`media_restore.py` protects clean-cluster recovery. It preserves an existing dataset
-only after checking its persistent `.ops-media-manifest.json` and canary hash. It
-refuses unknown populated directories rather than overwrite them. For an empty dataset,
-it selects one restic snapshot, records its full ID, restores with `--verify`, and
-checks the canary. Retries use that same snapshot even if newer history appears.
-Suspend the media ReplicationSource during an operator-initiated restore and resume
-it only after validation, so partial recovery cannot become a new backup.
-An exclusive NFS file lock prevents overlapping restore jobs. External Linux and
-Nextcloud writers must remain stopped until recovery completes.
-
-A genuinely new empty library requires both first-install flags:
-
-```sh
-python3 /usr/local/lib/jellyfin/media_restore.py --root /media \
-  --allow-initialize --initialize-repository
-```
-
-Only the predefined empty library directories are ignored when determining emptiness.
-Repository initialization is explicit; authentication, network or repository-read
-failures cannot be treated as an empty library. After initialization, take an
-off-cluster backup, restore it in isolation and remove both flags from Git. The hidden
-canary and manifest must remain in every backup. Exclude `.ops-media-restore*` control
-files; they describe an in-progress recovery rather than library contents.
-
-## Recovery checks
+Jellyfin configuration and the shared media library have no VolSync/restic backups,
+by operator choice. Existing live PVCs and the NAS dataset are preserved. A fresh
+configuration PVC starts an empty Jellyfin installation; lost media must be obtained
+again. Other applications retain their existing backup policies.
 
 On a replacement OS with surviving disks, import the existing pool through the normal
-host role and remount the preserved dataset. Rebuilding Kubernetes must not replay an
-older backup over surviving media. After actual pool loss, create the empty media
-dataset, restore it from the off-cluster repository through the guarded restore job,
-then enable Jellyfin and other writers. The NFS CSI StorageClass uses a fixed
-`library` subdirectory and `onDelete: retain`, while Kubernetes PV objects use Delete
-reclamation. Recreating a PVC therefore preserves and rebinds the same directory
-without retaining a stale claim UID. The driver leaves ownership to the host ACLs
-with `fsGroupPolicy: None`; a cluster admission policy reserves this shared storage
-class for `media/jellyfin-media`.
+host role and remount the preserved dataset. The NFS CSI StorageClass uses a fixed
+`library` subdirectory and `onDelete: retain`. Recreating the media PVC rebinds that
+directory. Local snapshots, if present, do not survive NAS or pool loss.
 
-For delayed corruption, preserve the current dataset and select an older known-good
-snapshot into an isolated recovery directory or dataset. Compare and validate files
-before replacing any current media. The automatic guard intentionally cannot overwrite
-an initialized live library; recovering selected older content is an operator action.
-
-A restore drill must verify the canary and representative real-file hashes and prove
-that Jellyfin can read the restored library. A first-install empty-library drill proves
-the backup/recovery wiring and canary only; repeat with real media after importing it.
-Keep a rollback copy during migrations and delete temporary drill resources afterward.
-Recovery requires the repository, off-cluster endpoint, restic password, S3 access
-credentials, host administrator access and the normal Flux recovery prerequisites.
-
-### Initial off-cluster restore evidence
-
-On 2026-10-17, the initial media backup was restored from the off-cluster repository
-into an isolated `emptyDir` by a restricted, non-root Job. It mounted no NAS or live
-media PVC. Runtime image digest
-`54ed2633b05a399f14f35fc3b23285dbf25b02b4f8ae3dbeb411866ce8444820`
-ran the normal recovery helper without either initialization flag.
-
-The restore completed at 17:17:16 UTC with restic content verification and recovery
-manifest validation:
-
-- Snapshot: `e42a5ba16304ac248feda473320c57d49572a4e574c8d519739ac7cdf97a0192`.
-- Canary SHA-256: `762c19c80ead377ef8c5253e2616a3b5ccb100904ef55080252a0dbe8bb8e4c2`.
-- Two regular files: the persistent canary and its manifest.
-
-The temporary Job and pod were deleted after validation. This proves initial
-off-cluster recovery and the expected snapshot layout; the empty library contained no
-real media. Repeat the drill with representative media hashes after importing files.
+See [Jellyfin backup cleanup](jellyfin-backup-cleanup.md) for the one-time removal of
+old controllers and backup history after deploying this policy.

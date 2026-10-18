@@ -480,3 +480,10 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 - [x] Use Sofie’s hardware-backed SSH identity for host operations and remove the
   separate automation-account provisioning path. Deleted the obsolete NAS account,
   home and sudo rule; fresh Sofie SSH/sudo and the unchanged bootstrap path passed.
+
+- [x] Remove Jellyfin configuration and media VolSync backups and restore dependencies
+  by operator request; preserve live application and media PVCs.
+- [ ] Run `docs/jellyfin-backup-cleanup.md` after deploying the no-backup policy to
+  remove Jellyfin-only backup history and leftover VolSync resources.
+- [x] Add `task volsync:restic APP=<app> -- <arguments>` with shared Kubernetes
+  backup credentials scoped to that command, without local secret decryption.

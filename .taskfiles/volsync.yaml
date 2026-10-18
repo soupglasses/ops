@@ -8,6 +8,32 @@ set: [pipefail]
 
 # Restore tasks accept NS=<namespace> (default: default).
 tasks:
+  restic:
+    desc: Run restic for an app using shared cluster credentials [APP=required -- restic arguments]
+    requires:
+      vars: [APP]
+    preconditions:
+      - sh: '[[ {{.APP | shellQuote}} =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]'
+        msg: APP must be a Kubernetes application name
+    silent: true
+    cmd: |
+      set -eu
+      backup_field() {
+        value=$(kubectl -n flux-system get secret cluster-secrets -o "jsonpath={.data.$1}" | base64 --decode)
+        test -n "$value" || { echo "Missing backup field: $1" >&2; return 1; }
+        printf '%s' "$value"
+      }
+      # Task env values yield to inherited variables; assign here to enforce APP's repository.
+      endpoint=$(backup_field SECRET_S3_ENDPOINT)
+      RESTIC_REPOSITORY="${endpoint%/}/volsync-{{.APP}}"
+      RESTIC_PASSWORD=$(backup_field SECRET_PASSWORD)
+      AWS_ACCESS_KEY_ID=$(backup_field SECRET_AWS_ACCESS_KEY_ID)
+      AWS_SECRET_ACCESS_KEY=$(backup_field SECRET_AWS_SECRET_ACCESS_KEY)
+      export RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+      unset RESTIC_REPOSITORY_FILE RESTIC_PASSWORD_FILE RESTIC_PASSWORD_COMMAND
+      unset RESTIC_HOST RESTIC_TAG AWS_SESSION_TOKEN
+      exec restic {{.CLI_ARGS}}
+
   resume:
     dir: ansible
     desc: Resume held backups and Flux on their coordinating node [NODE=required]

@@ -34,8 +34,6 @@ spec:
   dependsOn:
     - name: csi-driver-nfs
       namespace: kube-system
-    - name: volsync
-      namespace: volsync-system
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -63,8 +61,6 @@ spec:
       namespace: network
     - name: openebs
       namespace: openebs-system
-    - name: volsync
-      namespace: volsync-system
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -72,36 +68,6 @@ spec:
   interval: 10m
   retryInterval: 2m
   timeout: 10m
-  prune: false
-  wait: true
-  postBuild:
-    substitute:
-      APP: jellyfin
-      VOLSYNC_CAPACITY: 20Gi
-      VOLSYNC_CACHE_CAPACITY: 5Gi
-      VOLSYNC_STORAGECLASS: openebs-zfs
-      VOLSYNC_QUIESCE_TARGET_SELECTOR: app=jellyfin
-      VOLSYNC_QUIESCE_TARGET_CONTAINER: jellyfin
-      VOLSYNC_QUIESCE_CMD: python3 /usr/local/lib/jellyfin/runtime.py checkpoint
-      VOLSYNC_RESUME_CMD: /bin/true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: jellyfin-media-backup
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/media-backup
-  targetNamespace: media
-  dependsOn:
-    - name: jellyfin-media
-      namespace: media
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  interval: 10m
-  timeout: 5m
   prune: false
   wait: true
 ---
