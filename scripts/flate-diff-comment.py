@@ -32,12 +32,11 @@ def main():
     number = os.environ["PR_NUMBER"]
     head_sha = os.environ["PR_HEAD_SHA"]
     commit_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/commit/{head_sha}"
-    run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+    summary = Path("body.md").read_text().strip()
+    has_diff = bool(summary) and summary != "No rendered Flux diff."
     body = (
-        f"{MARKER}\n{Path('body.md').read_text().rstrip()}\n\n"
-        f"PR commit: [`{head_sha[:12]}`]({commit_url}) "
-        f"(validated as merged into the base branch). "
-        f"[Validation run]({run_url}).\n"
+        f"{MARKER}\n{summary}\n\n"
+        f"Commit: [`{head_sha[:12]}`]({commit_url})\n"
     )
     endpoint = f"repos/{repo}/issues/{number}/comments"
     pages = api(endpoint, paginate=True)
@@ -48,6 +47,10 @@ def main():
         and (comment["body"].startswith(MARKER)
              or comment["body"].startswith("## Rendered Flux Diff\n"))
     ]
+    if not has_diff:
+        for comment in comments:
+            api(f"repos/{repo}/issues/comments/{comment['id']}", "DELETE")
+        return
     if comments:
         api(f"repos/{repo}/issues/comments/{comments[0]['id']}", "PATCH", body)
     else:

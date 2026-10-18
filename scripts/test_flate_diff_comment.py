@@ -23,7 +23,7 @@ def entry(identifier, body, author="github-actions[bot]"):
 
 
 class CommentTests(unittest.TestCase):
-    def publish(self, pages, failure=False):
+    def publish(self, pages, failure=False, summary="## Rendered Flux Diff\n\n+changed"):
         def respond(endpoint, method="GET", body=None, paginate=False):
             if method == "GET":
                 return pages
@@ -32,11 +32,11 @@ class CommentTests(unittest.TestCase):
 
         env = {
             "GITHUB_REPOSITORY": "soupglasses/ops", "PR_NUMBER": "42",
-            "GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "123",
+            "GITHUB_SERVER_URL": "https://github.com",
             "PR_HEAD_SHA": "abcdef1234567890abcdef1234567890abcdef12",
         }
         with patch.dict("os.environ", env), patch.object(
-            Path, "read_text", return_value="No rendered Flux diff.\n",
+            Path, "read_text", return_value=summary,
         ), patch.object(comment, "api", side_effect=respond) as api:
             if failure:
                 with self.assertRaises(subprocess.CalledProcessError):
@@ -50,17 +50,29 @@ class CommentTests(unittest.TestCase):
         self.assertTrue(calls[0].kwargs["paginate"])
         self.assertEqual(calls[1].args[:2], ("repos/soupglasses/ops/issues/42/comments", "POST"))
         self.assertIn(comment.MARKER, calls[1].args[2])
-        self.assertIn("actions/runs/123", calls[1].args[2])
         self.assertIn("[`abcdef123456`]", calls[1].args[2])
         self.assertIn("/commit/abcdef1234567890abcdef1234567890abcdef12", calls[1].args[2])
-        self.assertIn("validated as merged into the base branch", calls[1].args[2])
 
-    def test_updates_existing_comment_even_when_diff_is_empty(self):
+    def test_updates_existing_comment(self):
         calls = self.publish([[entry(7, comment.MARKER + "\nold diff")]])
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[1].args[:2], ("repos/soupglasses/ops/issues/comments/7", "PATCH"))
-        self.assertIn("No rendered Flux diff.", calls[1].args[2])
+        self.assertIn("+changed", calls[1].args[2])
         self.assertNotIn("old diff", calls[1].args[2])
+
+    def test_no_diff_does_not_create_a_comment(self):
+        for summary in ("No rendered Flux diff.\n", ""):
+            calls = self.publish([[]], summary=summary)
+            self.assertEqual(len(calls), 1)
+
+    def test_no_diff_removes_previous_diff_comments_and_preserves_others(self):
+        calls = self.publish([
+            [entry(1, comment.MARKER), entry(2, "other bot report")],
+            [entry(3, "## Rendered Flux Diff\nold"), entry(4, comment.MARKER, "sofie")],
+        ], summary="No rendered Flux diff.\n")
+        self.assertEqual([call.args[1] for call in calls[1:]], ["DELETE", "DELETE"])
+        self.assertTrue(calls[1].args[0].endswith("/1"))
+        self.assertTrue(calls[2].args[0].endswith("/3"))
 
     def test_consolidates_legacy_comments_across_pages_and_preserves_others(self):
         calls = self.publish([
