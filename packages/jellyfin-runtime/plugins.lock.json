@@ -1,15 +1,9 @@
 {
-  "jellyfin": {
-    "version": "12.2",
-    "image": "jellyfin/jellyfin:12.2@sha256:357724bf0ae27a672c7cbaa899db2d9abeb13dbd8657ccce750258a4c059d037"
-  },
   "ldap": {
     "repository": "jellyfin/jellyfin-plugin-ldapauth",
-    "revision": "d11c86a47d51a0e3372bbff20e508302ad78f7bd",
-    "version": "24.0.0.0",
+    "licenseRevision": "d11c86a47d51a0e3372bbff20e508302ad78f7bd",
     "license": "MIT",
     "tag": "v24",
-    "asset": "ldap-authentication_24.0.0.0.zip",
     "sha256": "3be1f9d6a6ce9ea375e556dd30136d178a8dbe35cbe866d30d3451dc3ff7e804"
   }
 }

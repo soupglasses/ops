@@ -36,6 +36,12 @@
   },
   packageRules: [
     {
+      description: "Review Jellyfin plugin upgrades with the tested runtime build",
+      matchPackageNames: ["jellyfin/jellyfin-plugin-ldapauth"],
+      automerge: false,
+      pinDigests: true,
+    },
+    {
       description: "Vector tag and digest are updated together by its regex manager",
       matchFileNames: ["kubernetes/apps/monitoring/log-collector/app/helmrelease.yaml"],
       matchManagers: ["flux", "helm-values"],
@@ -168,6 +174,16 @@
     },
   ],
   customManagers: [
+    {
+      description: "Jellyfin LDAP release and verified archive checksum",
+      customType: "regex",
+      managerFilePatterns: ["/^packages/jellyfin-runtime/plugins\\.lock\\.json$/"],
+      matchStrings: [
+        '"repository":\\s*"(?<depName>jellyfin/jellyfin-plugin-ldapauth)"[\\s\\S]*?"tag":\\s*"(?<currentValue>v[0-9]+)"\\s*,\\s*"sha256":\\s*"(?<currentDigest>[a-f0-9]{64})"',
+      ],
+      datasourceTemplate: "github-release-attachments",
+      versioningTemplate: "loose",
+    },
     {
       description: "Kubernetes editor schemas follow the grouped RKE2 release",
       customType: "regex",

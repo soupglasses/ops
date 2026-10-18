@@ -30,6 +30,31 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Classify runtime publication
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          base = os.environ.get("BASE_SHA", "")
+          force = os.environ["EVENT_NAME"] == "workflow_dispatch" or not base.strip("0")
+          changed = [] if force else subprocess.check_output(
+              ["git", "diff", "--name-only", base, os.environ["GITHUB_SHA"]], text=True
+          ).splitlines()
+          runtime = force or any(
+              path.startswith("packages/jellyfin-runtime/")
+              or path == ".github/workflows/jellyfin.yaml"
+              for path in changed
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+              print(f"runtime={str(runtime).lower()}", file=output)
+          PYTHON
       - name: Test runtime recovery
         run: |
           python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
@@ -47,9 +72,14 @@ jobs:
         run: python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py
           -v
       - name: Publish
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: steps.changes.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref
+          == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
+          version=$(sed -n 's|^FROM jellyfin/jellyfin:\([^@]*\)@.*|\1|p' packages/jellyfin-runtime/Dockerfile)
+          test -n "$version"
+          docker tag ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }} ghcr.io/soupglasses/ops/jellyfin-runtime:"$version"
+          docker push ghcr.io/soupglasses/ops/jellyfin-runtime:"$version"

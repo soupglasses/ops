@@ -36,6 +36,34 @@ and the pinned LDAP plugin distribution. See
 [provider migration](../provider-jellyfin/README.md) for adoption and
 recovery ordering.
 
+## Plugin updates
+
+Keep plugin binaries in the tested runtime image and plugin settings in Crossplane.
+Jellyfin supports manual installation into its plugin directory. The Terraform
+provider's Plugin resource can require replacement for a version change, and a
+restart is needed before a newly installed plugin's configuration API is usable.
+Using it here would add install/restart/configuration ordering to an already working
+image rollout. Do not run both image seeding and a managed Plugin for the same binary.
+
+`plugins.lock.json` pins the LDAP release tag and archive SHA-256. Renovate's
+`github-release-attachments` datasource updates both together; its filename mapping
+supports the upstream `ldap-authentication_<version>.zip` convention. Builds verify
+the checksum before extraction and read the plugin GUID/version from the verified
+archive's `meta.json`. There is no separate directory-version pin to forget. The MIT
+license is fetched from the separately pinned `licenseRevision`.
+
+After the real Jellyfin/LDAP integration test passes, CI publishes the source-SHA
+tag and an upstream-Jellyfin-version tag derived from the Dockerfile, such as `12.2`.
+Deploy `:12.2@sha256:...`: Renovate can discover a new runtime digest after a plugin
+rebuild while the running deployment stays immutable. The Dockerfile's official
+Jellyfin base image remains independently tag-and-digest pinned and Renovate-managed.
+Plugin upgrade PRs require review and passing integration tests; future upstream
+asset naming or server compatibility changes may require adjusting the build.
+
+References: [Jellyfin plugin installation](https://jellyfin.org/docs/general/server/plugins/index.html),
+[pinned provider lifecycle](https://github.com/soupglasses/terraform-provider-jellyfin/blob/65dbe330d0862501b43c841ab7ed93953096ad3a/internal/provider/plugin_resource.go),
+and [Renovate release attachments](https://docs.renovatebot.com/modules/datasource/github-release-attachments/).
+
 ## Tests
 
 ```sh
