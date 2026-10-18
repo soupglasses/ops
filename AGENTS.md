@@ -9,6 +9,40 @@ SPDX-License-Identifier: 0BSD
 Git and Flux own durable production state. Work in an isolated worktree, preserve
 unrelated changes, and stage explicit paths.
 
+## Desired end state
+
+- Services must converge automatically from an empty installation to their declared
+  state using Git, external backups and the minimum documented recovery credentials.
+  Prove fresh installation and recovery, including configuration and usable data.
+- Prefer typed, declarative APIs for application settings and identities. Reuse
+  Terraform providers through Crossplane Upjet, compositions and CRDs where useful.
+  Use Components, templating and native Helm tests to share platform behavior.
+  Keep implementation workarounds inside the platform, out of application declarations.
+- Apply file-based configuration at startup. Make Flux changes take effect through
+  native reloads or workload rollouts without manual intervention. Use generated
+  ConfigMap names or equivalent change tracking when a restart is needed.
+- Use the shared LDAP identities and SSO where supported. Applications must not
+  maintain independent human account lists. A first-configuration or recovery
+  administrator is an explicit exception. Prefer directory-backed service identities.
+- Restore backed-up state automatically from S3 through VolSync when local data is
+  absent. Block startup until recovery and required image pulls complete. Declare
+  intentional fresh initialization and cost-versus-rebuild exceptions explicitly:
+  Jellyfin configuration and media have no backups because rebuilding is cheaper.
+- Pin deployable artifacts and automate updates with Renovate. Validate behavior
+  through the real application interfaces, not duplicated versions or snapshots
+  of today's deployment.
+
+## Documentation and follow-up work
+
+Keep durable usage and ownership guidance in the relevant README. Reserve `docs/`
+for material such as architecture and disaster recovery that needs a separate home.
+Track unfinished work and operational evidence in GitHub issues. Do not grow TODO.md
+into a change log. Remove completed entries and obsolete migration notes.
+
+Do not duplicate pins, commit hashes, resource inventories or current environment
+snapshots in maintained prose or tests. Ordinary dependency and environment updates
+should not require editing unrelated documentation or incidental assertions.
+
 ## Delivery and verification
 
 - Use `mise exec -- ...` for tools managed by the repository's Mise configuration.
@@ -25,15 +59,16 @@ unrelated changes, and stage explicit paths.
 - Push production changes to `main`, reconcile with `task flux:reconcile`, and verify
   the affected application live. Keep branch preparation distinct from deployment.
 - Remove temporary verification resources and leave the end state Flux-managed.
-  Record actionable follow-up findings in `TODO.md` and tick off completed work.
+  Record actionable follow-up findings in GitHub issues.
 
 ## Data and access
 
-Application data must survive a clean rebuild from Git, off-cluster backups, and
-independently held recovery keys. For changes affecting recovery, preserve a rollback
+Backed-up application data must survive a clean rebuild from Git, off-cluster backups,
+and independently held recovery keys. For changes affecting recovery, preserve a rollback
 copy until restored application contents have been validated. Use the
 [VolSync contract](kubernetes/components/volsync/README.md) and
 [restore-drill example](docs/openldap-volsync-migration.md) for recovery changes.
+Use native database recovery where a volume copy cannot provide consistency.
 
 Use the credentials assigned to the current runtime. Mise defaults `KUBECONFIG` to
 `.secure/kubeconfig`; when using an externally supplied credential, select it after

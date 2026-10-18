@@ -12,7 +12,9 @@ read-write mount for media and sidecar metadata. Neither volume is backed up.
 
 ## Storage policy
 
-Jellyfin configuration and media have no backups by operator choice. The deployment
+Jellyfin configuration and media have no backups because rebuilding this data costs
+less than storing it off-site. This is an explicit exception to automatic S3 recovery.
+The deployment
 preserves live configuration and media volumes and starts directly without restore
 init containers. A new configuration PVC starts an empty installation. Media recovery
 depends on surviving NAS storage or obtaining the files again.
@@ -53,8 +55,8 @@ archive's `meta.json`. There is no separate directory-version pin to forget. The
 license is fetched from the separately pinned `licenseRevision`.
 
 After the real Jellyfin/LDAP integration test passes, CI publishes the source-SHA
-tag and an upstream-Jellyfin-version tag derived from the Dockerfile, such as `12.2`.
-Deploy `:12.2@sha256:...`: Renovate can discover a new runtime digest after a plugin
+tag and an upstream-Jellyfin-version tag derived from the Dockerfile.
+Deploy the version tag with its digest: Renovate can discover a new runtime digest after a plugin
 rebuild while the running deployment stays immutable. The Dockerfile's official
 Jellyfin base image remains independently tag-and-digest pinned and Renovate-managed.
 Plugin upgrade PRs require review and passing integration tests; future upstream
