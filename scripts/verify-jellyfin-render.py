@@ -23,25 +23,36 @@ def verify(path):
             raise ValueError(f"expected one {kind}/{name}, found {len(matches)}")
         return matches[0]
 
-    assert get("ReplicationSource", "jellyfin", "media")["spec"]["sourcePVC"] == "jellyfin-checkpoint"
-    destination_trigger = get("ReplicationDestination", "jellyfin-dst", "media")["spec"]["trigger"]
-    assert destination_trigger["schedule"] == "15 8 * * *"
-    assert not destination_trigger.get("manual"), "manual triggers suppress scheduled restore refresh"
-    watcher = get("Deployment", "jellyfin-volsync-quiesce", "media")["spec"]["template"]["spec"]["containers"][0]
-    environment = {item["name"]: item.get("value") for item in watcher["env"]}
-    assert environment["PVC"] == "jellyfin-checkpoint"
-    assert isinstance(environment["RESUME_CMD"], str)
-    assert get("Role", "jellyfin-volsync-quiesce", "media")["rules"][0]["resourceNames"] == ["jellyfin-checkpoint"]
-    annotation = "volsync.backube/use-copy-trigger"
-    assert annotation in get("PersistentVolumeClaim", "jellyfin-checkpoint", "media")["metadata"]["annotations"]
-    assert annotation not in get("PersistentVolumeClaim", "jellyfin", "media")["metadata"].get("annotations", {})
+    retired = {
+        ("ReplicationSource", "jellyfin"),
+        ("ReplicationSource", "jellyfin-media"),
+        ("ReplicationDestination", "jellyfin-dst"),
+        ("Deployment", "jellyfin-volsync-quiesce"),
+        ("Role", "jellyfin-volsync-quiesce"),
+        ("RoleBinding", "jellyfin-volsync-quiesce"),
+        ("ServiceAccount", "jellyfin-volsync-quiesce"),
+        ("PersistentVolumeClaim", "jellyfin-checkpoint"),
+        ("Job", "jellyfin-media-restore-v2"),
+        ("Kustomization", "jellyfin-media-backup"),
+    }
+    for item in objects:
+        metadata = item.get("metadata", {})
+        if metadata.get("namespace") == "media":
+            assert (item.get("kind"), metadata.get("name")) not in retired, "Jellyfin backup resource remains"
+    config = get("PersistentVolumeClaim", "jellyfin", "media")
+    assert "dataSourceRef" not in config["spec"]
+    assert "dataSource" not in config["spec"]
+    assert config["spec"]["resources"]["requests"]["storage"] == "20Gi"
+    assert config["metadata"]["annotations"]["kustomize.toolkit.fluxcd.io/ssa"] == "IfNotPresent"
+    assert get("PersistentVolumeClaim", "jellyfin-media", "media")["spec"]["storageClassName"] == "jellyfin-media"
     storage = get("StorageClass", "jellyfin-media")
     assert storage["reclaimPolicy"] == "Delete"
     assert storage["parameters"]["onDelete"] == "retain"
     assert storage["parameters"]["subDir"] == "library"
     assert get("CSIDriver", "nfs.csi.k8s.io")["spec"]["fsGroupPolicy"] == "None"
     application = get("Deployment", "jellyfin", "media")["spec"]["template"]["spec"]
-    assert any(item["name"] == "restore-media" for item in application["initContainers"])
+    assert not application.get("initContainers"), "Jellyfin must start without backup restores"
+    assert not any(item["name"] == "checkpoint" for item in application["volumes"])
     jellyfin = next(item for item in application["containers"] if item["name"] == "jellyfin")
     for probe in ("startupProbe", "readinessProbe"):
         assert jellyfin[probe]["exec"]["command"] == ["python3", "/usr/local/lib/jellyfin/health.py"]
@@ -52,7 +63,7 @@ def verify(path):
     assert get("CiliumLoadBalancerIPPool", "private-gateway")["spec"]["blocks"] == [{"cidr": "172.21.68.11/32"}]
     route = get("HTTPRoute", "jellyfin", "media")
     assert all(item["name"] == "private" and item["namespace"] == "network" for item in route["spec"]["parentRefs"])
-    print("Jellyfin rendered storage, recovery and private-route contracts passed")
+    print("Jellyfin rendered storage, no-backup policy and private-route contracts passed")
 
 
 if __name__ == "__main__":

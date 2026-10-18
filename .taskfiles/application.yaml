@@ -13,7 +13,7 @@ tasks:
           {{if .RELEASE}}--release {{.RELEASE | shellQuote}}{{else}}--deployment {{.APP | shellQuote}}{{end}}
 
   verify-render:
-    desc: Verify Jellyfin recovery and private-route invariants in the final Flux render
+    desc: Verify Jellyfin storage, no-backup policy and private-route invariants in the final Flux render
     vars:
       RENDER:
         sh: mktemp
