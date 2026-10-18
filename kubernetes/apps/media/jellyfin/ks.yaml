@@ -4,34 +4,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: jellyfin-identity
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/identity
-  dependsOn:
-    - name: ldap-system-users
-      namespace: identity
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  interval: 10m
-  retryInterval: 2m
-  timeout: 10m
-  prune: false
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
   name: jellyfin
   namespace: media
 spec:
   path: ./kubernetes/apps/media/jellyfin/app
-  targetNamespace: media
   dependsOn:
-    - name: jellyfin-identity
-      namespace: media
+    - name: jellyfin-provider
+      namespace: crossplane-system
+    - name: ldap-system-users
+      namespace: identity
     - name: csi-driver-nfs
       namespace: kube-system
     - name: cilium-private-gateway
@@ -42,84 +23,12 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: jellyfin
+      namespace: media
   interval: 10m
   retryInterval: 2m
   timeout: 10m
   prune: false
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: jellyfin-provider
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/provider
-  dependsOn:
-    - name: crossplane
-      namespace: crossplane-system
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  interval: 10m
-  retryInterval: 2m
-  timeout: 5m
-  prune: true
-  healthChecks:
-    - apiVersion: pkg.crossplane.io/v1
-      kind: Provider
-      name: jellyfin
-  healthCheckExprs:
-    - apiVersion: pkg.crossplane.io/v1
-      kind: Provider
-      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: jellyfin-settings
-  namespace: media
-spec:
-  path: ./kubernetes/apps/media/jellyfin/settings
-  targetNamespace: media
-  dependsOn:
-    - name: jellyfin
-      namespace: media
-    - name: jellyfin-provider
-      namespace: media
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  interval: 10m
-  retryInterval: 2m
-  timeout: 5m
-  prune: true
-  wait: true
-  healthCheckExprs:
-    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
-      kind: SystemConfiguration
-      current: >-
-        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
-        c.type == 'Synced' && c.status == 'True')
-    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
-      kind: NetworkingConfiguration
-      current: >-
-        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
-        c.type == 'Synced' && c.status == 'True')
-    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
-      kind: BrandingConfiguration
-      current: >-
-        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
-        c.type == 'Synced' && c.status == 'True')
-    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
-      kind: Library
-      current: >-
-        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
-        c.type == 'Synced' && c.status == 'True')
-    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
-      kind: PluginSettings
-      current: >-
-        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
-        c.type == 'Synced' && c.status == 'True')

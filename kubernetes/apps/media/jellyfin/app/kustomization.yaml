@@ -3,7 +3,6 @@
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: media
 resources:
   - ./deployment.yaml
   - ./service.yaml
@@ -13,3 +12,43 @@ resources:
   - ./storage-alerts.yaml
   - ./media-storage.yaml
   - ./media-admission.yaml
+  - ./secret.sops.yaml
+  - ./identity.yaml
+  - ./settings.yaml
+patches:
+  - target:
+      group: jellyfin.ops.finnes.dev
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: media
+  - target:
+      kind: Secret
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: media
+  - target:
+      group: jellyfin.ops.finnes.dev
+      kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library
+    patch: |-
+      - op: add
+        path: /spec/managementPolicies
+        value: [Observe, Create, Update]
+      - op: add
+        path: /spec/providerConfigRef
+        value:
+          kind: ProviderConfig
+          name: jellyfin
+  - target:
+      group: identity.ops.finnes.dev
+      kind: GroupOfNames
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: identity
+      - op: add
+        path: /spec/backendRef
+        value:
+          kind: ProviderConfig
+          name: directory-admin

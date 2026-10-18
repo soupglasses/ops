@@ -38,10 +38,6 @@ insert_final_newline = unset
 [*.go]
 indent_style = tab
 
-# Preserve the upstream generated schema input byte for byte.
-[/packages/provider-ldap/config/schema.json]
-insert_final_newline = unset
-
 [/packages/provider-jellyfin/config/schema.json]
 insert_final_newline = unset
 

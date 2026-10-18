@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
 
-charts/ldap-provider/crds/** linguist-generated=true
-packages/provider-ldap/config/schema.json linguist-generated=true
 packages/provider-jellyfin/package/crds/** linguist-generated=true
 packages/provider-jellyfin/config/schema.json linguist-generated=true
 kubernetes/clusters/**/gotk-*.yaml linguist-generated=true

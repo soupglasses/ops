@@ -6,9 +6,6 @@ kind: OAuth2Client
 metadata:
   name: grafana
 spec:
-  backendRef:
-    kind: ClusterProviderConfig
-    name: directory
   clientID: monitoring.grafana
   displayName: Grafana
   redirectURIs:

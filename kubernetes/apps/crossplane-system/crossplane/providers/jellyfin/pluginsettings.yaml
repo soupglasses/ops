@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: pluginsettings.jellyfin.ops.finnes.dev
+spec:
+  scope: Namespaced
+  group: jellyfin.ops.finnes.dev
+  names:
+    kind: PluginSettings
+    plural: pluginsettings
+  defaultCompositionRef:
+    name: jellyfin-plugin-settings
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - providerConfigRef
+                - pluginID
+                - configuration
+              properties:
+                providerConfigRef:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                pluginID:
+                  type: string
+                  minLength: 1
+                  x-kubernetes-validations:
+                    - rule: self == oldSelf
+                      message: Plugin identity is immutable.
+                managementPolicies:
+                  type: array
+                  default:
+                    - Observe
+                    - Create
+                    - Update
+                  items:
+                    type: string
+                    enum:
+                      - Observe
+                      - Create
+                      - Update
+                configuration:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                secretValues:
+                  description: Top-level configuration keys read from local Secrets or confirmed ServiceAccount
+                    credentials.
+                  type: object
+                  additionalProperties:
+                    type: object
+                    required:
+                      - key
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                      key:
+                        type: string
+                        minLength: 1
+                      serviceAccountRef:
+                        description: A ServiceAccount in this namespace whose generated credentials LDAP
+                          has confirmed.
+                        type: object
+                        required:
+                          - name
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                    x-kubernetes-validations:
+                      - rule: has(self.name) != has(self.serviceAccountRef)
+                        message: Choose a local Secret name or ServiceAccount reference.

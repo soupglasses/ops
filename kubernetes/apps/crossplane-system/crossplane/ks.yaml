@@ -17,3 +17,30 @@ spec:
   timeout: 5m
   prune: true
   wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin-provider
+  namespace: crossplane-system
+spec:
+  path: ./kubernetes/apps/crossplane-system/crossplane/providers/jellyfin
+  dependsOn:
+    - name: crossplane
+      namespace: crossplane-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  healthChecks:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      name: jellyfin
+  healthCheckExprs:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true

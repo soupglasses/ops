@@ -6,8 +6,5 @@ kind: GroupOfNames
 metadata:
   name: grafana-admins
 spec:
-  backendRef:
-    kind: ClusterProviderConfig
-    name: directory
   cn: monitoring.grafana-admins
   description: Grafana administrators

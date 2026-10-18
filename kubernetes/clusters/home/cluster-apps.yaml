@@ -55,14 +55,3 @@ spec:
       target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization
-    - patch: |-
-        - op: add
-          path: /spec/postBuild/substituteFrom/-
-          value:
-            kind: Secret
-            name: ldap-admin-credentials
-            optional: false
-      target:
-        group: kustomize.toolkit.fluxcd.io
-        kind: Kustomization
-        name: ldap-system-users

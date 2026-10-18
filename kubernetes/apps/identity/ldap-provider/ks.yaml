@@ -8,12 +8,9 @@ metadata:
   namespace: identity
 spec:
   path: ./kubernetes/apps/identity/ldap-provider/app
-  targetNamespace: identity
   dependsOn:
     - name: crossplane
       namespace: crossplane-system
-    - name: openldap
-      namespace: identity
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -21,7 +18,32 @@ spec:
   interval: 10m
   timeout: 5m
   prune: true
-  wait: true
+  healthChecks:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      name: ldap
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      name: function-go-templating
+    - apiVersion: apiextensions.crossplane.io/v2
+      kind: CompositeResourceDefinition
+      name: oauth2clients.identity.ops.finnes.dev
+    - apiVersion: apiextensions.crossplane.io/v2
+      kind: CompositeResourceDefinition
+      name: groupofnames.identity.ops.finnes.dev
+    - apiVersion: apiextensions.crossplane.io/v2
+      kind: CompositeResourceDefinition
+      name: serviceaccounts.identity.ops.finnes.dev
+  healthCheckExprs:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
+    - apiVersion: apiextensions.crossplane.io/v2
+      kind: CompositeResourceDefinition
+      current: status.conditions.exists(c, c.type == 'Established' && c.status == 'True')
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -32,6 +54,8 @@ spec:
   path: ./kubernetes/apps/identity/ldap-provider/config
   dependsOn:
     - name: ldap-provider
+      namespace: identity
+    - name: openldap
       namespace: identity
   sourceRef:
     kind: GitRepository

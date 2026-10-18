@@ -32,7 +32,7 @@ Dockerfile so the runtime can be rebuilt if its published image becomes unavaila
 ## Configuration ownership
 
 The namespaced Upjet provider owns the API settings and libraries declared in
-`kubernetes/apps/media/jellyfin/settings/`. The application has no
+`kubernetes/apps/media/jellyfin/app/settings.yaml`. The application has no
 configuration sidecar. The runtime contains the plugin launcher, readiness check
 and pinned LDAP plugin distribution. See
 [provider migration](../provider-jellyfin/README.md) for adoption and recovery ordering.

@@ -21,67 +21,6 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  healthChecks:
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-group-sentinel
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-users
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-system
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-groups
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-policies
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-oauth
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-oauth-clients
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-oauth-authorizations
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-oauth-consents
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-oauth-tokens
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-password-policy
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-system-policy
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-admin-user
-      namespace: identity
-    - apiVersion: ldap.ops.finnes.dev/v1alpha1
-      kind: Entry
-      name: directory-auth-user
-      namespace: identity
-    - apiVersion: identity.ops.finnes.dev/v1alpha1
-      kind: GroupOfNames
-      name: directory-admin-group
-      namespace: identity
   interval: 10m
   retryInterval: 2m
   timeout: 5m

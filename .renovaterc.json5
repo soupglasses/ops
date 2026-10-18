@@ -28,6 +28,9 @@
   "helm-values": {
     managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
   },
+  crossplane: {
+    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+  },
   kubernetes: {
     managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
   },
@@ -35,6 +38,10 @@
     managerFilePatterns: ["/(^|/)kustomization\\.ya?ml$/"],
   },
   packageRules: [
+    {
+      matchManagers: ["crossplane"],
+      pinDigests: true,
+    },
     {
       description: "Review Jellyfin plugin upgrades with the tested runtime build",
       matchPackageNames: ["jellyfin/jellyfin-plugin-ldapauth"],

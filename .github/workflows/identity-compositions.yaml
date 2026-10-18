@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Identity compositions
+on:
+  pull_request:
+    paths:
+      - "packages/identity-tests/**"
+      - "kubernetes/apps/identity/ldap-provider/app/**"
+      - ".github/workflows/identity-compositions.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/identity-tests/**"
+      - "kubernetes/apps/identity/ldap-provider/app/**"
+      - ".github/workflows/identity-compositions.yaml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: identity-compositions-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ldap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install test tools
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq aqua:crossplane/cli aqua:kubernetes-sigs/kind
+      - name: Build integration fixtures
+        run: docker build --target tests -t ops-identity-tests:ci packages/identity-tests
+      - name: Test native provider and ops identity compositions
+        env:
+          TESTS_IMAGE: ops-identity-tests:ci
+        run: packages/identity-tests/kind-test.sh

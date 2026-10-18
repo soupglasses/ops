@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-"""Validate real application CRs against the chart's generated API schemas."""
+"""Validate real application CRs against the provider and composition API schemas."""
 
 import copy
 import json
@@ -45,20 +45,19 @@ class LocalSchemaTests(unittest.TestCase):
             return subprocess.run([str(ROOT / "scripts/kubeconform.sh"), str(path)],
                                   cwd=ROOT, capture_output=True, text=True)
 
-    def test_generated_cluster_provider_schema_rejects_invalid_port(self):
-        resource = {"apiVersion": "ldap.ops.finnes.dev/v1beta1",
+    def test_cluster_provider_schema_requires_credential_secret_key(self):
+        resource = {"apiVersion": "ldap.finnes.dev/v1beta1",
                     "kind": "ClusterProviderConfig", "metadata": {"name": "directory"},
-                    "spec": {"host": "directory.example.test", "port": 636, "tls": True,
-                             "bindDN": "cn=admin,dc=example,dc=test",
-                             "credentialsSecretRef": {"namespace": "identity", "name": "directory", "key": "password"},
+                    "spec": {"credentials": {"source": "Secret", "secretRef": {"namespace": "identity", "name": "directory", "key": "connection.yaml"}},
+                             "namespaceSelector": {"matchLabels": {"directory.example.test/backend": "directory"}},
                              "allowedBases": ["ou=clients,dc=example,dc=test"]}}
         valid = self.validate(resource)
         self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
         invalid = copy.deepcopy(resource)
-        invalid["spec"]["port"] = "not-an-integer"
+        del invalid["spec"]["credentials"]["secretRef"]["key"]
         result = self.validate(invalid)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("port", result.stdout + result.stderr)
+        self.assertIn("key", result.stdout + result.stderr)
 
     def test_composition_schema_rejects_unsupported_grant(self):
         resource = {"apiVersion": "identity.ops.finnes.dev/v1alpha1",

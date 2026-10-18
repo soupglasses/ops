@@ -1,26 +1,23 @@
 <!--
 SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
-
 SPDX-License-Identifier: MIT
 -->
 
 # Jellyfin
 
-Flux installs the provider, reconciles LDAP identities, starts the application,
-and applies API settings after the server is available. `ks.yaml` declares those
-four stages; application settings do not require editing provider internals.
+`app/` contains the deployment, storage, networking and configuration.
+Edit `app/settings.yaml` for server settings, libraries and LDAP plugin settings.
+`app/identity.yaml` declares a reusable LDAP ServiceAccount and access groups.
+Crossplane generates the bind password and supplies it to the LDAP plugin only
+after LDAP confirms it. Change the ServiceAccount's `rotationID` to rotate it;
+the Jellyfin recovery administrator still uses its encrypted Secret. Manage human
+membership and ownership in Canaille.
 
-- `app/`: server, storage, networking and storage alerts.
-- `identity/`: bind identity in `media` and access groups in `identity`.
-- `settings/`: server settings, libraries and LDAP plugin configuration.
-- `provider/`: Crossplane provider installation and the plugin settings API.
+One Flux Kustomization installs the app after its infrastructure dependencies and
+checks the Deployment. Crossplane independently reconciles the inline settings;
+connection failures while Jellyfin starts are retried by its controller.
 
-Manage human group membership and ownership in Canaille. Git declares groups
-without granting human access. Keep the platform sentinel in otherwise empty
-groups; see the [LDAP chart](../../../../charts/ldap-provider/README.md).
-
-The [runtime image](../../../../packages/jellyfin-runtime/README.md) contains the
-pinned LDAP plugin and a launcher that runs Jellyfin directly. Configuration and
-media are deliberately not backed up; preserve existing PVCs during changes.
-Kubernetes checks the server's native health endpoint for liveness. Startup and
-readiness additionally require its response to say `Healthy`.
+The provider installation and reusable plugin settings API live with the
+[Crossplane platform](../../crossplane-system/crossplane/providers/jellyfin).
+See the [runtime policy](../../../../packages/jellyfin-runtime/README.md) for
+plugin updates and the intentional absence of configuration and media backups.

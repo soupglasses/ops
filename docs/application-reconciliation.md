@@ -6,8 +6,9 @@ SPDX-License-Identifier: MIT
 # Application identity and settings
 
 Flux owns application declarations and deployment ordering. Crossplane reconciles
-identity and application configuration through typed APIs backed by existing
-Terraform providers. No Terraform executable or external state directory is needed.
+identity and application configuration through typed APIs. The LDAP provider uses
+Crossplane's managed reconciler and a native LDAP client; the Jellyfin provider
+reuses its Terraform SDK without a Terraform executable or state directory.
 
 ## Shared identity
 
@@ -19,17 +20,24 @@ The directory platform owns its backend and administrative credentials. Applicat
 namespaces opt into a permitted backend and use namespace-local credential references.
 Directory resources own only declared attributes. Passwords, profiles, memberships
 and other user-managed values must survive adoption and routine reconciliation.
-Deleting an Entry retains its directory object; permanent deletion is explicit.
+Identity declarations use Crossplane deletion semantics: `deletionPolicy: Delete`
+removes the LDAP object when its declaration is deleted; `Orphan` retains it.
+The directory foundation explicitly retains its recovery resources.
+
+The generic LDAP [Provider](https://github.com/soupglasses/provider-ldap) is a
+native Crossplane package. Ops owns the identity XRDs and Compositions separately;
+the provider has no Canaille schema or application-specific configuration.
 
 The `OAuth2Client` composition maps a typed application declaration to the backend's
 LDAP schema. Applications should consume that API without embedding directory schema
 or reconciliation workarounds in their own configuration. See
 [Grafana identity configuration](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
 
-Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/identity/groups.yaml)
+Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/app/identity.yaml)
 are application-owned and reconciled centrally. New groups contain only the
-non-login platform sentinel; Canaille controls human membership and ownership. The user group permits login and
-the administrator group grants administrative privileges.
+non-login platform sentinel, which is continuously ensured without replacing
+human memberships. Canaille controls human membership and ownership. The user
+group permits login and the administrator group grants administrative privileges.
 
 Jellyfin accepts LDAP usernames and email aliases as the same directory identity.
 Keep aliases unique: ambiguous LDAP results can select the wrong account. The
@@ -43,7 +51,7 @@ names roll the workload when policy changes, so Git changes take effect automati
 
 ## Application configuration
 
-Jellyfin's [settings](../kubernetes/apps/media/jellyfin/settings) declare libraries,
+Jellyfin's [settings](../kubernetes/apps/media/jellyfin/app/settings.yaml) declare libraries,
 server settings and LDAP plugin configuration. The namespaced Upjet provider uses
 its ProviderConfig credentials to complete the first setup wizard when necessary,
 then authenticates normally. The application container needs no bootstrap script

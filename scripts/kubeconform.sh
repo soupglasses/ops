@@ -41,18 +41,20 @@ KUBECONFORM_ARGS=(
     -schema-location='https://json.schemastore.org/{{.ResourceKind}}.json'
     -summary
 )
-
-
-
-# Derive local APIs from the same generated CRDs and composition shipped to Flux.
-helm template schema "$REPO_ROOT/charts/ldap-provider" --include-crds \
-    --set oauth2.enabled=true --set groups.enabled=true \
-    | yq eval-all -o=json -I=0 '[.]' - \
+# Resolve generic LDAP schemas from the exact Provider package deployed by Flux.
+crossplane xpkg get-crds \
+    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/provider.yaml" \
+    --output-dir "$schema_dir/ldap-crds"
+yq eval-all -o=json -I=0 '[.]' \
+    "$schema_dir/ldap-crds/"*/*/*.yaml \
+    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/oauth2.yaml" \
+    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/groups.yaml" \
+    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/serviceaccounts.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
 yq eval-all -o=json -I=0 '[.]' \
     "$REPO_ROOT/packages/provider-jellyfin/package/crds/"*.yaml \
-    "$REPO_ROOT/kubernetes/apps/media/jellyfin/provider/pluginsettings.yaml" \
+    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/pluginsettings.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
 # The community catalog omits CRDs themselves; validate those against the

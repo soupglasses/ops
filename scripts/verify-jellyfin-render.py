@@ -23,6 +23,11 @@ def verify(path):
             raise ValueError(f"expected one {kind}/{name}, found {len(matches)}")
         return matches[0]
 
+    app = get("Kustomization", "jellyfin", "media")["spec"]
+    assert "healthCheckExprs" not in app and not app.get("wait", False)
+    assert app["healthChecks"] == [{"apiVersion": "apps/v1", "kind": "Deployment", "name": "jellyfin", "namespace": "media"}]
+    assert not any(item.get("kind") == "Kustomization" and item.get("metadata", {}).get("name") in
+                   {"jellyfin-settings", "jellyfin-identity", "jellyfin-groups", "jellyfin-media"} for item in objects)
     retired = {
         ("ReplicationSource", "jellyfin"),
         ("ReplicationSource", "jellyfin-media"),

@@ -38,8 +38,8 @@ and let Flux restore the chart's stock image; users sign in again.
 Manage group membership and ownership in Canaille. Git declares the group and
 its description without granting human access. The platform sentinel satisfies
 LDAP's required member attribute for new groups. The namespace opts into the
-central backend. Crossplane supplies Secret permissions; the LDAP chart supplies
-the Entry permission once for all identity compositions.
+central backend. Crossplane installs the LDAP Provider package and grants the
+composition access to its Entries and the generated Secrets.
 
 The normal Grafana login page remains available. Its existing `grafana-auth`
 Secret supplies the local recovery administrator independently of OIDC. There is

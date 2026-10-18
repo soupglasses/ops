@@ -6,15 +6,15 @@ on:
   pull_request:
     paths:
       - "packages/provider-jellyfin/**"
-      - "kubernetes/apps/media/jellyfin/provider/**"
-      - "kubernetes/apps/media/jellyfin/settings/**"
+      - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
+      - "kubernetes/apps/media/jellyfin/app/settings.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
   push:
     branches: [main]
     paths:
       - "packages/provider-jellyfin/**"
-      - "kubernetes/apps/media/jellyfin/provider/**"
-      - "kubernetes/apps/media/jellyfin/settings/**"
+      - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
+      - "kubernetes/apps/media/jellyfin/app/settings.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
   workflow_dispatch:
 permissions:
@@ -54,10 +54,10 @@ jobs:
               or path == ".github/workflows/jellyfin-provider.yaml"
               for path in changed
           )
-          native = source or any(path.startswith((
-              "kubernetes/apps/media/jellyfin/provider/",
-              "kubernetes/apps/media/jellyfin/settings/",
-          )) for path in changed)
+          native = source or any(
+              path.startswith("kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/")
+              for path in changed
+          )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
               print(f"source={str(source).lower()}", file=output)
               print(f"native={str(native).lower()}", file=output)

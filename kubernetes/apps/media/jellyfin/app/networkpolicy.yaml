@@ -5,6 +5,7 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  namespace: media
   name: jellyfin
 spec:
   endpointSelector:

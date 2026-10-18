@@ -34,8 +34,8 @@ jobs:
           version: 2026.10.11
           install_args: >-
             python aqua:go-task/task aqua:pre-commit/pre-commit aqua:editorconfig-checker/editorconfig-checker
-            aqua:helm aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2 aqua:mikefarah/yq pipx:reuse
-
+            aqua:helm aqua:crossplane/cli aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2
+            aqua:mikefarah/yq pipx:reuse
       - name: Run pre-commit checks
         run: task check
 

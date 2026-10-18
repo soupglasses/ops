@@ -1,0 +1,127 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: jellyfin-plugin-settings
+spec:
+  compositeTypeRef:
+    apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+    kind: PluginSettings
+  mode: Pipeline
+  pipeline:
+    - step: render-settings
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := getCompositeResource . -}}
+            {{- $spec := $xr.spec -}}
+            {{- $namespace := $xr.metadata.namespace -}}
+            {{- $extra := get . "extraResources" | default dict -}}
+            {{- $requirements := dict -}}
+            {{- $refs := dict -}}
+            {{- $credentialsReady := true -}}
+            {{- $configuration := deepCopy $spec.configuration -}}
+            {{- range $field, $ref := ($spec.secretValues | default dict) -}}
+              {{- $secretKey := printf "secret-%s" (sha256sum $field) -}}
+              {{- if $ref.serviceAccountRef -}}
+                {{- $identityKey := printf "identity-%s" (sha256sum $field) -}}
+                {{- $_ := set $requirements $identityKey (dict "apiVersion" "identity.ops.finnes.dev/v1alpha1" "kind" "ServiceAccount" "matchName" $ref.serviceAccountRef.name "namespace" $namespace) -}}
+                {{- $identities := dig $identityKey "items" (list) $extra -}}
+                {{- if ne (len $identities) 1 -}}
+                  {{- $credentialsReady = false -}}
+                {{- else -}}
+                  {{- $identity := (index $identities 0).resource -}}
+                  {{- $confirmed := dig "status" "secretRef" (dict) $identity -}}
+                  {{- $secretName := $confirmed.name | default "" -}}
+                  {{- $version := $confirmed.resourceVersion | default "" -}}
+                  {{- if or (ne $identity.metadata.name $ref.serviceAccountRef.name) (ne $identity.metadata.namespace $namespace) (ne (getResourceCondition "Ready" $identity).Status "True") (ne (getResourceCondition "Synced" $identity).Status "True") (eq $secretName "") (eq $version "") -}}
+                    {{- $credentialsReady = false -}}
+                  {{- end -}}
+                  {{- if $secretName -}}
+                    {{- $_ := set $refs $field (dict "name" $secretName "key" $ref.key "resourceVersion" $version) -}}
+                  {{- end -}}
+                {{- end -}}
+              {{- else -}}
+                {{- $_ := set $refs $field $ref -}}
+              {{- end -}}
+              {{- if hasKey $refs $field -}}
+                {{- $_ := set $requirements $secretKey (dict "apiVersion" "v1" "kind" "Secret" "matchName" (index $refs $field).name "namespace" $namespace) -}}
+              {{- end -}}
+            {{- end -}}
+            {{- range $field, $ref := $refs -}}
+              {{- $secretKey := printf "secret-%s" (sha256sum $field) -}}
+              {{- $items := dig $secretKey "items" (list) $extra -}}
+              {{- if ne (len $items) 1 -}}
+                {{- $credentialsReady = false -}}
+              {{- else -}}
+                {{- $secret := (index $items 0).resource -}}
+                {{- $encoded := get ($secret.data | default dict) $ref.key | default "" -}}
+                {{- if or (ne $secret.metadata.name $ref.name) (ne $secret.metadata.namespace $namespace) (eq $encoded "") (and $ref.resourceVersion (ne $secret.metadata.resourceVersion $ref.resourceVersion)) -}}
+                  {{- $credentialsReady = false -}}
+                {{- else -}}
+                  {{- $_ := set $configuration $field ($encoded | b64dec) -}}
+                {{- end -}}
+              {{- end -}}
+            {{- end -}}
+            {{- $settings := getComposedResource . "settings" -}}
+            {{- $managed := getComposedResource . "configuration" -}}
+            {{- $encodedConfiguration := $configuration | mustToJson | b64enc -}}
+            {{- $settingsCurrent := not (empty (and $credentialsReady $settings (eq (dig "data" "configuration.json" "" $settings) $encodedConfiguration))) -}}
+            {{- $settingsName := dig "metadata" "name" "" ($settings | default dict) -}}
+            {{- $managedSpec := dict "managementPolicies" ($spec.managementPolicies | default (list "Observe" "Create" "Update")) "providerConfigRef" (dict "kind" "ProviderConfig" "name" $spec.providerConfigRef.name) "forProvider" (dict "configurationJsonSecretRef" (dict "name" $settingsName "key" "configuration.json")) -}}
+            {{- $ready := not (empty (and $settingsCurrent $managed (eq (dig "spec" "forProvider" "configurationJsonSecretRef" "name" "" $managed) $settingsName) (eq (dig "spec" "providerConfigRef" "name" "" $managed) $spec.providerConfigRef.name) (eq (getResourceCondition "Ready" $managed).Status "True") (eq (getResourceCondition "Synced" $managed).Status "True"))) -}}
+            {{- if $requirements }}
+            apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+            kind: ExtraResources
+            requirements:
+              {{- $requirements | toYaml | nindent 2 }}
+            ---
+            {{- end }}
+            apiVersion: {{ $xr.apiVersion }}
+            kind: {{ $xr.kind }}
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            status: {}
+            {{/* Preserve composed resources while credentials rotate; omission would garbage-collect them. */}}
+            {{- if or $credentialsReady $settings }}
+            ---
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              namespace: {{ $namespace }}
+              annotations:
+                {{ setResourceNameAnnotation "settings" }}
+                gotemplating.fn.crossplane.io/ready: {{ $settingsCurrent | ternary "True" "False" | quote }}
+            type: Opaque
+            data:
+              {{- if $credentialsReady }}
+              configuration.json: {{ $encodedConfiguration | quote }}
+              {{- else }}
+              {{- $settings.data | toYaml | nindent 2 }}
+              {{- end }}
+            {{- end }}
+            {{- if or $settingsCurrent $managed }}
+            ---
+            apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+            kind: PluginConfiguration
+            metadata:
+              namespace: {{ $namespace }}
+              annotations:
+                {{ setResourceNameAnnotation "configuration" }}
+                crossplane.io/external-name: {{ $spec.pluginID | quote }}
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            spec:
+              {{- if $settingsCurrent }}
+              {{- $managedSpec | toYaml | nindent 2 }}
+              {{- else }}
+              {{- $managed.spec | toYaml | nindent 2 }}
+              {{- end }}
+            {{- end }}
