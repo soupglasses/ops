@@ -6,7 +6,7 @@ kind: Provider
 metadata:
   name: jellyfin
 spec:
-  package: ghcr.io/soupglasses/ops/provider-jellyfin:v0.1.0-upjet.65dbe330d086
+  package: ghcr.io/soupglasses/ops/provider-jellyfin@sha256:d1e22256a47695ac30882e0c6b319f10926d10cbd9618a808f664ed9b519af06
   revisionHistoryLimit: 2
   runtimeConfigRef:
     name: jellyfin

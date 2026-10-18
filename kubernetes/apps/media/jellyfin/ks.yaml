@@ -107,7 +107,6 @@ metadata:
   namespace: media
 spec:
   path: ./kubernetes/apps/media/jellyfin/provider
-  suspend: true
   dependsOn:
     - name: crossplane
       namespace: crossplane-system
@@ -135,7 +134,6 @@ metadata:
   namespace: media
 spec:
   path: ./kubernetes/apps/media/jellyfin/settings
-  suspend: true
   targetNamespace: media
   dependsOn:
     - name: jellyfin
