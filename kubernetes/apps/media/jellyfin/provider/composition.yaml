@@ -84,8 +84,4 @@ spec:
                 configurationJsonSecretRef:
                   name: {{ printf "%s-settings" $name | quote }}
                   key: configuration.json
-              initProvider:
-                configurationJsonSecretRef:
-                  name: {{ printf "%s-settings" $name | quote }}
-                  key: configuration.json
             {{- end }}
