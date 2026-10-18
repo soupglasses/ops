@@ -4,9 +4,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jellyfin-checkpoint
+  name: jellyfin
   annotations:
-    volsync.backube/use-copy-trigger: ""
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: openebs-zfs
