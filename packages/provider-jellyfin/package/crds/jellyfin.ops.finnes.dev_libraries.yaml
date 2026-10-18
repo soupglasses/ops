@@ -1,0 +1,1064 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: libraries.jellyfin.ops.finnes.dev
+spec:
+  group: jellyfin.ops.finnes.dev
+  names:
+    categories:
+      - crossplane
+      - managed
+      - jellyfin
+    kind: Library
+    listKind: LibraryList
+    plural: libraries
+    singular: library
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .metadata.annotations.crossplane\.io/external-name
+          name: EXTERNAL-NAME
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Library is the Schema for the Librarys API. <no value>
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: LibrarySpec defines the desired state of Library
+              properties:
+                forProvider:
+                  properties:
+                    collectionType:
+                      description: 'The collection type: one of `movies`, `tvshows`, `music`, `musicvideos`,
+                        `homevideos`, `boxsets`, `books`, `mixed`. A library without a collection type,
+                        which is how Jellyfin''s web UI creates a Mixed Movies and Shows library, reads
+                        as `mixed`: Jellyfin treats the two the same.'
+                      type: string
+                    libraryOptions:
+                      properties:
+                        cacheImagesInLibrary:
+                          description: Whether images are cached in the library. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        chapterImageIntervalSeconds:
+                          description: Chapter image interval in seconds. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: number
+                        disabled:
+                          description: Whether the library is disabled, the inverse of Jellyfin's `Enabled`
+                            option.
+                          type: boolean
+                        disabledImageFetchers:
+                          description: Disabled image fetchers for the whole library; Jellyfin only has
+                            them per item type, where `image_fetchers` in `type_options` enables the fetchers
+                            it lists. Jellyfin has no such library option, so setting it is an error.
+                            The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataFetchers:
+                          description: Disabled metadata fetchers for the whole library; Jellyfin only
+                            has them per item type, where `metadata_fetchers` in `type_options` enables
+                            the fetchers it lists. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataSavers:
+                          description: Disabled metadata savers; Jellyfin only has the enabled ones, which
+                            `metadata_savers` sets. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledSubtitleFetchers:
+                          description: 'Disabled subtitle fetchers. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        downloadImagesInAdvance:
+                          description: Whether images are downloaded in advance. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        enableAutomaticSeriesGrouping:
+                          description: Whether automatic series grouping is enabled.
+                          type: boolean
+                        enableChapterImageExtraction:
+                          description: Whether chapter image extraction is enabled.
+                          type: boolean
+                        enableEmbyPhotos:
+                          description: Whether Emby photos are enabled. Jellyfin has no such library option,
+                            so setting it is an error. The attribute will be removed in a future release.
+                          type: boolean
+                        enableMediaConversion:
+                          description: Whether media conversion is enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotoSubtitle:
+                          description: Whether photo subtitles are enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotos:
+                          description: Whether photos are enabled.
+                          type: boolean
+                        enableRealtimeMonitor:
+                          description: Whether realtime monitoring is enabled.
+                          type: boolean
+                        enableTrickplayImageExtraction:
+                          description: Whether trickplay images, the previews shown while seeking, are
+                            extracted.
+                          type: boolean
+                        extractChaptersDuringLibraryScan:
+                          description: Whether chapter images are extracted during the library scan.
+                          type: boolean
+                        extractMediaInformationDuringLibraryScan:
+                          description: Whether media information is extracted during library scan. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          type: boolean
+                        extractTrickplayImagesDuringLibraryScan:
+                          description: Whether trickplay images are extracted during the library scan,
+                            instead of only by the trickplay scheduled task.
+                          type: boolean
+                        imageFetcherOrder:
+                          description: Image fetcher order for the whole library; Jellyfin only has it
+                            per item type, which `image_fetchers` in `type_options` sets. Jellyfin has
+                            no such library option, so setting it is an error. The attribute will be removed
+                            in a future release.
+                          items:
+                            type: string
+                          type: array
+                        importMissingEpisodes:
+                          description: Whether missing episodes are imported. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        localMetadataReaderOrder:
+                          description: Local metadata reader order.
+                          items:
+                            type: string
+                          type: array
+                        metadataCountryCode:
+                          description: Metadata country code.
+                          type: string
+                        metadataFetcherOrder:
+                          description: Metadata fetcher order for the whole library; Jellyfin only has
+                            it per item type, which `metadata_fetchers` in `type_options` sets. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        metadataRefreshMode:
+                          description: Metadata refresh mode. Jellyfin has no such library option, so
+                            setting it is an error. The attribute will be removed in a future release.
+                          type: string
+                        metadataSavers:
+                          description: Enabled metadata savers, such as `Nfo`, which save metadata into
+                            the media folders.
+                          items:
+                            type: string
+                          type: array
+                        pathInfos:
+                          items:
+                            properties:
+                              networkPath:
+                                description: Network path. Jellyfin removed network paths, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                              passwordSecretRef:
+                                description: Password. Jellyfin has no such library option, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                properties:
+                                  key:
+                                    type: string
+                                  name:
+                                    description: Name of the secret.
+                                    type: string
+                                required:
+                                  - key
+                                  - name
+                                type: object
+                              path:
+                                description: Local path.
+                                type: string
+                              username:
+                                description: Username. Jellyfin has no such library option, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                            type: object
+                          type: array
+                        preferredMetadataLanguage:
+                          description: Preferred metadata language.
+                          type: string
+                        saveLocalMetadata:
+                          description: Whether local metadata is saved.
+                          type: boolean
+                        saveLocalThumbnailSets:
+                          description: Whether local thumbnail sets are saved. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        saveTrickplayWithMedia:
+                          description: Whether trickplay images are saved in the media folders, next to
+                            the media, instead of in Jellyfin's data folder.
+                          type: boolean
+                        seasonZeroDisplayName:
+                          description: Season zero display name.
+                          type: string
+                        subtitleFetcherOrder:
+                          description: 'Subtitle fetcher order. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        subtitleFetchers:
+                          description: 'Enabled subtitle fetchers, in priority order: Jellyfin asks the
+                            first one first and disables every other subtitle fetcher it offers. Subtitle
+                            fetchers come from plugins, such as Open Subtitles, and each name must match
+                            one the server offers exactly. Jellyfin enables a subtitle fetcher installed
+                            later, which then shows up as a change to this list. Conflicts with `disabled_subtitle_fetchers`
+                            and `subtitle_fetcher_order`, which it replaces.'
+                          items:
+                            type: string
+                          type: array
+                        typeOptions:
+                          items:
+                            properties:
+                              imageFetcherOrder:
+                                description: 'Image fetcher order for this type. Deprecated: list the
+                                  enabled image fetchers in priority order in `image_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `image_fetchers` changes. It will be removed
+                                  in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              imageFetchers:
+                                description: 'Enabled image fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `image_fetcher_order` is set,
+                                  changing the list also sets Jellyfin''s image fetcher order: these names,
+                                  then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              imageOptions:
+                                items:
+                                  properties:
+                                    limit:
+                                      description: Image limit.
+                                      type: number
+                                    minWidth:
+                                      description: Minimum image width in pixels.
+                                      type: number
+                                    type:
+                                      description: 'Image type: one of `Primary`, `Art`, `Backdrop`, `Banner`,
+                                        `Logo`, `Thumb`, `Disc`, `Box`, `Screenshot`, `Menu`, `Chapter`,
+                                        `BoxRear`, `Profile`.'
+                                      type: string
+                                  type: object
+                                type: array
+                              metadataFetcherOrder:
+                                description: 'Metadata fetcher order for this type. Deprecated: list the
+                                  enabled metadata fetchers in priority order in `metadata_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `metadata_fetchers` changes. It will be
+                                  removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              metadataFetchers:
+                                description: 'Enabled metadata fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `metadata_fetcher_order` is
+                                  set, changing the list also sets Jellyfin''s metadata fetcher order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviderOrder:
+                                description: 'Similar item provider order for this type. Deprecated: list
+                                  the enabled similar item providers in priority order in `similar_item_providers`
+                                  instead, which then sets the order. Set, it still overrides that order;
+                                  removed, the order it set stays until `similar_item_providers` changes.
+                                  It will be removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviders:
+                                description: 'Enabled similar item providers for this type, in priority
+                                  order; Jellyfin always uses its local ones, such as Local Genre/Tag,
+                                  which the list only ranks. Unless `similar_item_provider_order` is set,
+                                  changing the list also sets Jellyfin''s similar item provider order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              type:
+                                description: Item type.
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    paths:
+                      description: Paths of the library's media folders. Jellyfin looks them up on the
+                        server, so when it runs in a container they must be paths inside the container.
+                        Changing the paths replaces the library; changing only their order does not.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                initProvider:
+                  description: |-
+                    THIS IS A BETA FIELD. It will be honored
+                    unless the Management Policies feature flag is disabled.
+                    InitProvider holds the same fields as ForProvider, with the exception
+                    of Identifier and other resource reference fields. The fields that are
+                    in InitProvider are merged into ForProvider when the resource is created.
+                    The same fields are also added to the terraform ignore_changes hook, to
+                    avoid updating them after creation. This is useful for fields that are
+                    required on creation, but we do not desire to update them after creation,
+                    for example because of an external controller is managing them, like an
+                    autoscaler.
+                  properties:
+                    collectionType:
+                      description: 'The collection type: one of `movies`, `tvshows`, `music`, `musicvideos`,
+                        `homevideos`, `boxsets`, `books`, `mixed`. A library without a collection type,
+                        which is how Jellyfin''s web UI creates a Mixed Movies and Shows library, reads
+                        as `mixed`: Jellyfin treats the two the same.'
+                      type: string
+                    libraryOptions:
+                      properties:
+                        cacheImagesInLibrary:
+                          description: Whether images are cached in the library. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        chapterImageIntervalSeconds:
+                          description: Chapter image interval in seconds. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: number
+                        disabled:
+                          description: Whether the library is disabled, the inverse of Jellyfin's `Enabled`
+                            option.
+                          type: boolean
+                        disabledImageFetchers:
+                          description: Disabled image fetchers for the whole library; Jellyfin only has
+                            them per item type, where `image_fetchers` in `type_options` enables the fetchers
+                            it lists. Jellyfin has no such library option, so setting it is an error.
+                            The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataFetchers:
+                          description: Disabled metadata fetchers for the whole library; Jellyfin only
+                            has them per item type, where `metadata_fetchers` in `type_options` enables
+                            the fetchers it lists. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataSavers:
+                          description: Disabled metadata savers; Jellyfin only has the enabled ones, which
+                            `metadata_savers` sets. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledSubtitleFetchers:
+                          description: 'Disabled subtitle fetchers. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        downloadImagesInAdvance:
+                          description: Whether images are downloaded in advance. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        enableAutomaticSeriesGrouping:
+                          description: Whether automatic series grouping is enabled.
+                          type: boolean
+                        enableChapterImageExtraction:
+                          description: Whether chapter image extraction is enabled.
+                          type: boolean
+                        enableEmbyPhotos:
+                          description: Whether Emby photos are enabled. Jellyfin has no such library option,
+                            so setting it is an error. The attribute will be removed in a future release.
+                          type: boolean
+                        enableMediaConversion:
+                          description: Whether media conversion is enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotoSubtitle:
+                          description: Whether photo subtitles are enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotos:
+                          description: Whether photos are enabled.
+                          type: boolean
+                        enableRealtimeMonitor:
+                          description: Whether realtime monitoring is enabled.
+                          type: boolean
+                        enableTrickplayImageExtraction:
+                          description: Whether trickplay images, the previews shown while seeking, are
+                            extracted.
+                          type: boolean
+                        extractChaptersDuringLibraryScan:
+                          description: Whether chapter images are extracted during the library scan.
+                          type: boolean
+                        extractMediaInformationDuringLibraryScan:
+                          description: Whether media information is extracted during library scan. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          type: boolean
+                        extractTrickplayImagesDuringLibraryScan:
+                          description: Whether trickplay images are extracted during the library scan,
+                            instead of only by the trickplay scheduled task.
+                          type: boolean
+                        imageFetcherOrder:
+                          description: Image fetcher order for the whole library; Jellyfin only has it
+                            per item type, which `image_fetchers` in `type_options` sets. Jellyfin has
+                            no such library option, so setting it is an error. The attribute will be removed
+                            in a future release.
+                          items:
+                            type: string
+                          type: array
+                        importMissingEpisodes:
+                          description: Whether missing episodes are imported. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        localMetadataReaderOrder:
+                          description: Local metadata reader order.
+                          items:
+                            type: string
+                          type: array
+                        metadataCountryCode:
+                          description: Metadata country code.
+                          type: string
+                        metadataFetcherOrder:
+                          description: Metadata fetcher order for the whole library; Jellyfin only has
+                            it per item type, which `metadata_fetchers` in `type_options` sets. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        metadataRefreshMode:
+                          description: Metadata refresh mode. Jellyfin has no such library option, so
+                            setting it is an error. The attribute will be removed in a future release.
+                          type: string
+                        metadataSavers:
+                          description: Enabled metadata savers, such as `Nfo`, which save metadata into
+                            the media folders.
+                          items:
+                            type: string
+                          type: array
+                        pathInfos:
+                          items:
+                            properties:
+                              networkPath:
+                                description: Network path. Jellyfin removed network paths, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                              passwordSecretRef:
+                                description: Password. Jellyfin has no such library option, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                properties:
+                                  key:
+                                    type: string
+                                  name:
+                                    description: Name of the secret.
+                                    type: string
+                                required:
+                                  - key
+                                  - name
+                                type: object
+                              path:
+                                description: Local path.
+                                type: string
+                              username:
+                                description: Username. Jellyfin has no such library option, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                            type: object
+                          type: array
+                        preferredMetadataLanguage:
+                          description: Preferred metadata language.
+                          type: string
+                        saveLocalMetadata:
+                          description: Whether local metadata is saved.
+                          type: boolean
+                        saveLocalThumbnailSets:
+                          description: Whether local thumbnail sets are saved. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        saveTrickplayWithMedia:
+                          description: Whether trickplay images are saved in the media folders, next to
+                            the media, instead of in Jellyfin's data folder.
+                          type: boolean
+                        seasonZeroDisplayName:
+                          description: Season zero display name.
+                          type: string
+                        subtitleFetcherOrder:
+                          description: 'Subtitle fetcher order. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        subtitleFetchers:
+                          description: 'Enabled subtitle fetchers, in priority order: Jellyfin asks the
+                            first one first and disables every other subtitle fetcher it offers. Subtitle
+                            fetchers come from plugins, such as Open Subtitles, and each name must match
+                            one the server offers exactly. Jellyfin enables a subtitle fetcher installed
+                            later, which then shows up as a change to this list. Conflicts with `disabled_subtitle_fetchers`
+                            and `subtitle_fetcher_order`, which it replaces.'
+                          items:
+                            type: string
+                          type: array
+                        typeOptions:
+                          items:
+                            properties:
+                              imageFetcherOrder:
+                                description: 'Image fetcher order for this type. Deprecated: list the
+                                  enabled image fetchers in priority order in `image_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `image_fetchers` changes. It will be removed
+                                  in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              imageFetchers:
+                                description: 'Enabled image fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `image_fetcher_order` is set,
+                                  changing the list also sets Jellyfin''s image fetcher order: these names,
+                                  then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              imageOptions:
+                                items:
+                                  properties:
+                                    limit:
+                                      description: Image limit.
+                                      type: number
+                                    minWidth:
+                                      description: Minimum image width in pixels.
+                                      type: number
+                                    type:
+                                      description: 'Image type: one of `Primary`, `Art`, `Backdrop`, `Banner`,
+                                        `Logo`, `Thumb`, `Disc`, `Box`, `Screenshot`, `Menu`, `Chapter`,
+                                        `BoxRear`, `Profile`.'
+                                      type: string
+                                  type: object
+                                type: array
+                              metadataFetcherOrder:
+                                description: 'Metadata fetcher order for this type. Deprecated: list the
+                                  enabled metadata fetchers in priority order in `metadata_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `metadata_fetchers` changes. It will be
+                                  removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              metadataFetchers:
+                                description: 'Enabled metadata fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `metadata_fetcher_order` is
+                                  set, changing the list also sets Jellyfin''s metadata fetcher order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviderOrder:
+                                description: 'Similar item provider order for this type. Deprecated: list
+                                  the enabled similar item providers in priority order in `similar_item_providers`
+                                  instead, which then sets the order. Set, it still overrides that order;
+                                  removed, the order it set stays until `similar_item_providers` changes.
+                                  It will be removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviders:
+                                description: 'Enabled similar item providers for this type, in priority
+                                  order; Jellyfin always uses its local ones, such as Local Genre/Tag,
+                                  which the list only ranks. Unless `similar_item_provider_order` is set,
+                                  changing the list also sets Jellyfin''s similar item provider order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              type:
+                                description: Item type.
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    paths:
+                      description: Paths of the library's media folders. Jellyfin looks them up on the
+                        server, so when it runs in a container they must be paths inside the container.
+                        Changing the paths replaces the library; changing only their order does not.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                managementPolicies:
+                  default:
+                    - '*'
+                  description: |-
+                    THIS IS A BETA FIELD. It is on by default but can be opted out
+                    through a Crossplane feature flag.
+                    ManagementPolicies specify the array of actions Crossplane is allowed to
+                    take on the managed and external resources.
+                    See the design doc for more information: https://github.com/crossplane/crossplane/blob/499895a25d1a1a0ba1604944ef98ac7a1a71f197/design/design-doc-observe-only-resources.md?plain=1#L223
+                    and this one: https://github.com/crossplane/crossplane/blob/444267e84783136daa93568b364a5f01228cacbe/design/one-pager-ignore-changes.md
+                  items:
+                    description: |-
+                      A ManagementAction represents an action that the Crossplane controllers
+                      can take on an external resource.
+                    enum:
+                      - Observe
+                      - Create
+                      - Update
+                      - Delete
+                      - LateInitialize
+                      - '*'
+                    type: string
+                  type: array
+                providerConfigRef:
+                  default:
+                    kind: ClusterProviderConfig
+                    name: default
+                  description: |-
+                    ProviderConfigReference specifies how the provider that will be used to
+                    create, observe, update, and delete this managed resource should be
+                    configured.
+                  properties:
+                    kind:
+                      description: Kind of the referenced object.
+                      type: string
+                    name:
+                      description: Name of the referenced object.
+                      type: string
+                  required:
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  description: |-
+                    WriteConnectionSecretToReference specifies the namespace and name of a
+                    Secret to which any connection details for this managed resource should
+                    be written. Connection details frequently include the endpoint, username,
+                    and password required to connect to the managed resource.
+                  properties:
+                    name:
+                      description: Name of the secret.
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - forProvider
+              type: object
+              x-kubernetes-validations:
+                - message: spec.forProvider.collectionType is a required parameter
+                  rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies ||
+                    ''Update'' in self.managementPolicies) || has(self.forProvider.collectionType) ||
+                    (has(self.initProvider) && has(self.initProvider.collectionType))'
+                - message: spec.forProvider.paths is a required parameter
+                  rule: '!(''*'' in self.managementPolicies || ''Create'' in self.managementPolicies ||
+                    ''Update'' in self.managementPolicies) || has(self.forProvider.paths) || (has(self.initProvider)
+                    && has(self.initProvider.paths))'
+            status:
+              description: LibraryStatus defines the observed state of Library.
+              properties:
+                atProvider:
+                  properties:
+                    collectionType:
+                      description: 'The collection type: one of `movies`, `tvshows`, `music`, `musicvideos`,
+                        `homevideos`, `boxsets`, `books`, `mixed`. A library without a collection type,
+                        which is how Jellyfin''s web UI creates a Mixed Movies and Shows library, reads
+                        as `mixed`: Jellyfin treats the two the same.'
+                      type: string
+                    id:
+                      type: string
+                    itemId:
+                      description: The internal item ID assigned by Jellyfin.
+                      type: string
+                    libraryOptions:
+                      properties:
+                        cacheImagesInLibrary:
+                          description: Whether images are cached in the library. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        chapterImageIntervalSeconds:
+                          description: Chapter image interval in seconds. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: number
+                        disabled:
+                          description: Whether the library is disabled, the inverse of Jellyfin's `Enabled`
+                            option.
+                          type: boolean
+                        disabledImageFetchers:
+                          description: Disabled image fetchers for the whole library; Jellyfin only has
+                            them per item type, where `image_fetchers` in `type_options` enables the fetchers
+                            it lists. Jellyfin has no such library option, so setting it is an error.
+                            The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataFetchers:
+                          description: Disabled metadata fetchers for the whole library; Jellyfin only
+                            has them per item type, where `metadata_fetchers` in `type_options` enables
+                            the fetchers it lists. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledMetadataSavers:
+                          description: Disabled metadata savers; Jellyfin only has the enabled ones, which
+                            `metadata_savers` sets. Jellyfin has no such library option, so setting it
+                            is an error. The attribute will be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        disabledSubtitleFetchers:
+                          description: 'Disabled subtitle fetchers. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        downloadImagesInAdvance:
+                          description: Whether images are downloaded in advance. Jellyfin has no such
+                            library option, so setting it is an error. The attribute will be removed in
+                            a future release.
+                          type: boolean
+                        enableAutomaticSeriesGrouping:
+                          description: Whether automatic series grouping is enabled.
+                          type: boolean
+                        enableChapterImageExtraction:
+                          description: Whether chapter image extraction is enabled.
+                          type: boolean
+                        enableEmbyPhotos:
+                          description: Whether Emby photos are enabled. Jellyfin has no such library option,
+                            so setting it is an error. The attribute will be removed in a future release.
+                          type: boolean
+                        enableMediaConversion:
+                          description: Whether media conversion is enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotoSubtitle:
+                          description: Whether photo subtitles are enabled. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        enablePhotos:
+                          description: Whether photos are enabled.
+                          type: boolean
+                        enableRealtimeMonitor:
+                          description: Whether realtime monitoring is enabled.
+                          type: boolean
+                        enableTrickplayImageExtraction:
+                          description: Whether trickplay images, the previews shown while seeking, are
+                            extracted.
+                          type: boolean
+                        extractChaptersDuringLibraryScan:
+                          description: Whether chapter images are extracted during the library scan.
+                          type: boolean
+                        extractMediaInformationDuringLibraryScan:
+                          description: Whether media information is extracted during library scan. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          type: boolean
+                        extractTrickplayImagesDuringLibraryScan:
+                          description: Whether trickplay images are extracted during the library scan,
+                            instead of only by the trickplay scheduled task.
+                          type: boolean
+                        imageFetcherOrder:
+                          description: Image fetcher order for the whole library; Jellyfin only has it
+                            per item type, which `image_fetchers` in `type_options` sets. Jellyfin has
+                            no such library option, so setting it is an error. The attribute will be removed
+                            in a future release.
+                          items:
+                            type: string
+                          type: array
+                        importMissingEpisodes:
+                          description: Whether missing episodes are imported. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        localMetadataReaderOrder:
+                          description: Local metadata reader order.
+                          items:
+                            type: string
+                          type: array
+                        metadataCountryCode:
+                          description: Metadata country code.
+                          type: string
+                        metadataFetcherOrder:
+                          description: Metadata fetcher order for the whole library; Jellyfin only has
+                            it per item type, which `metadata_fetchers` in `type_options` sets. Jellyfin
+                            has no such library option, so setting it is an error. The attribute will
+                            be removed in a future release.
+                          items:
+                            type: string
+                          type: array
+                        metadataRefreshMode:
+                          description: Metadata refresh mode. Jellyfin has no such library option, so
+                            setting it is an error. The attribute will be removed in a future release.
+                          type: string
+                        metadataSavers:
+                          description: Enabled metadata savers, such as `Nfo`, which save metadata into
+                            the media folders.
+                          items:
+                            type: string
+                          type: array
+                        pathInfos:
+                          items:
+                            properties:
+                              networkPath:
+                                description: Network path. Jellyfin removed network paths, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                              path:
+                                description: Local path.
+                                type: string
+                              username:
+                                description: Username. Jellyfin has no such library option, so setting
+                                  it is an error. The attribute will be removed in a future release.
+                                type: string
+                            type: object
+                          type: array
+                        preferredMetadataLanguage:
+                          description: Preferred metadata language.
+                          type: string
+                        saveLocalMetadata:
+                          description: Whether local metadata is saved.
+                          type: boolean
+                        saveLocalThumbnailSets:
+                          description: Whether local thumbnail sets are saved. Jellyfin has no such library
+                            option, so setting it is an error. The attribute will be removed in a future
+                            release.
+                          type: boolean
+                        saveTrickplayWithMedia:
+                          description: Whether trickplay images are saved in the media folders, next to
+                            the media, instead of in Jellyfin's data folder.
+                          type: boolean
+                        seasonZeroDisplayName:
+                          description: Season zero display name.
+                          type: string
+                        subtitleFetcherOrder:
+                          description: 'Subtitle fetcher order. Deprecated: list the enabled subtitle
+                            fetchers in priority order in `subtitle_fetchers` instead, which disables
+                            the rest. It will be removed in a future release.'
+                          items:
+                            type: string
+                          type: array
+                        subtitleFetchers:
+                          description: 'Enabled subtitle fetchers, in priority order: Jellyfin asks the
+                            first one first and disables every other subtitle fetcher it offers. Subtitle
+                            fetchers come from plugins, such as Open Subtitles, and each name must match
+                            one the server offers exactly. Jellyfin enables a subtitle fetcher installed
+                            later, which then shows up as a change to this list. Conflicts with `disabled_subtitle_fetchers`
+                            and `subtitle_fetcher_order`, which it replaces.'
+                          items:
+                            type: string
+                          type: array
+                        typeOptions:
+                          items:
+                            properties:
+                              imageFetcherOrder:
+                                description: 'Image fetcher order for this type. Deprecated: list the
+                                  enabled image fetchers in priority order in `image_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `image_fetchers` changes. It will be removed
+                                  in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              imageFetchers:
+                                description: 'Enabled image fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `image_fetcher_order` is set,
+                                  changing the list also sets Jellyfin''s image fetcher order: these names,
+                                  then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              imageOptions:
+                                items:
+                                  properties:
+                                    limit:
+                                      description: Image limit.
+                                      type: number
+                                    minWidth:
+                                      description: Minimum image width in pixels.
+                                      type: number
+                                    type:
+                                      description: 'Image type: one of `Primary`, `Art`, `Backdrop`, `Banner`,
+                                        `Logo`, `Thumb`, `Disc`, `Box`, `Screenshot`, `Menu`, `Chapter`,
+                                        `BoxRear`, `Profile`.'
+                                      type: string
+                                  type: object
+                                type: array
+                              metadataFetcherOrder:
+                                description: 'Metadata fetcher order for this type. Deprecated: list the
+                                  enabled metadata fetchers in priority order in `metadata_fetchers` instead,
+                                  which then sets the order. Set, it still overrides that order; removed,
+                                  the order it set stays until `metadata_fetchers` changes. It will be
+                                  removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              metadataFetchers:
+                                description: 'Enabled metadata fetchers for this type, in priority order:
+                                  Jellyfin asks the first one first. Unless `metadata_fetcher_order` is
+                                  set, changing the list also sets Jellyfin''s metadata fetcher order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviderOrder:
+                                description: 'Similar item provider order for this type. Deprecated: list
+                                  the enabled similar item providers in priority order in `similar_item_providers`
+                                  instead, which then sets the order. Set, it still overrides that order;
+                                  removed, the order it set stays until `similar_item_providers` changes.
+                                  It will be removed in a future release.'
+                                items:
+                                  type: string
+                                type: array
+                              similarItemProviders:
+                                description: 'Enabled similar item providers for this type, in priority
+                                  order; Jellyfin always uses its local ones, such as Local Genre/Tag,
+                                  which the list only ranks. Unless `similar_item_provider_order` is set,
+                                  changing the list also sets Jellyfin''s similar item provider order:
+                                  these names, then the other names the server''s order held.'
+                                items:
+                                  type: string
+                                type: array
+                              type:
+                                description: Item type.
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    paths:
+                      description: Paths of the library's media folders. Jellyfin looks them up on the
+                        server, so when it runs in a container they must be paths inside the container.
+                        Changing the paths replaces the library; changing only their order does not.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          LastTransitionTime is the last time this condition transitioned from one
+                          status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          A Message containing details about this condition's last transition from
+                          one status to another, if any.
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        type: integer
+                      reason:
+                        description: A Reason for this condition's last transition from one status to
+                          another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: |-
+                          Type of this condition. At most one of each condition type may apply to
+                          a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                lastHandledReconcileAt:
+                  description: |-
+                    LastHandledReconcileAt holds the value of the most recent
+                    reconcile-requested-at annotation token that the controller has
+                    processed. Users can compare this to the annotation to determine
+                    whether a reconcile request has been handled.
+                  type: string
+                observedGeneration:
+                  description: |-
+                    ObservedGeneration is the latest metadata.generation
+                    which resulted in either a ready state, or stalled due to error
+                    it can not recover from without human intervention.
+                  format: int64
+                  type: integer
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

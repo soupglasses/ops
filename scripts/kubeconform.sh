@@ -50,6 +50,11 @@ helm template schema "$REPO_ROOT/charts/ldap-provider" --include-crds \
     | yq eval-all -o=json -I=0 '[.]' - \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
+yq eval-all -o=json -I=0 '[.]' \
+    "$REPO_ROOT/packages/provider-jellyfin/package/crds/"*.yaml \
+    "$REPO_ROOT/kubernetes/apps/media/jellyfin/provider/pluginsettings.yaml" \
+    | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
+
 # The community catalog omits CRDs themselves; validate those against the
 # selected Kubernetes release's own OpenAPI definitions.
 if grep -q '^kind: CustomResourceDefinition$' "$@"; then

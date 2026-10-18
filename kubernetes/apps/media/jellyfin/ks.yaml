@@ -133,3 +133,55 @@ spec:
   retryInterval: 2m
   timeout: 5m
   prune: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin-provider
+  namespace: media
+spec:
+  path: ./kubernetes/apps/media/jellyfin/provider
+  dependsOn:
+    - name: crossplane
+      namespace: crossplane-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  healthChecks:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      name: jellyfin
+  healthCheckExprs:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin-settings
+  namespace: media
+spec:
+  path: ./kubernetes/apps/media/jellyfin/settings
+  targetNamespace: media
+  dependsOn:
+    - name: jellyfin
+      namespace: media
+    - name: jellyfin-provider
+      namespace: media
+    - name: ldap-provider
+      namespace: identity
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true

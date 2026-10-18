@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: jellyfin.ops.finnes.dev/v1beta1
+kind: ProviderConfig
+metadata:
+  name: jellyfin
+spec:
+  endpoint: http://jellyfin.media.svc.cluster.local:8096
+  username: ops-recovery
+  passwordSecretRef:
+    name: jellyfin-identity
+    key: JELLYFIN_ADMIN_PASSWORD

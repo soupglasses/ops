@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-jellyfin
+spec:
+  crossplane:
+    version: ">=v2.4.0-0"

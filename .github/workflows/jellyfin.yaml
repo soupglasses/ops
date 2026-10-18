@@ -6,11 +6,13 @@ on:
   pull_request:
     paths:
       - "packages/jellyfin-runtime/**"
+      - "packages/provider-jellyfin/**"
       - ".github/workflows/jellyfin.yaml"
   push:
     branches: [main]
     paths:
       - "packages/jellyfin-runtime/**"
+      - "packages/provider-jellyfin/**"
       - ".github/workflows/jellyfin.yaml"
   workflow_dispatch:
 permissions:
@@ -28,20 +30,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Test runtime and settings reconciliation
+      - name: Test runtime recovery
         run: |
           python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
-          python3 -m unittest discover -s packages/jellyfin-runtime -p test_configuration.py -v
       - name: Build pinned Jellyfin and plugins
         env:
           GH_TOKEN: ${{ github.token }}
         run: packages/jellyfin-runtime/build.sh ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha
           }}
-      - name: Test LDAP password login and upstream profile images
+      - name: Build generated provider integration driver
+        run: docker build --target tests -t ops-jellyfin-provider-tests packages/provider-jellyfin
+      - name: Test LDAP login and photos through Upjet
         env:
           JELLYFIN_INTEGRATION_IMAGE: ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
-        run: |
-          python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py -v
+          JELLYFIN_PROVIDER_TEST_IMAGE: ops-jellyfin-provider-tests
+        run: python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py
+          -v
       - name: Publish
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:

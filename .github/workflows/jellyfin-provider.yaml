@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Jellyfin provider
+on:
+  pull_request:
+    paths:
+      - "packages/provider-jellyfin/**"
+      - "kubernetes/apps/media/jellyfin/provider/**"
+      - "kubernetes/apps/media/jellyfin/settings/**"
+      - ".github/workflows/jellyfin-provider.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/provider-jellyfin/**"
+      - "kubernetes/apps/media/jellyfin/provider/**"
+      - "kubernetes/apps/media/jellyfin/settings/**"
+      - ".github/workflows/jellyfin-provider.yaml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jellyfin-provider-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Crossplane CLI
+        run: |
+          curl -fsSL https://cli.crossplane.io/stable/v2.5.0/bin/linux_amd64/crossplane -o /tmp/crossplane
+          echo '065dd6b40c9ea5fc71e49900d5c924cc0bec7f58375922ddbde6b402f292347e  /tmp/crossplane' | sha256sum --check
+          sudo install /tmp/crossplane /usr/local/bin/crossplane
+      - name: Install Helm and kubectl
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.10
+          install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq
+      - name: Install pinned kind
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.33.0 --repo kubernetes-sigs/kind --pattern kind-linux-amd64 --dir /tmp
+          echo 'aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  /tmp/kind-linux-amd64' | sha256sum --check
+          sudo install /tmp/kind-linux-amd64 /usr/local/bin/kind
+      - name: Build and test the native provider package
+        run: bash packages/provider-jellyfin/build.sh /tmp/provider-jellyfin.xpkg
+      - name: Verify generated schemas are reproducible
+        run: |
+          docker build --target generated --output type=local,dest=/tmp/jellyfin-generated packages/provider-jellyfin
+          diff -r packages/provider-jellyfin/package/crds /tmp/jellyfin-generated/generated/crds
+          diff packages/provider-jellyfin/config/schema.json /tmp/jellyfin-generated/generated/schema.json
+      - name: Install native provider and verify namespace scope
+        env:
+          PROVIDER_PACKAGE: /tmp/provider-jellyfin.xpkg
+        run: bash packages/provider-jellyfin/kind-test.sh
+      - name: Render plugin settings with synthetic credentials
+        run: python3 packages/provider-jellyfin/tests/verify_composition.py
+      - name: Publish
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          crossplane xpkg push --package-files /tmp/provider-jellyfin.xpkg --oci-annotation org.opencontainers.image.revision=${{ github.sha }} ghcr.io/soupglasses/ops/provider-jellyfin:v0.1.0-${{ github.sha }}

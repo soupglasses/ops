@@ -13,6 +13,31 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LocalSchemaTests(unittest.TestCase):
+    def test_generated_jellyfin_schema_rejects_non_boolean_network_setting(self):
+        resource = {"apiVersion": "jellyfin.ops.finnes.dev/v1alpha1",
+                    "kind": "NetworkingConfiguration", "metadata": {"name": "jellyfin"},
+                    "spec": {"managementPolicies": ["Observe"],
+                             "providerConfigRef": {"kind": "ProviderConfig", "name": "jellyfin"},
+                             "forProvider": {"enableRemoteAccess": True}}}
+        valid = self.validate(resource)
+        self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
+        resource["spec"]["forProvider"]["enableRemoteAccess"] = "enabled"
+        invalid = self.validate(resource)
+        self.assertNotEqual(invalid.returncode, 0)
+        self.assertIn("enableRemoteAccess", invalid.stdout + invalid.stderr)
+
+    def test_plugin_settings_schema_requires_secret_key(self):
+        resource = {"apiVersion": "jellyfin.ops.finnes.dev/v1alpha1",
+                    "kind": "PluginSettings", "metadata": {"name": "ldap"},
+                    "spec": {"providerConfigRef": {"name": "jellyfin"}, "pluginID": "plugin",
+                             "configuration": {}, "secretValues": {"LdapBindPassword": {"name": "credentials", "key": "password"}}}}
+        valid = self.validate(resource)
+        self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
+        del resource["spec"]["secretValues"]["LdapBindPassword"]["key"]
+        invalid = self.validate(resource)
+        self.assertNotEqual(invalid.returncode, 0)
+        self.assertIn("key", invalid.stdout + invalid.stderr)
+
     def validate(self, resource):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "resource.yaml"

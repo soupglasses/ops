@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+/apis/cluster/
+/apis/namespaced/jellyfin/
+/apis/namespaced/zz_register.go
+/apis/namespaced/v1beta1/zz_*
+/internal/controller/
+/generated/
+/examples-generated/
+/bin/
+*.xpkg
