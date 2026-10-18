@@ -6,9 +6,9 @@ SPDX-License-Identifier: 0BSD
 
 # Jellyfin Upjet handoff
 
-Updated 2026-10-18. Resume the remaining cleanup from this document before changing
-plugin installation. The application settings migration is implemented; plugin
-binary installation remains a separate follow-up.
+Updated 2026-10-18. The application settings migration and legacy ConfigMap cleanup
+are complete. Keep plugin binaries in the tested runtime image and settings in
+Crossplane; Renovate now tracks the release/checksum and runtime image pins.
 
 ## Agreed design
 
@@ -36,8 +36,11 @@ Source: `b34cb7b705eb87f6317c40f0811e4c82275896a7`.
 [Publication CI](https://github.com/soupglasses/ops/actions/runs/39091069770) passed.
 
 Slim application runtime:
-`ghcr.io/soupglasses/ops/jellyfin-runtime@sha256:eff7a6ebc2609f6b6b2c5322e00971694d778b0d2c6467466b441def4cd39b88`.
-Source: `6616498b8e60da44171dc4582c562cc33b5f714b`.
+`ghcr.io/soupglasses/ops/jellyfin-runtime:12.2@sha256:ad1775c9eaae3cf8a07d8fe67f537ab865d2b0f1f48d080f545a922df21c4ccc`.
+Source: `a8debf8900c643b31882cf082e8fb954f070ed06`.
+[Runtime integration/publication](https://github.com/soupglasses/ops/actions/runs/39119309616)
+and [native provider checks](https://github.com/soupglasses/ops/actions/runs/39119309624)
+passed before this pin.
 Both images were anonymously pullable. Source and build recipes are in this repo.
 
 1. Published and installed the native package with all settings Observe-only.
@@ -61,38 +64,39 @@ Both images were anonymously pullable. Source and build recipes are in this repo
    that exact revision, including strict settings Ready/Synced health. Private
    HTTPS and the unchanged server identity were verified again.
 
-The namespace correction is live: the provider Kustomization is Ready/Healthy,
-its inventory contains `media_jellyfin-configuration__ConfigMap`, and the unused
-ConfigMap's Flux owner is `jellyfin-provider`. Only its final pruning remains.
+The namespace correction allowed adoption into the provider pruning inventory.
+At `a8debf8`, Flux pruned the unused ConfigMap; absence was verified. All three
+Jellyfin Kustomizations remained Ready/Healthy.
 
 Independent security and resilience reviews approved the staged handoff and exact
 ConfigMap cleanup. Keep the ordering: adoption, sidecar retirement, then writes.
 The configuration sidecar's source, tests, dependencies and obsolete documentation
 were removed. The runtime retains plugin seeding and checkpoint utilities.
 
-## Remaining cleanup
+## Plugin and delivery decisions
 
-1. Confirm `jellyfin`, `jellyfin-provider` and `jellyfin-settings` are Ready/Healthy
-   at or after `2db8596`. Confirm settings have Ready and Synced conditions and
-   management policies Observe/Create/Update. The current assigned credential
-   cannot directly read the generated Jellyfin CRDs; strict Flux health expressions
-   cover SystemConfiguration, NetworkingConfiguration, BrandingConfiguration,
-   Library and PluginSettings. Do not mistake package Healthy for settings health.
-2. Confirm the provider Kustomization inventory contains
-   `media_jellyfin-configuration__ConfigMap` and the ConfigMap's Flux owner is
-   `jellyfin-provider`. It must have no pod references. App pruning is deliberately
-   false; do not enable it globally to remove this object.
-3. Remove only `provider/legacy-configuration.yaml` and its entry in
-   `provider/kustomization.yaml`. Validate, commit and push. Flux will prune the
-   unused ConfigMap through the provider Kustomization's existing `prune: true`.
-   Verify NotFound afterward. Leave no temporary cleanup resource.
-4. Finalize the rollout entry in `docs/application-reconciliation.md` and the
-   application reconciliation checkbox in `TODO.md` against live evidence.
-5. Plugin binaries are still seeded by the runtime. Before using Plugin,
-   PluginRepository or ScheduledTask for installation, remove competing seeding
-   and prove repository ordering, replacement semantics, updates and restart/load
-   behavior. An Update-only policy may not support version changes that require
-   replacement. This optional work was not started today.
+Plugin installation stays in the runtime image. The provider can require
+replacement for a version change, and newly installed plugins need a restart
+before configuration. A tested image deploys the compatible server/plugin pair
+through Kubernetes without another install/restart/configuration lifecycle.
+Do not add competing managed Plugin resources for these binaries.
+
+Renovate tracks the LDAP release and archive checksum together. The build verifies
+the checksum and reads the directory version from the verified archive metadata.
+CI publishes source-SHA and server-version tags only after real LDAP tests pass;
+deployments use the discoverable version tag plus an immutable digest. See the
+[plugin update policy](../packages/jellyfin-runtime/README.md#plugin-updates).
+
+The CI workflow runs cheap rendering first and skips unchanged provider builds for
+settings/composition edits. Flux retains all dependencies with a five-second retry.
+The observed dependency chain fell from 176.5s to 22.4s. Persistent BuildKit cache
+is the next source-change CI improvement; see
+[timing evidence and options](jellyfin-delivery-performance.md).
+
+For future verification, require `jellyfin`, `jellyfin-provider`, and
+`jellyfin-settings` Ready/Healthy. The assigned credential cannot read the generated
+Jellyfin CRDs directly; strict Flux expressions require both Ready and Synced for
+all expected settings kinds. Package Healthy alone does not establish settings health.
 
 ## Verification and access
 
@@ -108,8 +112,7 @@ mise exec -- env KUBECONFIG="$KUBECONFIG" kubectl -n media get \
   kustomizations jellyfin jellyfin-provider jellyfin-settings
 mise exec -- env KUBECONFIG="$KUBECONFIG" kubectl -n media get pods -l app=jellyfin
 mise exec -- env KUBECONFIG="$KUBECONFIG" kubectl -n media get \
-  configmap jellyfin-configuration \
-  -o jsonpath='{.metadata.labels.kustomize\.toolkit\.fluxcd\.io/name}{"\n"}'
+  configmap jellyfin-configuration --ignore-not-found -o name
 mise exec -- env KUBECONFIG="$KUBECONFIG" kubectl -n media get \
   kustomization jellyfin-provider -o jsonpath='{.status.inventory.entries}'
 curl --fail --silent --show-error --max-time 10 \

@@ -312,9 +312,10 @@ the temporary legacy ConfigMap's namespace. Private HTTPS remained healthy.
 Independent security and
 resilience reviews approved this staged sequence. Existing PVCs and the current
 storage policy were preserved. Plugin settings now use Crossplane; binary plugin
-installation remains image-seeded until its replacement and restart lifecycle is
-separately proven.
+installation remains image-seeded by design, with Renovate-managed release/checksum
+pins and tested runtime tag/digest updates. See the
+[plugin update policy](../packages/jellyfin-runtime/README.md#plugin-updates).
 
-The unused legacy ConfigMap is adopted into the provider's pruning inventory;
-its removal is the remaining cleanup. Resume from the
+The unused legacy ConfigMap was adopted into the provider's pruning inventory and
+pruned at `a8debf8`. Resume from the
 [handoff document](jellyfin-upjet-handoff.md).

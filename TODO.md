@@ -16,14 +16,18 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   non-destructive provider writes. Security/resilience reviews, kind reconciliation,
   real LDAP/checkpoint fixtures and live identity checks passed. See
   [rollout evidence](docs/application-reconciliation.md#jellyfin-native-provider-rollout).
-- [ ] Prune the unused Jellyfin configuration ConfigMap through the provider's
-  adopted Flux inventory. Resume from [the handoff](docs/jellyfin-upjet-handoff.md).
-- [ ] Hand Jellyfin LDAP plugin installation over to the provider after removing
-  image seeding and proving repository, update-schedule and restart ordering.
-  The runtime currently overwrites plugin binaries on every start; adding a
-  competing managed Plugin before removing that behavior would be unsafe.
-  Upstream plugin version changes can require replacement; prove that lifecycle
-  explicitly before relying on an Update-only policy for plugin upgrades.
+- [x] Prune the unused Jellyfin configuration ConfigMap through the provider's
+  adopted Flux inventory. Deletion verified after `a8debf8`.
+- [x] Keep Jellyfin plugin binaries in the tested, pinned runtime image and settings
+  in Crossplane. Renovate tracks release/checksum pairs and runtime tag/digest
+  updates; avoid adding replacement/restart ordering through managed Plugin resources.
+  See [plugin update policy](packages/jellyfin-runtime/README.md#plugin-updates).
+- [x] Reduce unnecessary Jellyfin CI builds and Flux dependency waiting. The observed
+  dependency chain fell from 176.5s to 22.4s with five-second retries. See
+  [measurements and remaining options](docs/jellyfin-delivery-performance.md).
+- [ ] Add persistent BuildKit cache across provider/runtime CI runs, preserving
+  local image loading and generated-output targets. Cold Go builds remain the
+  largest source-change CI cost.
 
 - [x] Add structured Jellyfin reconciliation diagnostics: successful write counts,
   API resources, changed field names, library operations and request failure context.

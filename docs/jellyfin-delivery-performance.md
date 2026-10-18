@@ -43,6 +43,14 @@ often, increasing controller/cache/status/event work while dependencies are bloc
 This does not apply every workload six times as often. Watch controller readiness,
 restarts, error logs and resource use after rollout.
 
+The first live rollout with this setting, `a8debf8`, finished Crossplane at
+10:28:32.421 and Jellyfin settings at 10:28:54.791: 22.4 seconds across the same
+dependency chain, compared with 176.5 seconds in the earlier observation. Logs
+confirmed five-second retries, and individual reconciliations remained below one
+second. All three Jellyfin Kustomizations were Ready/Healthy. Controller usage was
+58 millicores and 84 MiB; without an earlier CPU sample this does not quantify the
+load increase. This is one observed rollout, not a universal speedup guarantee.
+
 ## Further improvements
 
 1. Add persistent BuildKit cache across runs, with distinct scopes for provider and
