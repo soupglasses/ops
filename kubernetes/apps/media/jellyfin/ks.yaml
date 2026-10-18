@@ -151,3 +151,29 @@ spec:
   timeout: 5m
   prune: true
   wait: true
+  healthCheckExprs:
+    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+      kind: SystemConfiguration
+      current: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
+        c.type == 'Synced' && c.status == 'True')
+    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+      kind: NetworkingConfiguration
+      current: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
+        c.type == 'Synced' && c.status == 'True')
+    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+      kind: BrandingConfiguration
+      current: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
+        c.type == 'Synced' && c.status == 'True')
+    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+      kind: Library
+      current: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
+        c.type == 'Synced' && c.status == 'True')
+    - apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+      kind: PluginSettings
+      current: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True') && status.conditions.exists(c,
+        c.type == 'Synced' && c.status == 'True')
