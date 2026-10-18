@@ -11,7 +11,7 @@ spec:
     kind: OAuth2Client
     plural: oauth2clients
   defaultCompositionRef:
-    name: oauth2client-canaille-ldap
+    name: oauth2client-ldap
   versions:
     - name: v1alpha1
       served: true
@@ -123,7 +123,7 @@ spec:
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: oauth2client-canaille-ldap
+  name: oauth2client-ldap
 spec:
   compositeTypeRef:
     apiVersion: ops.finnes.dev/v1alpha1

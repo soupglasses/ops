@@ -27,6 +27,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Install fixture dependencies
+        run: python3 -m pip install 'PyYAML==6.0.3'
       - name: Test native OpenLDAP access policy with the stock image
         env:
           OPENLDAP_ACCESS_TEST: "1"

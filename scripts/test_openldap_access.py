@@ -11,10 +11,6 @@ import time
 import unittest
 import uuid
 
-IMAGE = (
-    "docker.io/nfrastack/openldap:2.6-8.1.1@sha256:"
-    "5e5c8fdd1d7e3a9623500839699b258d0569bf965528b85c682ec5d0902f5d6c"
-)
 SOURCE = Path(__file__).resolve().parents[1] / "kubernetes/apps/identity/openldap/app"
 BASE = "dc=finnes,dc=dev"
 ADMIN = "cn=fixture-admin," + BASE
@@ -68,6 +64,14 @@ def attributes(output, name):
 )
 class NativeAccess(unittest.TestCase):
     def setUp(self):
+        import yaml
+
+        deployment = yaml.safe_load((SOURCE / "deployment.yaml").read_text())
+        self.image = next(
+            container["image"]
+            for container in deployment["spec"]["template"]["spec"]["containers"]
+            if container["name"] == "openldap"
+        )
         self.prefix = "ops-native-ldap-" + uuid.uuid4().hex[:10]
         self.volumes = {}
         for purpose in ("data", "db", "source"):
@@ -88,7 +92,7 @@ class NativeAccess(unittest.TestCase):
             *self.mounts(readonly_source=False),
             "--entrypoint",
             "/bin/sh",
-            IMAGE,
+            self.image,
             "-ec",
             "mkdir -p /data/config; chown -R 389:389 /data; sleep infinity",
         )
@@ -162,7 +166,7 @@ overlay memberof
             "/run/openldap:rw,uid=389,gid=389,mode=0750",
             "--entrypoint",
             "/bin/sh",
-            IMAGE,
+            self.image,
             "-ec",
             "mkdir -p /run/openldap/run; sleep infinity",
         )
@@ -308,7 +312,7 @@ member: uid=charlie,ou=users,{BASE}
             *self.mounts(alias),
             "--entrypoint",
             "/bin/sh",
-            IMAGE,
+            self.image,
             "/source/configure-access.sh",
         ]
 
