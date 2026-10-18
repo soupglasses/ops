@@ -66,35 +66,40 @@ jobs:
           if-no-files-found: ignore
 
       - name: Prepare diff summary
+        id: diff-summary
         if: always() && github.event_name == 'pull_request'
         env:
           DIFF_ARTIFACT_URL: ${{ steps.diff-artifact.outputs.artifact-url }}
           DIFF_OUTCOME: ${{ steps.render-diff.outcome }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          echo "has-diff=false" >> "$GITHUB_OUTPUT"
           if [ "$DIFF_OUTCOME" != success ]; then
             echo "Rendered diff failed. Check the Diff step before reviewing this pull request." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           if [ ! -s diff.txt ]; then
-            echo "No rendered Flux diff." >> "$GITHUB_STEP_SUMMARY"
+            echo "No rendered Flux diff." > body.md
+            cat body.md >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           test -n "$DIFF_ARTIFACT_URL"
 
           python3 scripts/flate-diff-summary.py \
             diff.txt diff-unified.txt "$DIFF_ARTIFACT_URL" > body.md
+          if grep -q '^--- ' diff-unified.txt; then
+            echo "has-diff=true" >> "$GITHUB_OUTPUT"
+            printf '\nCommit: [`%.12s`](%s/%s/commit/%s)\n' \
+              "$PR_HEAD_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$PR_HEAD_SHA" >> body.md
+          fi
           cat body.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on pull request
         if: >-
-          always() && steps.render-diff.outcome == 'success' && github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if [ ! -s diff.txt ]; then
-            exit 0
-          fi
-
-          gh pr comment "$PR_NUMBER" --body-file body.md
+          always() && steps.render-diff.outcome == 'success' && steps.diff-summary.outcome == 'success'
+          && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2.9.4
+        with:
+          header: flate-diff
+          path: body.md
+          delete: ${{ steps.diff-summary.outputs.has-diff != 'true' }}

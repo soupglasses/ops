@@ -11,8 +11,8 @@ unrelated changes, and stage explicit paths.
 
 ## Delivery and verification
 
-- Use repository-managed tools through `mise exec -- ...`. Commit with
-  `mise exec -- git commit ...` so hooks can find their tools.
+- Use `mise exec -- ...` for tools managed by the repository's Mise configuration.
+  Run other commands, including `git` and `gh`, directly.
 - For manifest changes, run `task flate:test` and inspect `task flate:diff` before
   shipping. Use `BASE=origin/main` when comparing a branch. These tasks align local
   rendering with CI, including CRDs and the Kubernetes version.
