@@ -32,8 +32,10 @@ spec:
 ```
 
 The shared backend defaults to `directory`. Namespace labels and allowed LDAP
-bases restrict its use; shared entries use namespace-prefixed names. Groups default
-to `ou=groups`, service accounts to `ou=system`, under our directory suffix.
+bases restrict its use; shared entries use namespace-prefixed names. The runtime
+has read-only namespace access to evaluate these labels, which Crossplane's default
+provider permissions do not include. Groups default to `ou=groups`, service accounts
+to `ou=system`, under our directory suffix.
 `backendRef` and `baseDN` allow explicit alternatives. Group and service-account
 name or base changes rename the same LDAP entry through its stable UUID.
 

@@ -78,10 +78,11 @@ helm upgrade --install crossplane crossplane --repo https://charts.crossplane.io
     --set 'args[0]=--poll-interval=2s' --wait --timeout 4m
 # Reuse production runtime and compositions, changing only fixture addresses.
 kubectl kustomize "$repo_dir/kubernetes/apps/identity/ldap-provider/app" > "$work_dir/production.yaml"
-yq 'select(.kind == "Provider" or .kind == "DeploymentRuntimeConfig")' "$work_dir/production.yaml" > "$work_dir/provider.yaml"
+yq 'select(.kind == "Provider" or .kind == "DeploymentRuntimeConfig" or .kind == "ClusterRole" or .kind == "ClusterRoleBinding")' "$work_dir/production.yaml" > "$work_dir/provider.yaml"
 PROVIDER_REFERENCE="$provider_package" yq -i '(select(.kind == "Provider") | .spec.package) = strenv(PROVIDER_REFERENCE) | (select(.kind == "DeploymentRuntimeConfig" and .metadata.name == "ldap") | .spec.deploymentTemplate.spec.template.spec.containers[0].args) = ["--poll-interval=2s"]' "$work_dir/provider.yaml"
 kubectl apply --filename "$work_dir/provider.yaml"
 kubectl wait provider/ldap --for=condition=Healthy --timeout=180s
+kubectl auth can-i get namespaces --as=system:serviceaccount:crossplane-system:ldap-provider --quiet
 kubectl wait crd/entries.ldap.finnes.dev --for=condition=Established --timeout=90s
 yq 'select(.kind == "CompositeResourceDefinition" or .kind == "Composition" or .kind == "Function")' "$work_dir/production.yaml" | sed 's/dc=finnes,dc=dev/dc=example,dc=test/g' > "$work_dir/compositions.yaml"
 kubectl apply --filename "$work_dir/compositions.yaml"
