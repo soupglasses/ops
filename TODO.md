@@ -10,16 +10,20 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
 
 ## Application reconciliation
 
-- [ ] Roll out the Jellyfin Upjet replacement after publishing and pinning the
-  provider image,
-  and satisfying security/resilience review. Reuse the existing `ops-recovery`
-  administrator. Verify observe-only adoption before
-  handing writes over from the sidecar. Local generated-connector tests and Flux
-  validation pass; live adoption and recovery evidence are still required.
+- [x] Replace Jellyfin's configuration sidecar with a native Crossplane v2 Upjet
+  package and namespaced application settings, reusing `ops-recovery`.
+  Observe-only adoption passed before retiring the sidecar and enabling
+  non-destructive provider writes. Security/resilience reviews, kind reconciliation,
+  real LDAP/checkpoint fixtures and live identity checks passed. See
+  [rollout evidence](docs/application-reconciliation.md#jellyfin-native-provider-rollout).
+- [ ] Prune the unused Jellyfin configuration ConfigMap through the provider's
+  adopted Flux inventory. Resume from [the handoff](docs/jellyfin-upjet-handoff.md).
 - [ ] Hand Jellyfin LDAP plugin installation over to the provider after removing
   image seeding and proving repository, update-schedule and restart ordering.
   The runtime currently overwrites plugin binaries on every start; adding a
   competing managed Plugin before removing that behavior would be unsafe.
+  Upstream plugin version changes can require replacement; prove that lifecycle
+  explicitly before relying on an Update-only policy for plugin upgrades.
 
 - [x] Add structured Jellyfin reconciliation diagnostics: successful write counts,
   API resources, changed field names, library operations and request failure context.

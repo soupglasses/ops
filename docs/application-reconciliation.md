@@ -279,3 +279,42 @@ through the installed controller, verifying observation without writes, desired
 updates and drift correction while preserving users and unspecified settings.
 Rollout and package evidence is tracked in
 [issue 110](https://github.com/soupglasses/ops/issues/110).
+
+### Jellyfin native provider rollout
+
+On 2026-10-18, the native Crossplane 2.4.2 package replaced the settings sidecar.
+The provider embeds the pinned Terraform provider ownership fix and exposes
+namespaced APIs; settings remain beside the Jellyfin app manifests. It reuses the
+existing `ops-recovery` administrator. No additional account or secret was created.
+
+The corrected package is
+`ghcr.io/soupglasses/ops/provider-jellyfin@sha256:df798c6aedf296135b3239666236ab8f33c2157909dceb90a003b11682fa95f0`,
+built from `b34cb7b705eb87f6317c40f0811e4c82275896a7`.
+[Publication CI](https://github.com/soupglasses/ops/actions/runs/39091069770)
+passed generated-schema reproduction, connector tests, native installation under
+restricted Pod Security, real controller reconciliation in kind, and composition
+rendering with synthetic credentials. The controller observed settings without
+writes, applied desired values, corrected drift, and preserved existing users.
+The disposable kind cluster was deleted.
+
+Live adoption first passed strict Ready and Synced checks for all expected settings,
+libraries and the LDAP composition under Observe-only policies. After upgrading the
+provider, the temporary Secret-selector migration reference was removed and the same
+checks passed again at `1c878626efd2f060e295eaac4720173900c1fd6d`.
+The sidecar retired at `25259821d937b6acde176cf594c5536691563b97`; the replacement
+single-container pod became healthy with unchanged server identity, version and
+completed setup. Its desired-settings and credential mounts are absent.
+
+`bba29dd84757bb4eb5b31e43b1fdc8a78e07dfff` enabled Observe/Create/Update after
+retirement. Delete remains excluded. Flux's strict settings health checks passed
+under the new writer at `2db8596c10f17fc5f91f971167cfcade4079ddbb`, after correcting
+the temporary legacy ConfigMap's namespace. Private HTTPS remained healthy.
+Independent security and
+resilience reviews approved this staged sequence. Existing PVCs and the current
+storage policy were preserved. Plugin settings now use Crossplane; binary plugin
+installation remains image-seeded until its replacement and restart lifecycle is
+separately proven.
+
+The unused legacy ConfigMap is adopted into the provider's pruning inventory;
+its removal is the remaining cleanup. Resume from the
+[handoff document](jellyfin-upjet-handoff.md).
