@@ -19,7 +19,7 @@ rules:
   - apiGroups: [ldap.finnes.dev]
     resources: [entries, providerconfigs]
     verbs: [get, list, watch, create, update, patch, delete]
-  - apiGroups: [identity.ops.finnes.dev]
+  - apiGroups: [ops.finnes.dev]
     resources: [oauth2clients, groupofnames, serviceaccounts]
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [""]

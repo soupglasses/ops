@@ -14,7 +14,7 @@ spec:
       key: connection.yaml
   namespaceSelector:
     matchLabels:
-      identity.ops.finnes.dev/backend: directory
+      ops.finnes.dev/backend: directory
   allowedBases:
     - ou=system,dc=finnes,dc=dev
     - ou=groups,dc=finnes,dc=dev

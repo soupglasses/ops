@@ -3,10 +3,10 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: oauth2clients.identity.ops.finnes.dev
+  name: oauth2clients.ops.finnes.dev
 spec:
   scope: Namespaced
-  group: identity.ops.finnes.dev
+  group: ops.finnes.dev
   names:
     kind: OAuth2Client
     plural: oauth2clients
@@ -126,7 +126,7 @@ metadata:
   name: oauth2client-canaille-ldap
 spec:
   compositeTypeRef:
-    apiVersion: identity.ops.finnes.dev/v1alpha1
+    apiVersion: ops.finnes.dev/v1alpha1
     kind: OAuth2Client
   mode: Pipeline
   pipeline:
@@ -173,7 +173,7 @@ spec:
               name: {{ $name }}
               namespace: {{ $namespace }}
               labels:
-                identity.ops.finnes.dev/client-uid: {{ $xr.metadata.uid | quote }}
+                ops.finnes.dev/client-uid: {{ $xr.metadata.uid | quote }}
               annotations:
                 {{ setResourceNameAnnotation "ldap-entry" }}
                 gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (not (empty (and $entry (eq (getResourceCondition "Ready" $entry).Status "True") (eq (getResourceCondition "Synced" $entry).Status "True") (eq (toString (dig "status" "atProvider" "observedGeneration" 0 $entry)) (toString $entry.metadata.generation)) (deepEqual $entry.spec.forProvider $parameters)))) | quote }}

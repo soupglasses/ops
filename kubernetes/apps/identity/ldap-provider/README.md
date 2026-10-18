@@ -13,7 +13,7 @@ application declarations.
 Keep declarations beside their application:
 
 ```yaml
-apiVersion: identity.ops.finnes.dev/v1alpha1
+apiVersion: ops.finnes.dev/v1alpha1
 kind: GroupOfNames
 metadata:
   name: jellyfin-users
@@ -22,7 +22,7 @@ spec:
   cn: media.jellyfin.user
   description: Users permitted to sign in to Jellyfin
 ---
-apiVersion: identity.ops.finnes.dev/v1alpha1
+apiVersion: ops.finnes.dev/v1alpha1
 kind: ServiceAccount
 metadata:
   name: jellyfin-bind

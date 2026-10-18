@@ -27,13 +27,13 @@ spec:
       name: function-go-templating
     - apiVersion: apiextensions.crossplane.io/v2
       kind: CompositeResourceDefinition
-      name: oauth2clients.identity.ops.finnes.dev
+      name: oauth2clients.ops.finnes.dev
     - apiVersion: apiextensions.crossplane.io/v2
       kind: CompositeResourceDefinition
-      name: groupofnames.identity.ops.finnes.dev
+      name: groupofnames.ops.finnes.dev
     - apiVersion: apiextensions.crossplane.io/v2
       kind: CompositeResourceDefinition
-      name: serviceaccounts.identity.ops.finnes.dev
+      name: serviceaccounts.ops.finnes.dev
   healthCheckExprs:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider

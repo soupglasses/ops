@@ -100,11 +100,11 @@ spec:
     PasswordResetUrl: ''
     LdapBindUser: uid=media.jellyfin,ou=system,dc=finnes,dc=dev
     LdapBaseDn: ou=users,dc=finnes,dc=dev
-    LdapSearchFilter: (|(memberOf=cn=jellyfin.user,ou=groups,dc=finnes,dc=dev)(memberOf=cn=jellyfin.admin,ou=groups,dc=finnes,dc=dev))
+    LdapSearchFilter: (|(memberOf=cn=media.jellyfin.user,ou=groups,dc=finnes,dc=dev)(memberOf=cn=media.jellyfin.admin,ou=groups,dc=finnes,dc=dev))
     LdapSearchAttributes: uid,mail
     LdapUidAttribute: uid
     LdapUsernameAttribute: uid
-    LdapAdminFilter: (memberOf=cn=jellyfin.admin,ou=groups,dc=finnes,dc=dev)
+    LdapAdminFilter: (memberOf=cn=media.jellyfin.admin,ou=groups,dc=finnes,dc=dev)
     CreateUsersFromLdap: true
     EnableAllFolders: true
     EnableLdapProfileImageSync: true

@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -45,23 +47,27 @@ func TestServiceAccountComposition(t *testing.T) {
 	}
 	ns := os.Getenv("POD_NAMESPACE")
 	name := fmt.Sprintf("service-%x", time.Now().UnixNano())
+	backendName := name
 	f := startLDAP(t)
 	if _, err := kube.CoreV1().Secrets(ns).Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name}, Data: connectionSecretData(os.Getenv("TEST_POD_IP"), f.port)}, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = kube.CoreV1().Secrets(ns).Delete(context.Background(), name, metav1.DeleteOptions{}) })
+	t.Cleanup(func() {
+		_ = kube.CoreV1().Secrets(ns).Delete(context.Background(), backendName, metav1.DeleteOptions{})
+	})
 	providers := dyn.Resource(schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1beta1", Resource: "providerconfigs"}).Namespace(ns)
 	pc := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "ldap.finnes.dev/v1beta1", "kind": "ProviderConfig", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": providerConnectionSpec(name, ns)}}
 	if _, err := providers.Create(ctx, pc, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = providers.Delete(context.Background(), name, metav1.DeleteOptions{}) })
-	accounts := dyn.Resource(schema.GroupVersionResource{Group: "identity.ops.finnes.dev", Version: "v1alpha1", Resource: "serviceaccounts"}).Namespace(ns)
-	xr := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "ServiceAccount", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": map[string]any{"cn": "service.original", "passwordPolicyDN": "", "baseDN": "ou=users," + baseDN, "backendRef": map[string]any{"kind": "ProviderConfig", "name": name}}}}
+	t.Cleanup(func() { _ = providers.Delete(context.Background(), backendName, metav1.DeleteOptions{}) })
+	accounts := dyn.Resource(schema.GroupVersionResource{Group: "ops.finnes.dev", Version: "v1alpha1", Resource: "serviceaccounts"}).Namespace(ns)
+	xr := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "ops.finnes.dev/v1alpha1", "kind": "ServiceAccount", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": map[string]any{"cn": "service.original", "passwordPolicyDN": "", "baseDN": "ou=users," + baseDN, "backendRef": map[string]any{"kind": "ProviderConfig", "name": name}}}}
 	if _, err := accounts.Create(ctx, xr, metav1.CreateOptions{FieldValidation: "Strict"}); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = accounts.Delete(context.Background(), name, metav1.DeleteOptions{}) })
+	originalName := name
+	t.Cleanup(func() { _ = accounts.Delete(context.Background(), originalName, metav1.DeleteOptions{}) })
 	var lastConditions []any
 	confirmed := func(rotation string) *corev1.Secret {
 		t.Helper()
@@ -89,7 +95,7 @@ func TestServiceAccountComposition(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			return secret.ResourceVersion == version && secret.Annotations["identity.ops.finnes.dev/rotation-id"] == rotation, nil
+			return secret.ResourceVersion == version && secret.Annotations["ops.finnes.dev/rotation-id"] == rotation, nil
 		})
 		if err != nil {
 			t.Fatalf("service-account confirmed credentials: %v; conditions=%v", err, lastConditions)
@@ -124,6 +130,68 @@ func TestServiceAccountComposition(t *testing.T) {
 	}
 	original := confirmed("")
 	uuid := verify(original, "service.original")
+	// Exercise composite replacement using retained resource references rather than
+	// generating a second credential or adopting a different LDAP object.
+	patch := func(resources dynamic.ResourceInterface, resourceName string, body map[string]any) {
+		t.Helper()
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := resources.Patch(ctx, resourceName, types.MergePatchType, encoded, metav1.PatchOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	patch(accounts, name, map[string]any{"metadata": map[string]any{"annotations": map[string]any{"crossplane.io/paused": "true"}}})
+	if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 20*time.Second, true, func(context.Context) (bool, error) {
+		paused, err := accounts.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		conditions, _, _ := unstructured.NestedSlice(paused.Object, "status", "conditions")
+		for _, raw := range conditions {
+			condition := raw.(map[string]any)
+			if condition["reason"] == "ReconcilePaused" {
+				return true, nil
+			}
+		}
+		return false, nil
+	}); err != nil {
+		t.Fatalf("old service-account reconcile did not pause: %v", err)
+	}
+	source, err := accounts.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	references, _, err := unstructured.NestedSlice(source.Object, "spec", "crossplane", "resourceRefs")
+	if err != nil || len(references) != 2 {
+		t.Fatal("expected generated Secret and Entry references")
+	}
+	sourceSpec, _, _ := unstructured.NestedMap(source.Object, "spec")
+	replacementName := name + "-adopted"
+	replacement := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "ops.finnes.dev/v1alpha1", "kind": "ServiceAccount", "metadata": map[string]any{"name": replacementName, "namespace": ns, "annotations": map[string]any{"crossplane.io/paused": "true"}}, "spec": sourceSpec}}
+	replacement, err = accounts.Create(ctx, replacement, metav1.CreateOptions{FieldValidation: "Strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = accounts.Delete(context.Background(), replacementName, metav1.DeleteOptions{}) })
+	for _, raw := range references {
+		ref := raw.(map[string]any)
+		resource := schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1alpha1", Resource: "entries"}
+		if ref["kind"] == "Secret" {
+			resource = schema.GroupVersionResource{Version: "v1", Resource: "secrets"}
+		}
+		metadata := map[string]any{"labels": map[string]any{"crossplane.io/composite": replacementName}, "ownerReferences": []any{map[string]any{"apiVersion": "ops.finnes.dev/v1alpha1", "kind": "ServiceAccount", "name": replacementName, "uid": string(replacement.GetUID()), "controller": true, "blockOwnerDeletion": true}}}
+		patch(dyn.Resource(resource).Namespace(ns), ref["name"].(string), map[string]any{"metadata": metadata})
+	}
+	patch(accounts, name, map[string]any{"spec": map[string]any{"crossplane": map[string]any{"resourceRefs": []any{}}}})
+	patch(accounts, replacementName, map[string]any{"metadata": map[string]any{"annotations": map[string]any{"crossplane.io/paused": nil}}})
+	name = replacementName
+	adopted := confirmed("")
+	if adopted.UID != original.UID || string(adopted.Data["password"]) != string(original.Data["password"]) || verify(adopted, "service.original") != uuid {
+		t.Fatal("composite replacement regenerated credentials or LDAP identity")
+	}
+
 	update := func(key, value string) {
 		t.Helper()
 		current, err := accounts.Get(ctx, name, metav1.GetOptions{})

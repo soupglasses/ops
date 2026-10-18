@@ -47,7 +47,7 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	ns := os.Getenv("POD_NAMESPACE")
 	name := fmt.Sprintf("group-%x", time.Now().UnixNano())
 	pcGVR := schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1beta1", Resource: "providerconfigs"}
-	xrGVR := schema.GroupVersionResource{Group: "identity.ops.finnes.dev", Version: "v1alpha1", Resource: "groupofnames"}
+	xrGVR := schema.GroupVersionResource{Group: "ops.finnes.dev", Version: "v1alpha1", Resource: "groupofnames"}
 	entryGVR := schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1alpha1", Resource: "entries"}
 	xrs := dyn.Resource(xrGVR).Namespace(ns)
 	f := startLDAP(t)
@@ -85,7 +85,7 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	}
 	uuid := uuidOf()
 	makeGroup := func(resourceName, cn string) *unstructured.Unstructured {
-		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "GroupOfNames", "metadata": map[string]any{"name": resourceName, "namespace": ns}, "spec": map[string]any{"backendRef": map[string]any{"kind": "ProviderConfig", "name": name}, "cn": cn, "description": "Managed description", "baseDN": "ou=groups," + baseDN, "sentinelDN": sentinel}}}
+		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "ops.finnes.dev/v1alpha1", "kind": "GroupOfNames", "metadata": map[string]any{"name": resourceName, "namespace": ns}, "spec": map[string]any{"backendRef": map[string]any{"kind": "ProviderConfig", "name": name}, "cn": cn, "description": "Managed description", "baseDN": "ou=groups," + baseDN, "sentinelDN": sentinel}}}
 	}
 	create := func(xr *unstructured.Unstructured) *unstructured.Unstructured {
 		t.Helper()

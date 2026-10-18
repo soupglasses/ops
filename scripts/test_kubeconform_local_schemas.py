@@ -60,7 +60,7 @@ class LocalSchemaTests(unittest.TestCase):
         self.assertIn("key", result.stdout + result.stderr)
 
     def test_composition_schema_rejects_unsupported_grant(self):
-        resource = {"apiVersion": "identity.ops.finnes.dev/v1alpha1",
+        resource = {"apiVersion": "ops.finnes.dev/v1alpha1",
                     "kind": "OAuth2Client", "metadata": {"name": "application"},
                     "spec": {"backendRef": {"name": "directory"}, "clientID": "media.application",
                              "redirectURIs": ["https://application.example.test/callback"],
@@ -73,7 +73,7 @@ class LocalSchemaTests(unittest.TestCase):
         self.assertIn("grantTypes", invalid.stdout + invalid.stderr)
 
     def test_group_of_names_schema_requires_valid_cn_without_human_members(self):
-        resource = {"apiVersion": "identity.ops.finnes.dev/v1alpha1",
+        resource = {"apiVersion": "ops.finnes.dev/v1alpha1",
                     "kind": "GroupOfNames", "metadata": {"name": "application-users"},
                     "spec": {"backendRef": {"name": "directory-admin", "kind": "ProviderConfig"},
                              "cn": "application.users"}}

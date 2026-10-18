@@ -32,7 +32,7 @@ spec:
               {{- $secretKey := printf "secret-%s" (sha256sum $field) -}}
               {{- if $ref.serviceAccountRef -}}
                 {{- $identityKey := printf "identity-%s" (sha256sum $field) -}}
-                {{- $_ := set $requirements $identityKey (dict "apiVersion" "identity.ops.finnes.dev/v1alpha1" "kind" "ServiceAccount" "matchName" $ref.serviceAccountRef.name "namespace" $namespace) -}}
+                {{- $_ := set $requirements $identityKey (dict "apiVersion" "ops.finnes.dev/v1alpha1" "kind" "ServiceAccount" "matchName" $ref.serviceAccountRef.name "namespace" $namespace) -}}
                 {{- $identities := dig $identityKey "items" (list) $extra -}}
                 {{- if ne (len $identities) 1 -}}
                   {{- $credentialsReady = false -}}

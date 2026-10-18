@@ -3,10 +3,10 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: groupofnames.identity.ops.finnes.dev
+  name: groupofnames.ops.finnes.dev
 spec:
   scope: Namespaced
-  group: identity.ops.finnes.dev
+  group: ops.finnes.dev
   names:
     kind: GroupOfNames
     plural: groupofnames
@@ -71,7 +71,7 @@ metadata:
   name: groupofnames-ldap
 spec:
   compositeTypeRef:
-    apiVersion: identity.ops.finnes.dev/v1alpha1
+    apiVersion: ops.finnes.dev/v1alpha1
     kind: GroupOfNames
   mode: Pipeline
   pipeline:
@@ -100,7 +100,7 @@ spec:
               name: {{ $name }}
               namespace: {{ $xr.metadata.namespace }}
               labels:
-                identity.ops.finnes.dev/group-uid: {{ $xr.metadata.uid | quote }}
+                ops.finnes.dev/group-uid: {{ $xr.metadata.uid | quote }}
               annotations:
                 {{ setResourceNameAnnotation "ldap-entry" }}
                 gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (not (empty (and $entry (eq (getResourceCondition "Ready" $entry).Status "True") (eq (getResourceCondition "Synced" $entry).Status "True") (eq (toString (dig "status" "atProvider" "observedGeneration" 0 $entry)) (toString $entry.metadata.generation)) (deepEqual $entry.spec.forProvider (dict "dn" (printf "cn=%s,%s" $spec.cn $spec.baseDN) "attributes" $attributes "sharedAttributes" (dict "objectClass" (list "groupOfNames") "member" (list $spec.sentinelDN))))))) | quote }}

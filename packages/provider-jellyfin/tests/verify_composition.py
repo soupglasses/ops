@@ -37,7 +37,7 @@ conditions = [{"type": kind, "status": "True"} for kind in ("Ready", "Synced")]
 
 def identity(version="7", ready=True):
     return {
-        "apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "ServiceAccount",
+        "apiVersion": "ops.finnes.dev/v1alpha1", "kind": "ServiceAccount",
         "metadata": {"name": reference["serviceAccountRef"]["name"], "namespace": "media"},
         "status": {
             "secretRef": {"name": "generated-bind-password", "resourceVersion": version},

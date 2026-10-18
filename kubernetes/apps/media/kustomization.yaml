@@ -15,4 +15,4 @@ patches:
       - op: add
         path: /metadata/labels
         value:
-          identity.ops.finnes.dev/backend: directory
+          ops.finnes.dev/backend: directory

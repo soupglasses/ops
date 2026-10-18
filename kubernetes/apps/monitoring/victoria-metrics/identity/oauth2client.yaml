@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
 
-apiVersion: identity.ops.finnes.dev/v1alpha1
+apiVersion: ops.finnes.dev/v1alpha1
 kind: OAuth2Client
 metadata:
   name: grafana

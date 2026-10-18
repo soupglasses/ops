@@ -7,7 +7,7 @@ replace: olcAccess
 olcAccess: {0}to dn.exact="uid=group-placeholder,ou=users,dc=finnes,dc=dev" attrs=userPassword by * none
 olcAccess: {1}to attrs=userPassword by self =w by anonymous auth by * none
 olcAccess: {2}to dn.base="ou=users,dc=finnes,dc=dev" attrs=entry,objectClass by dn.exact="uid=media.jellyfin,ou=system,dc=finnes,dc=dev" read by * break
-olcAccess: {3}to dn.subtree="ou=users,dc=finnes,dc=dev" filter="(|(memberOf=cn=jellyfin.user,ou=groups,dc=finnes,dc=dev)(memberOf=cn=jellyfin.admin,ou=groups,dc=finnes,dc=dev))" attrs=entry,objectClass,uid,cn,displayName,givenName,sn,mail,memberOf,jpegPhoto by dn.exact="uid=media.jellyfin,ou=system,dc=finnes,dc=dev" read by * break
+olcAccess: {3}to dn.subtree="ou=users,dc=finnes,dc=dev" filter="(|(memberOf=cn=media.jellyfin.user,ou=groups,dc=finnes,dc=dev)(memberOf=cn=media.jellyfin.admin,ou=groups,dc=finnes,dc=dev))" attrs=entry,objectClass,uid,cn,displayName,givenName,sn,mail,memberOf,jpegPhoto by dn.exact="uid=media.jellyfin,ou=system,dc=finnes,dc=dev" read by * break
 olcAccess: {4}to dn.base="dc=finnes,dc=dev" attrs=entry,objectClass,dc by group/groupOfNames/member.exact="cn=ldap-readers,ou=groups,dc=finnes,dc=dev" read by * none
 olcAccess: {5}to dn.subtree="ou=users,dc=finnes,dc=dev" attrs=entry,objectClass,uid,cn,sn,givenName,displayName,mail,memberOf,entryUUID,modifyTimestamp by group/groupOfNames/member.exact="cn=ldap-readers,ou=groups,dc=finnes,dc=dev" read by self read by * none
 olcAccess: {6}to dn.subtree="ou=groups,dc=finnes,dc=dev" attrs=entry,objectClass,cn,description,member,entryUUID,modifyTimestamp by group/groupOfNames/member.exact="cn=ldap-readers,ou=groups,dc=finnes,dc=dev" read by * none

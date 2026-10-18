@@ -41,14 +41,8 @@ patches:
           kind: ProviderConfig
           name: jellyfin
   - target:
-      group: identity.ops.finnes.dev
-      kind: GroupOfNames
+      group: ops.finnes.dev
     patch: |-
       - op: add
         path: /metadata/namespace
-        value: identity
-      - op: add
-        path: /spec/backendRef
-        value:
-          kind: ProviderConfig
-          name: directory-admin
+        value: media

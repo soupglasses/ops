@@ -87,9 +87,9 @@ kubectl wait crd/entries.ldap.finnes.dev --for=condition=Established --timeout=9
 yq 'select(.kind == "CompositeResourceDefinition" or .kind == "Composition" or .kind == "Function")' "$work_dir/production.yaml" | sed 's/dc=finnes,dc=dev/dc=example,dc=test/g' > "$work_dir/compositions.yaml"
 kubectl apply --filename "$work_dir/compositions.yaml"
 kubectl wait function/function-go-templating --for=condition=Healthy --timeout=180s
-kubectl wait crd/groupofnames.identity.ops.finnes.dev --for=condition=Established --timeout=90s
-kubectl wait crd/oauth2clients.identity.ops.finnes.dev --for=condition=Established --timeout=90s
-kubectl wait crd/serviceaccounts.identity.ops.finnes.dev --for=condition=Established --timeout=90s
+kubectl wait crd/groupofnames.ops.finnes.dev --for=condition=Established --timeout=90s
+kubectl wait crd/oauth2clients.ops.finnes.dev --for=condition=Established --timeout=90s
+kubectl wait crd/serviceaccounts.ops.finnes.dev --for=condition=Established --timeout=90s
 cp "$repo_dir/packages/identity-tests/tests/kubernetes.yaml" "$work_dir/tests.yaml"
 TESTS_IMAGE="$tests_image" TEST_PATTERN="$test_pattern" yq -i '(select(.kind == "Pod") | .spec.containers[0].image) = strenv(TESTS_IMAGE) | (select(.kind == "Pod") | .spec.containers[0].args[2]) = "-test.run=" + strenv(TEST_PATTERN)' "$work_dir/tests.yaml"
 kubectl apply --filename "$work_dir/tests.yaml"

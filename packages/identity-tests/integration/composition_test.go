@@ -59,7 +59,7 @@ func TestProviderReadiness(t *testing.T) {
 	}
 	groups := []string{"ldap.finnes.dev/v1alpha1", "ldap.finnes.dev/v1beta1"}
 	if os.Getenv("OAUTH2_ENABLED") == "true" || os.Getenv("GROUPS_ENABLED") == "true" {
-		groups = append(groups, "identity.ops.finnes.dev/v1alpha1")
+		groups = append(groups, "ops.finnes.dev/v1alpha1")
 	}
 	for _, group := range groups {
 		if _, err := kube.Discovery().ServerResourcesForGroupVersion(group); err != nil {
@@ -97,7 +97,7 @@ func TestOAuth2ClientComposition(t *testing.T) {
 	credentialsName := pcName + "-credentials"
 	pcGVR := schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1beta1", Resource: "providerconfigs"}
 	entryGVR := schema.GroupVersionResource{Group: "ldap.finnes.dev", Version: "v1alpha1", Resource: "entries"}
-	xrGVR := schema.GroupVersionResource{Group: "identity.ops.finnes.dev", Version: "v1alpha1", Resource: "oauth2clients"}
+	xrGVR := schema.GroupVersionResource{Group: "ops.finnes.dev", Version: "v1alpha1", Resource: "oauth2clients"}
 	xrs := dyn.Resource(xrGVR).Namespace(ns)
 	patchSpec := func(resources dynamic.ResourceInterface, name string, spec map[string]any) {
 		t.Helper()
@@ -135,7 +135,7 @@ func TestOAuth2ClientComposition(t *testing.T) {
 		} else {
 			spec["clientSecretRef"] = map[string]any{"name": credential, "key": "client-secret"}
 		}
-		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "identity.ops.finnes.dev/v1alpha1", "kind": "OAuth2Client", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": spec}}
+		return &unstructured.Unstructured{Object: map[string]any{"apiVersion": "ops.finnes.dev/v1alpha1", "kind": "OAuth2Client", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": spec}}
 	}
 	createXR := func(xr *unstructured.Unstructured) *unstructured.Unstructured {
 		t.Helper()
@@ -193,7 +193,7 @@ func TestOAuth2ClientComposition(t *testing.T) {
 	if read(t, f.conn, dn).GetAttributeValue("oauthScope") == "" {
 		t.Fatal("default OIDC scopes missing")
 	}
-	selector := "identity.ops.finnes.dev/client-uid=" + string(xr.GetUID())
+	selector := "ops.finnes.dev/client-uid=" + string(xr.GetUID())
 	entries, err := dyn.Resource(entryGVR).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: selector})
 	if err != nil || len(entries.Items) != 1 {
 		t.Fatalf("expected one composed LDAP Entry: %v", err)
@@ -292,7 +292,7 @@ func TestOAuth2ClientComposition(t *testing.T) {
 
 	missingDN := "oauthClientID=missing-composed,ou=clients,ou=oauth," + baseDN
 	waitFor("managed Entry missing credential error", func() (bool, error) {
-		children, err := dyn.Resource(entryGVR).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: "identity.ops.finnes.dev/client-uid=" + string(missing.GetUID())})
+		children, err := dyn.Resource(entryGVR).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: "ops.finnes.dev/client-uid=" + string(missing.GetUID())})
 		if err != nil {
 			return false, err
 		}
