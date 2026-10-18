@@ -34,8 +34,8 @@ jobs:
           version: 2026.10.10
           install_args: github:home-operations/flate aqua:go-task/task aqua:mikefarah/yq
 
-      - name: Test diff summary
-        run: python3 -m unittest discover -s scripts -p test_flate_diff_summary.py
+      - name: Test diff reporting
+        run: python3 -m unittest discover -s scripts -p 'test_flate_diff*.py'
 
       - name: Test
         run: task flate:test
@@ -66,6 +66,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Prepare diff summary
+        id: diff-summary
         if: always() && github.event_name == 'pull_request'
         env:
           DIFF_ARTIFACT_URL: ${{ steps.diff-artifact.outputs.artifact-url }}
@@ -76,7 +77,8 @@ jobs:
             exit 0
           fi
           if [ ! -s diff.txt ]; then
-            echo "No rendered Flux diff." >> "$GITHUB_STEP_SUMMARY"
+            echo "No rendered Flux diff." > body.md
+            cat body.md >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           test -n "$DIFF_ARTIFACT_URL"
@@ -87,14 +89,10 @@ jobs:
 
       - name: Comment on pull request
         if: >-
-          always() && steps.render-diff.outcome == 'success' && github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
+          always() && steps.render-diff.outcome == 'success' && steps.diff-summary.outcome == 'success'
+          && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [ ! -s diff.txt ]; then
-            exit 0
-          fi
-
-          gh pr comment "$PR_NUMBER" --body-file body.md
+          python3 scripts/flate-diff-comment.py
