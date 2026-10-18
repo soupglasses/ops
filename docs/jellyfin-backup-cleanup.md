@@ -41,40 +41,34 @@ preserve them. A new installation creates an ordinary PVC without restore depend
 
 ## Delete the two restic histories
 
-Run this Bash block yourself. It reads credentials from the two existing Secrets into
-subprocess environments without displaying or saving them. Repository suffix checks
-restrict deletion to Jellyfin. Keep the Secrets until this block succeeds.
+The `volsync:restic` task loads the shared backup fields from
+`flux-system/cluster-secrets` into its command environment. It selects
+`SECRET_S3_ENDPOINT/volsync-<APP>` and passes arguments after `--` to restic.
+It does not need the per-application Secrets or local SOPS decryption. With mise
+activated, inspect either repository using:
+
+```bash
+task volsync:restic APP=jellyfin -- snapshots
+task volsync:restic APP=jellyfin-media -- snapshots
+```
+
+After stopping the controllers above, run this Bash block yourself to delete only
+the two Jellyfin histories. Credentials are not printed or saved to disk.
 
 ```bash
 set -euo pipefail
-set +x
-mise exec -- restic version
-for repo in volsync-jellyfin volsync-jellyfin-media; do
-  (
-    unset RESTIC_REPOSITORY_FILE RESTIC_PASSWORD_FILE RESTIC_PASSWORD_COMMAND RESTIC_HOST RESTIC_TAG
-    for key in RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
-      value=$(mise exec -- kubectl -n media get secret "$repo" \
-        -o "jsonpath={.data.$key}" | base64 --decode)
-      test -n "$value"
-      export "$key=$value"
-    done
-    unset value
-    case "$RESTIC_REPOSITORY" in
-      s3:*/"$repo") ;;
-      *) printf 'Refusing unexpected repository for %s\n' "$repo" >&2; exit 1 ;;
-    esac
-    snapshot_json=$(mise exec -- restic snapshots --no-cache --json)
-    snapshot_ids=$(printf '%s' "$snapshot_json" | mise exec -- jq -er \
-      'if type == "array" then map(.id) | join("\n") else error("invalid snapshots") end')
-    if [[ -n "$snapshot_ids" ]]; then
-      mapfile -t ids <<< "$snapshot_ids"
-      mise exec -- restic forget --no-cache --prune "${ids[@]}"
-    else
-      mise exec -- restic prune --no-cache
-    fi
-    mise exec -- restic snapshots --no-cache --json | mise exec -- jq -e 'length == 0'
-    mise exec -- restic check --no-cache
-  )
+for app in jellyfin jellyfin-media; do
+  snapshot_json=$(task volsync:restic APP="$app" -- snapshots --no-cache --json)
+  snapshot_ids=$(printf '%s' "$snapshot_json" | jq -er \
+    'if type == "array" then map(.id) | join("\n") else error("invalid snapshots") end')
+  if [[ -n "$snapshot_ids" ]]; then
+    mapfile -t ids <<< "$snapshot_ids"
+    task volsync:restic APP="$app" -- forget --no-cache --prune "${ids[@]}"
+  else
+    task volsync:restic APP="$app" -- prune --no-cache
+  fi
+  task volsync:restic APP="$app" -- snapshots --no-cache --json | jq -e 'length == 0'
+  task volsync:restic APP="$app" -- check --no-cache
 done
 ```
 

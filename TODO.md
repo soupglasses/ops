@@ -483,3 +483,5 @@ Findings from the July 2026 architecture review, ranked. Data-loss items first.
   by operator request; preserve live application and media PVCs.
 - [ ] Run `docs/jellyfin-backup-cleanup.md` after deploying the no-backup policy to
   remove Jellyfin-only backup history and leftover VolSync resources.
+- [x] Add `task volsync:restic APP=<app> -- <arguments>` with shared Kubernetes
+  backup credentials scoped to that command, without local secret decryption.

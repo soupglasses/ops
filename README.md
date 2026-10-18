@@ -36,6 +36,17 @@ organized into namespaced groups under `.taskfiles/`:
 task --list
 ```
 
+With mise activated, run restic using shared cluster backup credentials:
+
+```bash
+task volsync:restic APP=openldap -- snapshots
+```
+
+This task reads the backup fields from `flux-system/cluster-secrets` into its own
+environment and selects the `volsync-<APP>` repository. It needs Kubernetes access
+to that Secret. Other commands do not load backup credentials. Without shell
+activation, prefix the task command with `mise exec --`.
+
 Run `mise exec -- task check` to run every pre-commit check on tracked files.
 The separate Pre-commit Checks workflow runs the same task for pull requests and
 pushes to main. Commit signature verification remains a local pre-push hook.
