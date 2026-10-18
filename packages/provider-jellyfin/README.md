@@ -7,8 +7,7 @@ SPDX-License-Identifier: MIT
 
 This controller embeds the Jellyfin Terraform Plugin Framework provider through
 Upjet. It runs no Terraform executable and needs no Terraform state volume.
-The source is pinned to
-[the ownership fix](https://github.com/soupglasses/terraform-provider-jellyfin/commit/65dbe330d0862501b43c841ab7ed93953096ad3a).
+The upstream fork and revision are pinned in [go.mod](go.mod).
 
 The Go module is nested under the upstream module path because the upstream
 provider constructor is internal. The `replace` directive downloads the pinned
@@ -37,9 +36,10 @@ drift, unmanaged values, released ownership, missing fields, controller restarts
 and non-destructive deletion. Credential tests cover rotation and local Secret
 resolution. The real Jellyfin/OpenLDAP fixture uses the generated connector to
 verify library identity, LDAP login, role changes, profile photos and drift repair.
-The kind test installs the native package and a disposable Jellyfin Pod, then applies
-namespaced resources through Kubernetes. It verifies observation without writes,
-Secret-backed plugin configuration, controller-driven settings updates and drift correction
+The kind test installs the native package and starts an empty Jellyfin instance.
+Namespaced resources create the first administrator and complete initial setup
+through the provider, without a separate bootstrap script. It then verifies observation
+without writes, Secret-backed plugin configuration, settings updates and drift correction
 while preserving user identities.
 
 ## Configuration and adoption
@@ -49,7 +49,7 @@ Crossplane installs the native OCI provider package declared in
 the controller in `crossplane-system`, watching only `media`. Crossplane manages provider revisions
 and the generated CRDs; the package embeds its controller image for recovery.
 
-Crossplane 2.4.2 also grants native provider controllers cluster-wide Secret
+Crossplane grants native provider controllers cluster-wide Secret
 read/write permissions through its generated system ClusterRole. Namespace-scoped reconciliation and local
 credential selectors therefore do not establish a Kubernetes authorization boundary.
 This deployment accepts that standard trusted-controller authority; it does not
@@ -59,6 +59,11 @@ permissions and the namespace scope of its APIs. See the
 
 Application settings live in `kubernetes/apps/media/jellyfin/settings/`.
 The ProviderConfig selects the existing `ops-recovery` first-setup administrator.
+On an empty instance, the embedded Terraform provider uses those credentials to
+create the first administrator and complete Jellyfin's setup wizard. On later
+connections it authenticates without recreating accounts or resetting their passwords.
+The application container needs no administrator credential or bootstrap Job.
+Crossplane then reconciles the declared LDAP settings, libraries and server settings.
 Other deployments can set `username` directly, or `usernameSecretRef` to a local
 Secret key such as `JELLYFIN_ADMIN_USERNAME`; no additional account is required.
 The PluginSettings composition reads local Secret references, serializes the
@@ -67,9 +72,10 @@ PluginConfiguration. It reuses the existing function-go-templating installation.
 No encrypted source file needs editing or decryption, and credentials do not pass
 through Helm release storage.
 
-Start adoption with `[Observe]`, preserving the existing sidecar. Confirm every
-managed resource resolves the existing external object, then remove the sidecar
-and enable `[Observe, Create, Update]`. Never run both writers during the handoff.
+For an existing server, start adoption with `[Observe]` and confirm every resource
+resolves the intended external object. Stop any previous settings writer before
+enabling `[Observe, Create, Update]`. Fresh installations use those write policies
+so the provider can bootstrap and configure the server automatically.
 The resulting manifests exclude Delete: pruning cannot remove libraries, plugins
 or application data. Libraries own their declared paths; the upstream provider
 requires replacement for path changes, so those changes need a deliberate migration.
@@ -77,17 +83,14 @@ requires replacement for path changes, so those changes need a deliberate migrat
 The manifest pins the native package by digest. The publication workflow tags each
 package with its source revision so the controller can be rebuilt from this repository.
 
-The current application policy has no configuration or media backups and no restore
-init containers, by operator request. Preserve the existing PVCs during adoption.
+Jellyfin configuration and media have no backups or restore init containers: the
+off-site storage cost outweighs rebuilding this data. Preserve existing PVCs during adoption.
 Library names and plugin GUIDs identify existing objects; user mappings, photos,
 memberships and other unmanaged settings remain application data. Crossplane cannot
 reconstruct that data after its loss. The real-image checkpoint fixture tests the
 retained utilities and provider compatibility, not an active production backup path.
 See the [runtime storage policy](../jellyfin-runtime/README.md).
 
-The runtime still supplies the pinned LDAP binaries. Although this provider
-generates Plugin, PluginRepository and ScheduledTask APIs, production plugin
-installation is not handed over yet. That handoff must remove image seeding,
-establish repository and schedule ordering, load installations through a restart,
-and prove a clean restore. Do not add a competing Plugin version declaration
-while the image overwrites plugins at startup.
+The runtime supplies pinned LDAP binaries. Keep binary updates in the tested image
+and settings in Crossplane. Do not add a competing Plugin resource for an image-owned
+plugin. See the [runtime plugin policy](../jellyfin-runtime/README.md#plugin-updates).

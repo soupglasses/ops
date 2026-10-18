@@ -3,6 +3,7 @@
 """Exercise the installed controller against a disposable Jellyfin in kind."""
 
 import json
+from pathlib import Path
 import socket
 import subprocess
 import time
@@ -49,7 +50,16 @@ apply(
             "containers": [
                 {
                     "name": "jellyfin",
-                    "image": "jellyfin/jellyfin:12.2@sha256:357724bf0ae27a672c7cbaa899db2d9abeb13dbd8657ccce750258a4c059d037",
+                    "image": next(
+                        line.split()[1]
+                        for line in (
+                            Path(__file__).resolve().parents[2]
+                            / "jellyfin-runtime/Dockerfile"
+                        )
+                        .read_text()
+                        .splitlines()
+                        if line.startswith("FROM jellyfin/jellyfin:")
+                    ),
                     "readinessProbe": {
                         "httpGet": {"path": "/health", "port": 8096},
                         "periodSeconds": 2,
@@ -136,27 +146,8 @@ def fixture_ready():
 try:
     eventually(fixture_ready, "Jellyfin did not start")
     password = "disposable-kind-test-password"
-    api(
-        "/Startup/Configuration",
-        {
-            "UICulture": "en-US",
-            "MetadataCountryCode": "US",
-            "PreferredMetadataLanguage": "en",
-        },
-    )
-    # Jellyfin creates its first administrator when the setup wizard reads this endpoint.
-    api("/Startup/User")
-    api("/Startup/User", {"Name": "ops-recovery", "Password": password})
-    api(
-        "/Startup/RemoteAccess",
-        {"EnableRemoteAccess": True, "EnableAutomaticPortMapping": False},
-    )
-    api("/Startup/Complete", {})
-    token = api(
-        "/Users/AuthenticateByName", {"Username": "ops-recovery", "Pw": password}
-    )["AccessToken"]
-    users = api("/Users")
-    baseline = api("/System/Configuration")
+    initial = api("/System/Info/Public")
+    assert initial["StartupWizardCompleted"] is False, "fixture was already initialized"
     apply(
         {
             "apiVersion": "v1",
@@ -185,9 +176,9 @@ try:
             "annotations": {"crossplane.io/external-name": "system"},
         },
         "spec": {
-            "managementPolicies": ["Observe"],
+            "managementPolicies": ["Observe", "Create", "Update"],
             "providerConfigRef": {"name": "kind-fixture", "kind": "ProviderConfig"},
-            "forProvider": {"serverName": "Managed by Crossplane"},
+            "forProvider": {"serverName": "Fresh Crossplane instance"},
         },
     }
     apply(resource)
@@ -196,6 +187,35 @@ try:
         "systemconfiguration/kind-fixture",
         "--for=condition=Synced",
         "--timeout=120s",
+    )
+    assert api("/System/Info/Public")["StartupWizardCompleted"] is True
+    token = api(
+        "/Users/AuthenticateByName", {"Username": "ops-recovery", "Pw": password}
+    )["AccessToken"]
+    users = api("/Users")
+    assert len(users) == 1 and users[0]["Policy"]["IsAdministrator"], (
+        "provider did not create exactly one first administrator"
+    )
+    assert api("/System/Info/Public")["Id"] == initial["Id"], "server was replaced"
+    baseline = api("/System/Configuration")
+    assert baseline["ServerName"] == "Fresh Crossplane instance"
+    resource["spec"]["managementPolicies"] = ["Observe"]
+    resource["spec"]["forProvider"]["serverName"] = "Managed by Crossplane"
+    apply(resource)
+    # Wait for a new reconciliation rather than accepting the previous Synced condition.
+    generation = json.loads(
+        kube("get", "systemconfiguration/kind-fixture", "-o", "json")
+    )["metadata"]["generation"]
+    eventually(
+        lambda: any(
+            condition["type"] == "Synced"
+            and condition["status"] == "True"
+            and condition.get("observedGeneration") == generation
+            for condition in json.loads(
+                kube("get", "systemconfiguration/kind-fixture", "-o", "json")
+            )["status"]["conditions"]
+        ),
+        "Observe did not reconcile the new generation",
     )
     assert api("/System/Configuration")["ServerName"] == baseline["ServerName"], (
         "Observe wrote settings"
@@ -264,7 +284,7 @@ try:
         (u["Id"], u["Name"]) for u in users
     ]
     print(
-        "Kind controller adopted settings without writes, applied desired state, corrected drift, and preserved users."
+        "Kind controller bootstrapped an empty server, adopted settings without writes, applied desired state, corrected drift, and preserved users."
     )
 finally:
     forward.terminate()
