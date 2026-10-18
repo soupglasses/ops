@@ -69,7 +69,7 @@ with tempfile.TemporaryDirectory(prefix="jellyfin-composition-") as directory:
     assert (
         settings["metadata"]["namespace"] == managed["metadata"]["namespace"] == "media"
     )
-    assert managed["spec"]["managementPolicies"] == ["Observe"]
+    assert managed["spec"]["managementPolicies"] == xr["spec"]["managementPolicies"]
     assert (
         managed["spec"]["forProvider"]["configurationJsonSecretRef"]["name"]
         == settings["metadata"]["name"]
@@ -85,5 +85,5 @@ with tempfile.TemporaryDirectory(prefix="jellyfin-composition-") as directory:
     assert b"Secret key is missing or empty" in failed.stderr
 
 print(
-    "PluginSettings composition preserves JSON credentials, namespace scope and observe-only policy"
+    "PluginSettings composition preserves JSON credentials, namespace scope and declared management policies"
 )

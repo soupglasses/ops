@@ -21,3 +21,12 @@ patches:
     target:
       group: kustomize.toolkit.fluxcd.io
       kind: Kustomization
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --requeue-dependency=5s
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: kustomize-controller
