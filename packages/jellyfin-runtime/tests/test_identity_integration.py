@@ -390,16 +390,30 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "/usr/local/lib/jellyfin/runtime.py",
             "checkpoint",
         )
-        restored_config = work / "restored"
-        restored_config.mkdir()
+        restored_volume = command("docker", "volume", "create").strip()
+        self.addCleanup(lambda: command("docker", "volume", "rm", restored_volume))
         command("docker", "exec", container, "test", "-s", "/backup/checkpoint.tar")
         # Docker's archive endpoint does not expose this tmpfs-backed checkpoint.
-        with (restored_config / "checkpoint.tar").open("wb") as archive:
-            subprocess.run(
-                ["docker", "exec", container, "cat", "/backup/checkpoint.tar"],
-                stdout=archive,
-                check=True,
-            )
+        archive = subprocess.check_output(
+            ["docker", "exec", container, "cat", "/backup/checkpoint.tar"]
+        )
+        # Model the PVC's ownership without depending on the host runner's UID.
+        command(
+            "docker",
+            "run",
+            "--rm",
+            "--interactive",
+            "--user",
+            "0:0",
+            "--volume",
+            restored_volume + ":/config",
+            "--entrypoint",
+            "sh",
+            image,
+            "-c",
+            "cat > /config/checkpoint.tar && chown 1000:1000 /config /config/checkpoint.tar",
+            input=archive,
+        )
         command(
             "docker",
             "run",
@@ -407,7 +421,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "--user",
             "1000:1000",
             "--volume",
-            str(restored_config) + ":/config",
+            restored_volume + ":/config",
             "--entrypoint",
             "python3",
             image,
@@ -426,7 +440,7 @@ jpegPhoto:: {base64.b64encode(jpeg).decode()}
             "1000:1000",
             "--read-only",
             "--volume",
-            str(restored_config) + ":/config",
+            restored_volume + ":/config",
             "--volume",
             str(media) + ":/media:ro",
             "--tmpfs",
