@@ -69,6 +69,10 @@ The resulting manifests exclude Delete: pruning cannot remove libraries, plugins
 or application data. Libraries own their declared paths; the upstream provider
 requires replacement for path changes, so those changes need a deliberate migration.
 
+The initial bootstrap keeps both new Flux Kustomizations suspended until the
+repository's publication workflow has pushed the first package. Pin its digest
+before resuming observation.
+
 The application backup and restore contract remains the runtime's offline
 checkpoint, staging PVC, VolSync destination and restore init containers. Restore
 the application before resuming provider writes. Existing library names and plugin
