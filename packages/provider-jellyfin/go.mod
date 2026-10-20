@@ -160,4 +160,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace github.com/ThePhaseless/terraform-provider-jellyfin => github.com/soupglasses/terraform-provider-jellyfin v0.0.0-20261018003529-65dbe330d086
+replace github.com/ThePhaseless/terraform-provider-jellyfin => github.com/soupglasses/terraform-provider-jellyfin v0.6.0
