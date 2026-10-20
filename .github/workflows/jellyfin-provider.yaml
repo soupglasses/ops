@@ -68,7 +68,7 @@ jobs:
           echo '065dd6b40c9ea5fc71e49900d5c924cc0bec7f58375922ddbde6b402f292347e  /tmp/crossplane' | sha256sum --check
           sudo install /tmp/crossplane /usr/local/bin/crossplane
       - name: Install Helm and kubectl
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
         with:
           version: 2026.10.11
           install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq
