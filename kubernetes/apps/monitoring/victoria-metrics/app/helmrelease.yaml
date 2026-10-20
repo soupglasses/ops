@@ -15,7 +15,7 @@ spec:
   chart:
     spec:
       chart: victoria-metrics-k8s-stack
-      version: 0.95.2
+      version: 0.96.0
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -43,7 +43,7 @@ spec:
       spec:
         image:
           repository: victoriametrics/victoria-metrics
-          tag: v1.153.0@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd
+          tag: v1.154.1@sha256:c7884f32920dd45a9d86542a717227e63af03e060e53bbf8031e6e6fd0e1e05d
         managedMetadata:
           labels:
             monitoring.finnes.dev/enabled: "true"
@@ -56,7 +56,7 @@ spec:
               claimName: victoria-metrics
         initContainers:
           - name: require-restored-metrics
-            image: victoriametrics/victoria-metrics:v1.153.0@sha256:5eff7af5341e401471002f58d106d399e614a62f3d240f2dbc21901e49eed5dd
+            image: victoriametrics/victoria-metrics:v1.154.1@sha256:c7884f32920dd45a9d86542a717227e63af03e060e53bbf8031e6e6fd0e1e05d
             command: [/bin/sh, -ec]
             args:
               - test -d /data/data && test -d /data/metadata
@@ -194,7 +194,7 @@ spec:
           defaultMode: 0440
       defaultDashboardsTimezone: browser
       plugins:
-        - victoriametrics-logs-datasource@0.32.0
+        - victoriametrics-logs-datasource@0.33.1
       ingress:
         enabled: false
       persistence:
