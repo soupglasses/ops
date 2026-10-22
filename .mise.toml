@@ -5,7 +5,6 @@
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 KUBECONFIG = "{{config_root}}/.secure/kubeconfig"
-TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 SOPS_AGE_KEY_FILE = "{{config_root}}/.secure/age.agekey"
 MISE_EXPERIMENTAL = true # for krew plugin
 
@@ -15,7 +14,6 @@ krew="https://github.com/soupglasses/mise-krew"
 [tools]
 "go" = "1.27.3"
 "python" = "3.15.1"
-"aqua:budimanjojo/talhelper" = "3.1.17"
 "aqua:cilium/cilium-cli" = "0.20.1"
 "aqua:FiloSottile/age" = "1.3.2"
 "aqua:fluxcd/flux2" = "2.9.6"
@@ -29,7 +27,6 @@ krew="https://github.com/soupglasses/mise-krew"
 "aqua:kubernetes/kubectl" = "1.34.2"
 "aqua:kubecolor/kubecolor" = "0.8.0"
 "aqua:mikefarah/yq" = "4.54.1"
-"aqua:siderolabs/talos" = "1.14.4"
 "aqua:yannh/kubeconform" = "0.8.0"
 "aqua:editorconfig-checker/editorconfig-checker" = "4.0.2"
 "aqua:dandavison/delta" = "0.20.1"
@@ -52,10 +49,8 @@ script = '''
 source <(\kubectl completion bash)
 source <(kubectl-pv_mounter completion bash)
 source <(kubectl-pv_migrate completion bash)
-source <(talosctl completion bash)
 source <(task --completion bash)
 source <(flux completion bash)
-source <(talhelper completion bash)
 source <(kubectl-volsync completion bash)
 
 # kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
@@ -78,8 +73,6 @@ alias kubectl=kubecolor
 complete -o default -F __start_kubectl kubecolor
 alias k=kubectl
 complete -o default -F __start_kubectl k
-alias t=talosctl
-complete -o default -F __start_talosctl t
 
 _openldap_exec() {
   local ldap_command=$1
@@ -125,10 +118,8 @@ script = '''
 source <(kubectl completion zsh)
 source <(kubectl-pv_mounter completion zsh)
 source <(kubectl-pv_migrate completion zsh)
-source <(talosctl completion zsh)
 source <(task --completion zsh)
 source <(flux completion zsh)
-source <(talhelper completion zsh)
 source <(kubectl-volsync completion bash)
 
 # kubectl ≥1.26 looks up `kubectl_complete-<plugin>` in PATH to complete
@@ -151,8 +142,6 @@ alias kubectl=kubecolor
 compdef kubecolor=kubectl
 alias k=kubectl
 compdef k=kubectl
-alias t=talosctl
-compdef t=talosctl
 
 _openldap_exec() {
   local ldap_command=$1

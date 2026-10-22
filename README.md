@@ -15,8 +15,7 @@ physical host, native systemd-networkd configuration, CIS-oriented baseline, ZFS
 RKE2, and its day-zero Cilium configuration. Flux owns applications and post-bootstrap
 cluster policy.
 
-The former Talos configuration remains as a historical migration reference. Current
-recovery uses the [RKE2 bootstrap guide](docs/cluster-bootstrap.md).
+Recovery uses the [RKE2 bootstrap guide](docs/cluster-bootstrap.md).
 
 ### Network layout
 

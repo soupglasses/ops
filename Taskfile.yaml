@@ -12,9 +12,6 @@ includes:
   ansible:
     taskfile: ansible/Taskfile.yaml
     dir: ansible
-  talos:
-    taskfile: .taskfiles/talos.yaml
-    dir: .
   flux:
     taskfile: .taskfiles/flux.yaml
     dir: .
