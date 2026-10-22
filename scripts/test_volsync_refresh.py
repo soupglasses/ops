@@ -57,7 +57,7 @@ CHECKPOINT = '2026-10-22T06:15:00Z'
 class RefreshTests(unittest.TestCase):
     def invoke(self, mode='success', source_changes=None, rd_changes=None):
         source = {'spec': {'sourcePVC': 'demo', 'restic': {}, 'trigger': {'schedule': '0 * * * *'}},
-                  'status': {'lastSyncTime': CHECKPOINT, 'latestMoverStatus': {'result': 'Successful'}}}
+                  'status': {'lastSyncTime': CHECKPOINT, 'lastManualSync': 'completed-maintenance-request', 'latestMoverStatus': {'result': 'Successful'}}}
         rd = {'metadata': {'uid': 'original', 'resourceVersion': '1', 'annotations': {}},
               'spec': {'trigger': {'manual': 'restore-once'}, 'restic': {}},
               'status': {'lastManualSync': 'restore-once', 'latestImage': {'name': 'old-image'}}}
