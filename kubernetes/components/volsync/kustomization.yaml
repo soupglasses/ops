@@ -11,6 +11,8 @@ resources:
   - ./replicationsource.yaml
   - ./secret.yaml
   - ./refresh.yaml
+  - ./check.yaml
+  - ./prometheusrule.yaml
 configMapGenerator:
   - name: ${APP}-restore-refresh
     files:
