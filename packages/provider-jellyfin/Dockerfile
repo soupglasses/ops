@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-FROM golang:1.27.3-alpine3.23@sha256:7fd63dd7c37f5ddaef15bd8fd3f3e4f90f0d50cd9cae255c7cf73887a494d8df AS generate
+FROM golang:1.27.3-alpine3.23@sha256:754d5200fc3edae76d3b6598a9a3fac7e74981ee6a5413ab955025f185753ef2 AS generate
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
