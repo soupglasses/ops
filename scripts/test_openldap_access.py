@@ -239,6 +239,9 @@ member: uid=charlie,ou=users,{BASE}
             "--read-only",
             "--network",
             "none",
+            # Native LDAP tools resolve the local hostname even for offline imports.
+            "--hostname",
+            "localhost",
             "--cap-drop",
             "ALL",
             "--security-opt",
