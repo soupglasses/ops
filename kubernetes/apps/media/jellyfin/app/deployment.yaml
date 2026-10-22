@@ -36,7 +36,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: jellyfin
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime:12.2@sha256:0a840b024cb8f04371b6b14dc1793f754f539b75081ee5740d35060089f843d9
+          image: ghcr.io/soupglasses/ops/jellyfin-runtime:12.2@sha256:4d30e414cb8fbea6d9aa87b758884e9747fa0c05b87650cd01bdf23e8b10d7dd
           ports:
             - name: http
               containerPort: 8096
