@@ -7,7 +7,7 @@ go 1.26.8
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/ThePhaseless/terraform-provider-jellyfin v0.0.0
+	github.com/ThePhaseless/terraform-provider-jellyfin v0.6.0
 	github.com/crossplane/crossplane-runtime/v2 v2.4.3
 	github.com/crossplane/crossplane/apis/v2 v2.4.3
 	github.com/crossplane/upjet/v2 v2.5.1
