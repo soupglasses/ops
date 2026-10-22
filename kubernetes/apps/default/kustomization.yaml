@@ -9,4 +9,4 @@ namespace: default
 components:
   - ../../components/common
 resources:
-  - ./minecraft/ks.yaml
+  - ./minecraft/kustomize.yaml

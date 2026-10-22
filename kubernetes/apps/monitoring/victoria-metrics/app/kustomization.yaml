@@ -8,11 +8,9 @@ kind: Kustomization
 resources:
   - ./alertmanager-smtp.sops.yaml
   - ./grafana-auth.sops.yaml
-  - ./app-dashboard.yaml
-  - ./node-dashboard.yaml
-  - ./app-recording-rules.yaml
-  - ./grafana-rbac.yaml
+  - ./configmap.yaml
+  - ./prometheusrule.yaml
+  - ./rbac.yaml
   - ./helmrelease.yaml
-  - ./storage-alerts.yaml
 components:
   - ../../../../components/volsync

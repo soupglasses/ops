@@ -6,15 +6,22 @@ kind: Kustomization
 resources:
   - ./deployment.yaml
   - ./service.yaml
-  - ./networkpolicy.yaml
+  - ./ciliumnetworkpolicy.yaml
   - ./httproute.yaml
-  - ./pvc.yaml
-  - ./storage-alerts.yaml
-  - ./media-storage.yaml
-  - ./media-admission.yaml
+  - ./persistentvolumeclaim.yaml
+  - ./prometheusrule.yaml
+  - ./storageclass.yaml
+  - ./validatingadmissionpolicy.yaml
+  - ./validatingadmissionpolicybinding.yaml
   - ./secret.sops.yaml
-  - ./identity.yaml
-  - ./settings.yaml
+  - ./serviceaccount.yaml
+  - ./groupofnames.yaml
+  - ./providerconfig.yaml
+  - ./systemconfiguration.yaml
+  - ./networkingconfiguration.yaml
+  - ./brandingconfiguration.yaml
+  - ./library.yaml
+  - ./pluginsettings.yaml
 patches:
   - target:
       group: jellyfin.ops.finnes.dev

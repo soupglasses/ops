@@ -9,5 +9,5 @@ namespace: cert-manager
 components:
   - ../../components/common
 resources:
-  - ./cert-manager/ks.yaml
-  - ./cloudflare-issuers/ks.yaml
+  - ./cert-manager/kustomize.yaml
+  - ./cloudflare-issuers/kustomize.yaml

@@ -6,9 +6,9 @@ SPDX-License-Identifier: MIT
 # Jellyfin
 
 `app/` contains the deployment, storage, networking and configuration.
-Edit `app/settings.yaml` for server settings, libraries and LDAP plugin settings.
-`app/identity.yaml` declares namespace-local `ops.finnes.dev` ServiceAccount and
-access groups.
+Edit the manifests in `app/` for server settings, libraries and LDAP plugin settings.
+`app/serviceaccount.yaml` and `app/groupofnames.yaml` declare namespace-local
+`ops.finnes.dev` ServiceAccount and access groups.
 Crossplane generates the bind password and supplies it to the LDAP plugin only
 after LDAP confirms it. Change the ServiceAccount's `rotationID` to rotate it;
 the Jellyfin recovery administrator still uses its encrypted Secret. Manage human

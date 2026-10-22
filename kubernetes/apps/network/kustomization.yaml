@@ -10,10 +10,9 @@ components:
   - ../../components/common
   - ../../components/privileged
 resources:
-  - ./cilium-bgp/ks.yaml
-  - ./cilium-gateway/crds.yaml
-  - ./cilium-gateway/ks.yaml
-  - ./cilium-private-gateway/ks.yaml
-  - ./cilium-host-policy/ks.yaml
-  - ./external-dns/ks.yaml
-  - ./tailscale-operator/ks.yaml
+  - ./cilium-bgp/kustomize.yaml
+  - ./cilium-gateway/kustomize.yaml
+  - ./cilium-private-gateway/kustomize.yaml
+  - ./cilium-host-policy/kustomize.yaml
+  - ./external-dns/kustomize.yaml
+  - ./tailscale-operator/kustomize.yaml

@@ -57,7 +57,7 @@ kubernetes/
     {namespace}/
       kustomization.yaml   # Flux Kustomization (no app/ prefix in resources)
       {app}/
-        ks.yaml            # Flux Kustomization resource
+        kustomize.yaml            # Flux Kustomization resource
         app/               # Application manifests
           helmrelease.yaml
           secret.sops.yaml
@@ -79,8 +79,8 @@ ansible/                  # Ubuntu, RKE2, and RouterOS host management
 
 Apps use **two-level Kustomization**:
 
-1. **`{app}/ks.yaml`** - Flux Kustomization resource that points to `app/` folder
-2. **Parent `kustomization.yaml`** - Lists `ks.yaml` in resources (not `app/` directly)
+1. **`{app}/kustomize.yaml`** - Flux Kustomization resource that points to `app/` folder
+2. **Parent `kustomization.yaml`** - Lists `kustomize.yaml` in resources (not `app/` directly)
 
 ```yaml
 # apps/default/kustomization.yaml
@@ -90,7 +90,7 @@ namespace: default
 components:
   - ../../components/common
 resources:
-  - ./minecraft/ks.yaml  # Reference ks.yaml, not minecraft/app/
+  - ./minecraft/kustomize.yaml  # Reference kustomize.yaml, not minecraft/app/
 ```
 
 ### Kustomization Auto-Generation
@@ -144,7 +144,7 @@ Bash-style defaults work: `${VAR:-default}`
 
 ### Health Checks
 
-Include in ks.yaml for HelmReleases:
+Include in kustomize.yaml for HelmReleases:
 
 ```yaml
 healthChecks:
@@ -164,8 +164,8 @@ Place in `app/` folder alongside HelmRelease.
 
 1. Create `apps/{namespace}/{app}/app/` folder structure
 2. Add manifests (helmrelease.yaml, secret.sops.yaml if needed, etc.)
-3. Create `ks.yaml` in `{app}/` folder
-4. Reference `ks.yaml` in parent namespace `kustomization.yaml`
+3. Create `kustomize.yaml` in `{app}/` folder
+4. Reference `kustomize.yaml` in parent namespace `kustomization.yaml`
 5. Add `common` component to namespace kustomization if not present
 
 ### VolSync Backup Setup
@@ -174,10 +174,10 @@ Every stateful app gets the volsync component; a PVC without a backup is a bug.
 
 1. Add the `volsync` component (and `volsync-quiesce` if the app needs a pre-snapshot
    hook) to the app's `kustomization.yaml`
-2. Set `postBuild.substitute` vars in `ks.yaml`: `APP`, `VOLSYNC_CAPACITY`, and
+2. Set `postBuild.substitute` vars in `kustomize.yaml`: `APP`, `VOLSYNC_CAPACITY`, and
    `VOLSYNC_PUID`/`VOLSYNC_PGID` matching the container's uid (the mover must be able
    to read the data). Keep `VOLSYNC_CACHE_CAPACITY` small; the cache holds metadata only
-3. Add `dependsOn` openebs + volsync to the app's `ks.yaml` so from-zero rebuilds order
+3. Add `dependsOn` openebs + volsync to the app's `kustomize.yaml` so from-zero rebuilds order
    cleanly
 4. Credentials come from `cluster-secrets.sops.yaml` via the
    `${SECRET_S3_ENDPOINT}/volsync-${APP}` pattern; no per-app setup needed
@@ -211,6 +211,6 @@ Pull requests automatically run `task flate:test` and `task flate:diff` in CI.
 - **No manual kustomization.yaml in app/ folders** - Flux auto-generates
 - **Always encrypt secrets with SOPS** before committing
 - **Use cluster-secrets for shared credentials** to avoid duplication
-- **Reference ks.yaml not app/ folder** in parent kustomizations
+- **Reference kustomize.yaml not app/ folder** in parent kustomizations
 - **Components use ${APP} variable** substituted from Kustomization name
 - **Run `task flate:test` before committing** to catch validation errors early

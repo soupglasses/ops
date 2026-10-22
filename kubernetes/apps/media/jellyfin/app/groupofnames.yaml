@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: jellyfin-user-group
+spec:
+  cn: media.jellyfin.user
+  description: Users permitted to sign in to Jellyfin
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: jellyfin-admin-group
+spec:
+  cn: media.jellyfin.admin
+  description: Jellyfin administrators

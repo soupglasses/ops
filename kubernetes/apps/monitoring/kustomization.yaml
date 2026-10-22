@@ -9,11 +9,11 @@ namespace: monitoring
 components:
   - ../../components/common
 resources:
-  - ./prometheus-operator-crds/ks.yaml
-  - ./victoria-metrics/ks.yaml
-  - ./victoria-logs/ks.yaml
-  - ./rke2-host-metrics/ks.yaml
-  - ./log-collector/ks.yaml
+  - ./prometheus-operator-crds/kustomize.yaml
+  - ./victoria-metrics/kustomize.yaml
+  - ./victoria-logs/kustomize.yaml
+  - ./rke2-host-metrics/kustomize.yaml
+  - ./log-collector/kustomize.yaml
 patches:
   - target:
       kind: Namespace

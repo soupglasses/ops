@@ -151,7 +151,7 @@
 
 - name: Install the RKE2 CoreDNS configuration
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../../kubernetes/bootstrap/rke2-coredns.yaml"
+    src: "{{ playbook_dir }}/../../kubernetes/bootstrap/helmchartconfig.yaml"
     dest: /var/lib/rancher/rke2/server/manifests/rke2-coredns-config.yaml
     owner: root
     group: root

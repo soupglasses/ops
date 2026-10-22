@@ -32,6 +32,19 @@ unrelated changes, and stage explicit paths.
   through the real application interfaces, not duplicated versions or snapshots
   of today's deployment.
 
+## Manifest filenames
+
+Name Kubernetes YAML files after their lowercase resource kind, such as
+`prometheusrule.yaml`, `pluginsettings.yaml`, or `systemconfiguration.yaml`.
+For files containing related kinds from one API group, use the relevant segment
+of `apiVersion`, such as `rbac.yaml` for Role and RoleBinding resources in
+`rbac.authorization.k8s.io/v1`.
+Split unrelated kinds into separate files and combine resources of the same kind
+within a directory. Use `kustomize.yaml` for Flux Kustomizations, keeping
+`kustomization.yaml` for Kustomize build configuration. Keep required tool-generated
+filenames and the `.sops.yaml` suffix. Name patches after their target kind with a
+`-patch` suffix.
+
 ## Documentation and follow-up work
 
 Keep durable usage and ownership guidance in the relevant README. Reserve `docs/`

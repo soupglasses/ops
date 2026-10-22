@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-gateway-api-crds
+  namespace: network
+spec:
+  path: ./kubernetes/apps/network/cilium-gateway/crds
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 1h
+  prune: false
+  wait: true
+  timeout: 5m
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-gateway
+  namespace: network
+spec:
+  dependsOn:
+    - name: cilium-gateway-api-crds
+      namespace: network
+    - name: cloudflare-issuers
+      namespace: cert-manager
+  path: ./kubernetes/apps/network/cilium-gateway/app
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 10m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  timeout: 5m

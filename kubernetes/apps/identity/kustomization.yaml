@@ -9,7 +9,7 @@ namespace: identity
 components:
   - ../../components/common
 resources:
-  - ./openldap/ks.yaml
-  - ./ldap-system-users/ks.yaml
-  - ./canaille/ks.yaml
-  - ./ldap-provider/ks.yaml
+  - ./openldap/kustomize.yaml
+  - ./ldap-system-users/kustomize.yaml
+  - ./canaille/kustomize.yaml
+  - ./ldap-provider/kustomize.yaml

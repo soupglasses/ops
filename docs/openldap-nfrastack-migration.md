@@ -12,7 +12,7 @@ standard configuration into persistent `cn=config`; normal starts need no root
 initializer, custom image, or repeated data conversion.
 
 Production resources are in [the application directory](../kubernetes/apps/identity/openldap/app),
-with standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/ks.yaml).
+with standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/kustomize.yaml).
 The one-time migration harness was removed after validation; its scripts and test
 fixtures remain in Git history at `f8945a9`. Recovery uses the backed-up native
 configuration and directory, not those migration fixtures.

@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+kind: SystemConfiguration
+metadata:
+  name: jellyfin
+  annotations:
+    crossplane.io/external-name: system
+spec:
+  forProvider:
+    serverName: Jellyfin
+    uiCulture: en-US
+    metadataCountryCode: US
+    preferredMetadataLanguage: en
