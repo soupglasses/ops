@@ -110,7 +110,7 @@ Use a disposable repository and keys with the same permissions as production:
    workstation before treating the independent recovery path as proven.
 
 The shared [VolSync contract](../kubernetes/components/volsync/README.md) describes
-in-cluster freshness, integrity checks and controlled restores. Independent access
+backup execution and controlled restores. Independent access
 and history protection remain tracked in [#128](https://github.com/soupglasses/ops/issues/128)
 and [#129](https://github.com/soupglasses/ops/issues/129). Jellyfin configuration and
 media intentionally have no backups and are outside these recovery procedures.

@@ -5,8 +5,7 @@
 #
 # Force a volsync PVC to restore from restic.
 #
-# A destination latestImage may be stale until its next scheduled or manual
-# refresh. Recreating the PVC alone would restore that stale image. This script
+# A destination latestImage may be stale until its next explicit restore. Recreating the PVC alone would restore that stale image. This script
 # bumps the RD trigger, waits for the mover to refresh latestImage, scales the
 # workload to 0, preserves and replaces the PVC with controllers held, then
 # verifies application contents before releasing the recovery holds.
@@ -379,8 +378,7 @@ done
 kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Bound \
     "pvc/${APP}" --timeout="$TIMEOUT"
 
-# Keep manual precedence over cron through confirmation and PVC binding so a
-# scheduled refresh cannot replace the selected historical image mid-restore.
+# Retain recovery ownership through confirmation and PVC binding.
 cleanup=$(jq -nc --arg uid "$rd_uid" --arg token "$restore_trigger" \
         --arg before "$RESTORE_AS_OF" --argjson original "$original_rd" --argjson remove_manual "$manual_was_absent" '
         ($original.spec.restic // {}) as $restic |

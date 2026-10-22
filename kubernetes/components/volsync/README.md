@@ -12,7 +12,7 @@ Per-app PVC backup + auto-restore-on-PVC-create against a restic S3 repo.
 
 | File | Purpose |
 |---|---|
-| `pvc.yaml` | The PVC the app consumes. `dataSourceRef` points at the RD so populator restores it on creation. |
+| `persistentvolumeclaim.yaml` | The PVC the app consumes. `dataSourceRef` points at the RD so populator restores it on creation. |
 | `replicationsource.yaml` | RS: scheduled backup of the source PVC into restic. |
 | `replicationdestination.yaml` | RD: restores from restic into an internal volume and exposes a `latestImage` snapshot for the populator. |
 | `secret.yaml` | Restic credentials (repo URL + password + S3 creds) templated from `cluster-secrets`. |
@@ -81,32 +81,22 @@ For a genuinely new application, explicitly initialize and validate its data, ta
 first backup, then adopt this component. Never use that path to bypass missing history.
 See [the recovery sequence](../../../docs/rke2-operations.md#application-recovery).
 
-## Restore-image freshness
+## Recovery from the backup repository
 
-A successful backup and a successful restore image are separate checkpoints.
-The per-application `*-restore-refresh` CronJob checks every five minutes and requests
-a destination refresh only after a new successful, idle backup. It waits for its own
-completed mover and a new image before recording the backup checkpoint. Subsequent
-runs do no restore work until another backup succeeds. A retried job resumes its own
-pending request instead of replacing the trigger with a newer checkpoint.
+Normal operation only backs up and prunes through the ReplicationSource. There are
+no scheduled repository checks or restore-image refreshes. Each application's
+restic repository is its off-cluster recovery source; local snapshots are not a
+replacement for that repository.
 
-This adds a restore/download cycle after each backup. Existing snapshot cleanup remains
-VolSync-owned. The service account can only read its named source and read/patch its
-named destination; it cannot read Secrets or change application PVCs and workloads.
-Paused resources, unfinished requests, explicit recovery locks and historical selections
-block automatic refresh. Failed or timed-out refreshes retain their lock for diagnosis
-and retry; inspect the CronJob and mover before clearing it manually.
+A clean cluster creates the one-shot ReplicationDestination and the PVC together.
+The destination pulls the latest backup, and the populator blocks PVC binding until
+that restore is ready. The destination has no recurring trigger.
 
-The destination's `ops.soupglasses.dev/restore-checkpoint` annotation identifies the
-successful backup covered by its image. Refresh is asynchronous: until polling and
-the mover complete, PVC-only recreation can still use the preceding image. A new
-cluster's initial destination restore pulls the newest available backup. For an
-explicit recovery point or a destructive drill, use the controlled helper below.
-
-For PVC-only recovery, use `scripts/volsync-restore.sh` through the tasks below.
-It refreshes the destination and waits for its own successful mover before touching
-the source claim. An active backup, pending destination request, or another recovery
-operation blocks replacement. Never delete a backed-up PVC directly to request a restore.
+For PVC-only recovery on an existing cluster, use `scripts/volsync-restore.sh`
+through the tasks below. It requests a fresh restore from the same repository
+before replacing the claim. Deleting only the PVC can reuse the destination's old
+local image; it does not request the latest remote backup. For a complete storage
+rebuild, recreate the destination as well as the PVC so the one-shot restore runs.
 
 The helper suspends the application's Flux Kustomization, HelmRelease and backup
 source. For an operator-owned VMSingle it also pauses the operator resource. It
@@ -143,25 +133,6 @@ After validation, patch the retained snapshot's bound `VolumeSnapshotContent`
 deletion policy to `Delete` before deleting the `VolumeSnapshot`; otherwise its
 backend ZFS snapshot remains. Do not discard either recovery point during diagnosis.
 
-## Scheduled repository integrity checks
-
-Each declared restic source receives a weekly `*-backup-check` CronJob running
-`restic check --read-data`. The default is Monday 01:15 UTC; override
-`VOLSYNC_CHECK_SCHEDULE` for an application's backup and maintenance window. The job
-uses its existing repository Secret inside the Pod, has no Kubernetes API token,
-and mounts only disposable cache storage. It waits up to ten minutes for restic's
-native repository lock and has a two-hour job deadline. Full reads consume download
-bandwidth; choose schedules according to repository size and backup windows.
-
-A failed integrity or refresh Job alerts after fifteen minutes. A later successful
-run clears the alert even if a failed Job is retained for diagnostics. Inspect the
-failed Job without publishing private repository diagnostics. Do not prune or repair
-a damaged repository before retaining evidence and validating an older recovery point.
-A passing integrity check establishes encrypted data integrity, not application usability
-or protection from writer deletion. See the
-[Hetzner history-protection procedure](../../../docs/backup-history-protection.md)
-for independent credentials, policy and versioned recovery requirements.
-
 ## Recovery checks in CI
 
 The path-scoped Application recovery workflow runs the restore CLI's controller,
@@ -170,8 +141,8 @@ with disposable storage and restic repositories. Each drill writes data through 
 native API, backs up a stopped application, opens it with the candidate image,
 writes more data, and verifies both recovery points through that API. The older
 checkpoint is reopened with the base branch's image. It also reads all synthetic
-repository data with `restic check --read-data`, verifies injected corruption fails,
-and checks failure/clearance of the maintenance alert through VictoriaMetrics.
+repository data with `restic check --read-data` and verifies injected corruption fails.
+These reads use disposable local test repositories, not production backups.
 
 The OpenLDAP workflow runs its production backup hook on a synthetic directory,
 imports the paired exports into new native databases, and checks password login,

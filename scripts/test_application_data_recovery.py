@@ -110,37 +110,11 @@ class ApplicationRecovery(unittest.TestCase):
                     time.sleep(0.25)
                 self.assertEqual(actual, expected, run("docker", "logs", name))
 
-            def check_alert():
-                document = json.loads(run("yq", "-o=json", ".", str(ROOT / "kubernetes/components/volsync/prometheusrule.yaml")))
-                expression = document["spec"]["groups"][0]["rules"][0]["expr"].replace("${APP}", "fixture")
-                timestamp = milliseconds
-
-                def sample(text):
-                    nonlocal timestamp
-                    timestamp += 1
-                    request(base, "/api/v1/import/prometheus", body=f"{text} {timestamp}\n".encode())
-                    request(base, "/internal/force_flush", body=b"")
-
-                def firing():
-                    result = json.loads(request(base, "/api/v1/query", {"query": expression, "time": timestamp / 1000 + 1, "nocache": "1"}))
-                    self.assertEqual(result["status"], "success")
-                    return bool(result["data"]["result"])
-
-                sample('kube_job_failed{namespace="fixture",job_name="fixture-backup-check-123",condition="true"} 1')
-                sample('kube_job_status_start_time{namespace="fixture",job_name="fixture-backup-check-123"} 100')
-                self.assertTrue(firing(), "first failed check must alert without prior success")
-                sample('kube_cronjob_status_last_successful_time{namespace="fixture",cronjob="fixture-backup-check"} 90')
-                self.assertTrue(firing(), "failure newer than prior success must alert")
-                sample('kube_cronjob_status_last_successful_time{namespace="fixture",cronjob="fixture-backup-check"} 110')
-                self.assertFalse(firing(), "later successful check must clear a retained failed Job")
-
             def checkpoint():
                 output = run("restic", "backup", ".", "--json", cwd=data, env=env)
                 return next(json.loads(line)["snapshot_id"] for line in output.splitlines() if json.loads(line).get("message_type") == "summary")
 
             base = start(data, previous_image)
-            if metrics:
-                check_alert()
             write(base, "before-change")
             expect_contents(base, {"before-change"})
             stop()
