@@ -9,7 +9,7 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/ThePhaseless/terraform-provider-jellyfin v0.0.0
 	github.com/crossplane/crossplane-runtime/v2 v2.4.0
-	github.com/crossplane/crossplane/apis/v2 v2.4.1
+	github.com/crossplane/crossplane/apis/v2 v2.4.3
 	github.com/crossplane/upjet/v2 v2.5.1
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
