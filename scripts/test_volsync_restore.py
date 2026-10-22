@@ -156,7 +156,7 @@ class RestoreTests(unittest.TestCase):
                         "rd": {
                             "metadata": {"uid": "original-rd", "resourceVersion": "1"},
                             "spec": {"trigger": trigger, "restic": ({"restoreAsOf": original_before} if original_before else {})},
-                            "status": {"latestImage": {"name": "old"}, "lastManualSync": manual or ""},
+                            "status": {"latestImage": {"name": "old"}, "lastManualSync": manual or "completed-maintenance-request"},
                         },
                     }
                 )

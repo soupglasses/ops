@@ -9,6 +9,7 @@ on:
       - "scripts/test_volsync_restore.py"
       - "scripts/test_application_data_recovery.py"
       - "scripts/test_volsync_refresh.py"
+      - "scripts/test_volsync_incluster.py"
       - "kubernetes/components/volsync/**"
       - "kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"
       - "kubernetes/apps/monitoring/victoria-logs/app/helmrelease.yaml"
@@ -38,4 +39,5 @@ jobs:
         env:
           APPLICATION_RECOVERY_TEST: "1"
           RECOVERY_BASE_REF: ${{ github.event.pull_request.base.sha || github.sha }}
-        run: python3 -m unittest discover -s scripts -p test_application_data_recovery.py -v
+        run: python3 -m unittest scripts.test_application_data_recovery scripts.test_volsync_incluster
+          -v

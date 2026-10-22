@@ -218,7 +218,7 @@ if ! jq -e '
     (.spec.paused != true) and
     ((.status.lastSyncStartTime // "") == "") and
     ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0) and
-    ((.spec.trigger.manual // "") == (.status.lastManualSync // ""))
+    (((.spec.trigger.manual // "") == "") or (.spec.trigger.manual == .status.lastManualSync))
     ' <<<"$original_rd" >/dev/null; then
     echo "ERROR: restore destination is paused or has an unfinished request; refusing to replace its trigger" >&2
     exit 1

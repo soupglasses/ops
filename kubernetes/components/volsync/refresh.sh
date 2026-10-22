@@ -14,12 +14,18 @@ if [[ -v REFRESH_TIMEOUT_SECONDS ]]; then refresh_timeout=$REFRESH_TIMEOUT_SECON
 if [[ -v REFRESH_POLL_SECONDS ]]; then poll_seconds=$REFRESH_POLL_SECONDS; fi
 deadline=$((SECONDS + refresh_timeout))
 
+# The pinned client's timeout override bypasses in-cluster configuration. Bound
+# each process instead, preserving native service-account token handling.
+kubectl() {
+    timeout 20s kubectl "$@"
+}
+
 read_destination() {
-    kubectl -n "$NS" get replicationdestination "$destination" -o json --request-timeout=15s
+    kubectl -n "$NS" get replicationdestination "$destination" -o json
 }
 idle='((.status.lastSyncStartTime // "") == "") and
     ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0) and
-    ((.spec.trigger.manual // "") == (.status.lastManualSync // ""))'
+    (((.spec.trigger.manual // "") == "") or (.spec.trigger.manual == .status.lastManualSync))'
 source=$(kubectl -n "$NS" get replicationsource "$APP" -o json)
 if ! jq -e --arg app "$APP" "($idle) and (.spec.paused != true) and
     (.spec.sourcePVC == \$app) and (.spec.restic != null) and (.status.latestMoverStatus.result == \"Successful\") and
@@ -53,7 +59,7 @@ if [[ -z "$lock" ]]; then
     patch=$(jq -nc --arg token "$token" --arg key "$key" --arg previous "$previous" --argjson object "$original" '
         {metadata:{resourceVersion:$object.metadata.resourceVersion,annotations:{($key):$token,
             "ops.soupglasses.dev/previous-restore-image":$previous}},spec:{trigger:{manual:$token}}}')
-    kubectl -n "$NS" patch replicationdestination "$destination" --type=merge -p "$patch" --request-timeout=15s >/dev/null
+    kubectl -n "$NS" patch replicationdestination "$destination" --type=merge -p "$patch" >/dev/null
 else
     # A retried CronJob continues its own pending request, never a new checkpoint.
     token=$lock
@@ -79,7 +85,7 @@ while (( SECONDS < deadline )); do
                 {op:"add",path:"/metadata/annotations/ops.soupglasses.dev~1restore-checkpoint",value:$checkpoint},
                 {op:"remove",path:"/metadata/annotations/ops.soupglasses.dev~1previous-restore-image"},
                 {op:"remove",path:"/metadata/annotations/ops.soupglasses.dev~1recovery-operation"}]')
-        kubectl -n "$NS" patch replicationdestination "$destination" --type=json -p "$patch" --request-timeout=15s >/dev/null
+        kubectl -n "$NS" patch replicationdestination "$destination" --type=json -p "$patch" >/dev/null
         echo 'Restore image refreshed from the successful backup checkpoint.'
         exit 0
     fi
