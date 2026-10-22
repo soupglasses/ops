@@ -5,14 +5,14 @@ name: Jellyfin provider
 on:
   pull_request:
     paths:
-      - "packages/provider-jellyfin/**"
+      - "scripts/verify-jellyfin-composition.py"
       - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
       - "kubernetes/apps/media/jellyfin/app/*.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
   push:
     branches: [main]
     paths:
-      - "packages/provider-jellyfin/**"
+      - "scripts/verify-jellyfin-composition.py"
       - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
       - "kubernetes/apps/media/jellyfin/app/*.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
@@ -27,41 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Classify changed paths
-        id: changes
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          python3 - <<'PYTHON'
-          import os
-          import subprocess
-          from pathlib import Path
-
-          base = os.environ.get("BASE_SHA", "")
-          force = os.environ["EVENT_NAME"] == "workflow_dispatch" or not base.strip("0")
-          changed = [] if force else subprocess.check_output(
-              ["git", "diff", "--name-only", base, os.environ["GITHUB_SHA"]], text=True
-          ).splitlines()
-          source = force or any(
-              path.startswith("packages/provider-jellyfin/")
-              or path == ".github/workflows/jellyfin-provider.yaml"
-              for path in changed
-          )
-          native = source or any(
-              path.startswith("kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/")
-              for path in changed
-          )
-          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
-              print(f"source={str(source).lower()}", file=output)
-              print(f"native={str(native).lower()}", file=output)
-          PYTHON
       - name: Install pinned Crossplane CLI
         run: |
           curl -fsSL https://cli.crossplane.io/stable/v2.5.0/bin/linux_amd64/crossplane -o /tmp/crossplane
@@ -73,34 +43,4 @@ jobs:
           version: 2026.10.15
           install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq
       - name: Render plugin settings with synthetic credentials
-        run: python3 packages/provider-jellyfin/tests/verify_composition.py
-      - name: Install pinned kind
-        if: steps.changes.outputs.native == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release download v0.33.0 --repo kubernetes-sigs/kind --pattern kind-linux-amd64 --dir /tmp
-          echo 'aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  /tmp/kind-linux-amd64' | sha256sum --check
-          sudo install /tmp/kind-linux-amd64 /usr/local/bin/kind
-      - name: Build and test the native provider package
-        if: steps.changes.outputs.native == 'true'
-        run: bash packages/provider-jellyfin/build.sh /tmp/provider-jellyfin.xpkg
-      - name: Verify generated schemas are reproducible
-        if: steps.changes.outputs.native == 'true'
-        run: |
-          docker build --target generated --output type=local,dest=/tmp/jellyfin-generated packages/provider-jellyfin
-          diff -r packages/provider-jellyfin/package/crds /tmp/jellyfin-generated/generated/crds
-          diff packages/provider-jellyfin/config/schema.json /tmp/jellyfin-generated/generated/schema.json
-      - name: Verify native provider scope and reconciliation in kind
-        if: steps.changes.outputs.native == 'true'
-        env:
-          PROVIDER_PACKAGE: /tmp/provider-jellyfin.xpkg
-        run: bash packages/provider-jellyfin/kind-test.sh
-      - name: Publish
-        if: steps.changes.outputs.source == 'true' && github.event_name != 'pull_request' && github.ref
-          == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          crossplane xpkg push --package-files /tmp/provider-jellyfin.xpkg --oci-annotation org.opencontainers.image.revision=${{ github.sha }} ghcr.io/soupglasses/ops/provider-jellyfin:v0.1.0-${{ github.sha }}
+        run: python3 scripts/verify-jellyfin-composition.py

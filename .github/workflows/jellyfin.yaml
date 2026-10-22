@@ -6,13 +6,11 @@ on:
   pull_request:
     paths:
       - "packages/jellyfin-runtime/**"
-      - "packages/provider-jellyfin/**"
       - ".github/workflows/jellyfin.yaml"
   push:
     branches: [main]
     paths:
       - "packages/jellyfin-runtime/**"
-      - "packages/provider-jellyfin/**"
       - ".github/workflows/jellyfin.yaml"
   workflow_dispatch:
 permissions:
@@ -31,30 +29,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Classify runtime publication
-        id: changes
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          python3 - <<'PYTHON'
-          import os
-          import subprocess
-          from pathlib import Path
-
-          base = os.environ.get("BASE_SHA", "")
-          force = os.environ["EVENT_NAME"] == "workflow_dispatch" or not base.strip("0")
-          changed = [] if force else subprocess.check_output(
-              ["git", "diff", "--name-only", base, os.environ["GITHUB_SHA"]], text=True
-          ).splitlines()
-          runtime = force or any(
-              path.startswith("packages/jellyfin-runtime/")
-              or path == ".github/workflows/jellyfin.yaml"
-              for path in changed
-          )
-          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
-              print(f"runtime={str(runtime).lower()}", file=output)
-          PYTHON
       - name: Test plugin launcher and health checks
         run: |
           python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
@@ -63,17 +37,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: packages/jellyfin-runtime/build.sh ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha
           }}
-      - name: Build generated provider integration driver
-        run: docker build --target tests -t ops-jellyfin-provider-tests packages/provider-jellyfin
-      - name: Test LDAP login and photos through Upjet
-        env:
-          JELLYFIN_INTEGRATION_IMAGE: ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
-          JELLYFIN_PROVIDER_TEST_IMAGE: ops-jellyfin-provider-tests
-        run: python3 -m unittest discover -s packages/jellyfin-runtime/tests -p test_identity_integration.py
-          -v
       - name: Publish
-        if: steps.changes.outputs.runtime == 'true' && github.event_name != 'pull_request' && github.ref
-          == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

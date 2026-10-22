@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 
-root = Path(__file__).resolve().parents[3]
+root = Path(__file__).resolve().parents[1]
 composition = root / "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/composition.yaml"
 
 

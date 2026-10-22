@@ -38,9 +38,6 @@ insert_final_newline = unset
 [*.go]
 indent_style = tab
 
-[/packages/provider-jellyfin/config/schema.json]
-insert_final_newline = unset
-
 # Encrypted native router backups are binary artifacts.
 [*.backup]
 indent_style = unset
