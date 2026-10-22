@@ -35,7 +35,7 @@ The namespaced Upjet provider owns the API settings and libraries declared in
 `kubernetes/apps/media/jellyfin/app/`. The application has no
 configuration sidecar. The runtime contains the plugin launcher, readiness check
 and pinned LDAP plugin distribution. See
-[provider migration](../provider-jellyfin/README.md) for adoption and recovery ordering.
+[provider documentation](https://github.com/soupglasses/provider-jellyfin) for adoption guidance.
 
 ## Plugin updates
 
@@ -53,12 +53,12 @@ the checksum before extraction and read the plugin GUID/version from the verifie
 archive's `meta.json`. There is no separate directory-version pin to forget. The MIT
 license is fetched from the separately pinned `licenseRevision`.
 
-After the real Jellyfin/LDAP integration test passes, CI publishes the source-SHA
+After runtime checks and the image build pass, CI publishes the source-SHA
 tag and an upstream-Jellyfin-version tag derived from the Dockerfile.
 Deploy the version tag with its digest: Renovate can discover a new runtime digest after a plugin
 rebuild while the running deployment stays immutable. The Dockerfile's official
 Jellyfin base image remains independently tag-and-digest pinned and Renovate-managed.
-Plugin upgrade PRs require review and passing integration tests; future upstream
+Plugin upgrade PRs require review and passing runtime checks; future upstream
 asset naming or server compatibility changes may require adjusting the build.
 
 References: [Jellyfin plugin installation](https://jellyfin.org/docs/general/server/plugins/index.html),
@@ -74,8 +74,5 @@ python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
 The unit tests exercise plugin replacement, saved configuration preservation,
 direct process handoff and readiness during degraded startup.
 
-The opt-in Docker/OpenLDAP fixture runs the generated Upjet connector against
-real Jellyfin and verifies LDAP login, photo sync, drift repair and restart
-persistence. Set `JELLYFIN_INTEGRATION_IMAGE` to the built runtime image and
-`JELLYFIN_PROVIDER_TEST_IMAGE` to the provider Dockerfile's `tests` target before
-running `test_identity_integration.py`. All fixture credentials are synthetic.
+Provider resource lifecycle tests run against the installed native package in
+[provider-jellyfin](https://github.com/soupglasses/provider-jellyfin).

@@ -50,8 +50,11 @@ yq eval-all -o=json -I=0 '[.]' \
     "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/compositeresourcedefinition.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
+crossplane xpkg get-crds \
+    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/provider.yaml" \
+    --output-dir "$schema_dir/jellyfin-crds"
 yq eval-all -o=json -I=0 '[.]' \
-    "$REPO_ROOT/packages/provider-jellyfin/package/crds/"*.yaml \
+    "$schema_dir/jellyfin-crds/"*/*/*.yaml \
     "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/compositeresourcedefinition.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 

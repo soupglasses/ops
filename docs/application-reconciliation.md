@@ -61,7 +61,7 @@ Plugin configuration owns declared keys while preserving user mappings and other
 runtime state. Binary plugins are checksum-pinned in the tested container image;
 Crossplane manages their settings. See the
 [runtime policy](../packages/jellyfin-runtime/README.md) and
-[provider README](../packages/provider-jellyfin/README.md).
+[provider README](https://github.com/soupglasses/provider-jellyfin).
 
 ## Recovery
 
