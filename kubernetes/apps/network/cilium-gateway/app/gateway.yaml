@@ -2,66 +2,6 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-apiVersion: cilium.io/v2alpha1
-kind: CiliumGatewayClassConfig
-metadata:
-  name: public
-  namespace: network
-spec:
-  service:
-    type: LoadBalancer
-    externalTrafficPolicy: Cluster
-    loadBalancerClass: io.cilium/bgp-control-plane
-    ipFamilies: [IPv4, IPv6]
-    ipFamilyPolicy: RequireDualStack
-    allocateLoadBalancerNodePorts: false
-  telemetry:
-    accessLogs:
-      - format: JSON
-        targets: [HTTP]
-        json:
-          time: "%START_TIME%"
-          gateway: "%CILIUM_GATEWAY_NAME%"
-          gateway_namespace: "%CILIUM_GATEWAY_NAMESPACE%"
-          remote_addr: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
-          x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
-          request_id: "%REQ(X-REQUEST-ID)%"
-          method: "%REQ(:METHOD)%"
-          vhost: "%REQ(:AUTHORITY)%"
-          path: "%REQ(:PATH)%"
-          status: "%RESPONSE_CODE%"
-          response_flags: "%RESPONSE_FLAGS%"
-          duration_ms: "%DURATION%"
-          bytes_sent: "%BYTES_SENT%"
-          upstream_addr: "%UPSTREAM_HOST%"
-          upstream_cluster: "%UPSTREAM_CLUSTER%"
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: cilium-public
-spec:
-  controllerName: io.cilium/gateway-controller
-  parametersRef:
-    group: cilium.io
-    kind: CiliumGatewayClassConfig
-    name: public
-    namespace: network
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: public-gateway-tls
-  namespace: network
-spec:
-  secretName: public-gateway-tls
-  issuerRef:
-    name: cloudflare-dns01-production
-    kind: ClusterIssuer
-  dnsNames:
-    - auth.${DOMAIN}
-    - grafana.${DOMAIN}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

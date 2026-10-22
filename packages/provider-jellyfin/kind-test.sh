@@ -58,6 +58,7 @@ helm upgrade --install crossplane crossplane --repo https://charts.crossplane.io
     --wait --timeout 4m
 # Rewrite the package before creation so the test never contacts the production registry.
 kubectl create --dry-run=client --filename "$repo_dir/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/provider.yaml" \
+    --filename "$repo_dir/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/deploymentruntimeconfig.yaml" \
     --output json >"$work_dir/provider.json"
 python3 - "$work_dir/provider.json" "$registry_address" <<'PY'
 import json

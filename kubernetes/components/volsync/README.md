@@ -19,7 +19,7 @@ Per-app PVC backup + auto-restore-on-PVC-create against a restic S3 repo.
 
 ## Consuming app contract
 
-Set these in the app's `ks.yaml` `postBuild.substitute`:
+Set these in the app's `kustomize.yaml` `postBuild.substitute`:
 
 | Var | Default | Notes |
 |---|---|---|

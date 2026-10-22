@@ -19,9 +19,9 @@ def read_yaml(path, expression="[.]"):
     return json.loads(subprocess.check_output(["yq", "eval-all", "-o=json", expression, str(path)]))
 
 
-xr = next(item for item in read_yaml(root / "kubernetes/apps/media/jellyfin/app/settings.yaml")
+xr = next(item for item in read_yaml(root / "kubernetes/apps/media/jellyfin/app/pluginsettings.yaml")
           if item["kind"] == "PluginSettings")
-schema = read_yaml(composition.parent / "pluginsettings.yaml")[0]
+schema = read_yaml(composition.parent / "compositeresourcedefinition.yaml")[0]
 for field, definition in schema["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"].items():
     # CLI rendering does not apply admission defaults.
     if "default" in definition:

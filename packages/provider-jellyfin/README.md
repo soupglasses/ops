@@ -59,7 +59,7 @@ use an external runtime. The isolated native-package test verifies the effective
 permissions and the namespace scope of its APIs. See the
 [upstream baseline rules](https://github.com/crossplane/crossplane/blob/v2.4.2/internal/controller/rbac/provider/roles/roles.go#L73).
 
-Application settings live in `kubernetes/apps/media/jellyfin/app/settings.yaml`.
+Application settings live in `kubernetes/apps/media/jellyfin/app/`.
 The ProviderConfig selects the existing `ops-recovery` first-setup administrator.
 On an empty instance, the embedded Terraform provider uses those credentials to
 create the first administrator and complete Jellyfin's setup wizard. On later

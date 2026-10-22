@@ -7,7 +7,7 @@ namespace: media
 components:
   - ../../components/common
 resources:
-  - ./jellyfin/ks.yaml
+  - ./jellyfin/kustomize.yaml
 patches:
   - target:
       kind: Namespace

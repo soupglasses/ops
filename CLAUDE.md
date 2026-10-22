@@ -38,7 +38,7 @@ managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
 
 ## Ground rules
 
-- `kubernetes/apps/<namespace>/<app>/` uses the two-level pattern: `ks.yaml` plus an
+- `kubernetes/apps/<namespace>/<app>/` uses the two-level pattern: `kustomize.yaml` plus an
   `app/` folder with no kustomization.yaml inside.
 - `kubernetes/clusters/home/flux-system/` is Flux bootstrap output. Do not touch.
 - Deeper conventions live in DEVELOPMENT.md, agent workflow rules in AGENTS.md, design

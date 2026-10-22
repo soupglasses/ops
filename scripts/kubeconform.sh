@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-SETTINGS="$REPO_ROOT/kubernetes/components/common/config/cluster-settings.yaml"
+SETTINGS="$REPO_ROOT/kubernetes/components/common/config/configmap.yaml"
 
 # Real cluster-wide vars come from the same ConfigMap the controller reads.
 # yq -o=shell emits KEY='value' lines safe for eval.
@@ -47,14 +47,12 @@ crossplane xpkg get-crds \
     --output-dir "$schema_dir/ldap-crds"
 yq eval-all -o=json -I=0 '[.]' \
     "$schema_dir/ldap-crds/"*/*/*.yaml \
-    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/oauth2.yaml" \
-    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/groups.yaml" \
-    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/serviceaccounts.yaml" \
+    "$REPO_ROOT/kubernetes/apps/identity/ldap-provider/app/compositeresourcedefinition.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
 yq eval-all -o=json -I=0 '[.]' \
     "$REPO_ROOT/packages/provider-jellyfin/package/crds/"*.yaml \
-    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/pluginsettings.yaml" \
+    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/compositeresourcedefinition.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
 # The community catalog omits CRDs themselves; validate those against the

@@ -1,0 +1,214 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-users
+spec:
+  forProvider:
+    dn: ou=users,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-system
+spec:
+  forProvider:
+    dn: ou=system,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-groups
+spec:
+  forProvider:
+    dn: ou=groups,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-policies
+spec:
+  forProvider:
+    dn: ou=policies,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth
+spec:
+  forProvider:
+    dn: ou=oauth,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-clients
+spec:
+  forProvider:
+    dn: ou=clients,ou=oauth,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-authorizations
+spec:
+  forProvider:
+    dn: ou=authorizations,ou=oauth,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-consents
+spec:
+  forProvider:
+    dn: ou=consents,ou=oauth,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-oauth-tokens
+spec:
+  forProvider:
+    dn: ou=tokens,ou=oauth,dc=finnes,dc=dev
+    attributes:
+      objectClass: [organizationalUnit]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-password-policy
+spec:
+  forProvider:
+    dn: cn=password,ou=policies,dc=finnes,dc=dev
+    attributes:
+      objectClass: [pwdPolicy, person, top]
+      sn: [password]
+      pwdAttribute: [userPassword]
+      pwdMustChange: ['TRUE']
+      pwdLockout: ['TRUE']
+      pwdAllowUserChange: ['TRUE']
+      pwdGraceAuthNLimit: ['1']
+      pwdMaxFailure: ['999']
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-system-policy
+spec:
+  forProvider:
+    dn: cn=system,ou=policies,dc=finnes,dc=dev
+    attributes:
+      objectClass: [pwdPolicy, person, top]
+      sn: [system]
+      pwdAttribute: [userPassword]
+      pwdMustChange: ['FALSE']
+      pwdLockout: ['FALSE']
+      pwdAllowUserChange: ['FALSE']
+      pwdMaxFailure: ['0']
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-admin-user
+spec:
+  forProvider:
+    dn: uid=admin,ou=users,dc=finnes,dc=dev
+    attributes:
+      objectClass: [inetOrgPerson, oathHOTPToken, organizationalPerson, person]
+      cn: [Admin]
+      sn: [Admin]
+      mail: ['admin@${DOMAIN}']
+    attributeSecretRefs:
+      userPassword:
+        name: ldap-admin-credentials
+        key: admin_password_hash
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-auth-user
+spec:
+  forProvider:
+    dn: uid=auth,ou=system,dc=finnes,dc=dev
+    attributes:
+      objectClass: [inetOrgPerson, organizationalPerson, person]
+      pwdPolicySubentry: ['cn=system,ou=policies,dc=finnes,dc=dev']
+      cn: [System Auth User]
+      sn: [Auth]
+    attributeSecretRefs:
+      userPassword:
+        name: ldap-admin-credentials
+        key: admin_user_password_hash
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1alpha1
+kind: Entry
+metadata:
+  name: directory-group-sentinel
+spec:
+  forProvider:
+    dn: uid=group-placeholder,ou=users,dc=finnes,dc=dev
+    attributes:
+      objectClass: [inetOrgPerson, oathHOTPToken]
+      cn: ['System: group placeholder (disabled)']
+      sn: [Placeholder]
+      displayName: ['System: group placeholder (disabled)']
+      pwdEndTime: ['19700101000000Z']
+      userPassword: []
+      description: [Non-login identity required by groupOfNames; retain when removing human members]

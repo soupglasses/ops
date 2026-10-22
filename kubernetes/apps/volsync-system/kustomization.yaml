@@ -9,4 +9,4 @@ namespace: volsync-system
 components:
   - ../../components/common
 resources:
-  - ./volsync/ks.yaml
+  - ./volsync/kustomize.yaml

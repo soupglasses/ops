@@ -7,14 +7,14 @@ on:
     paths:
       - "packages/provider-jellyfin/**"
       - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
-      - "kubernetes/apps/media/jellyfin/app/settings.yaml"
+      - "kubernetes/apps/media/jellyfin/app/*.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
   push:
     branches: [main]
     paths:
       - "packages/provider-jellyfin/**"
       - "kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/**"
-      - "kubernetes/apps/media/jellyfin/app/settings.yaml"
+      - "kubernetes/apps/media/jellyfin/app/*.yaml"
       - ".github/workflows/jellyfin-provider.yaml"
   workflow_dispatch:
 permissions:

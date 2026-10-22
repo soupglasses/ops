@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: cilium.io/v2alpha1
+kind: CiliumGatewayClassConfig
+metadata:
+  name: private
+  namespace: network
+spec:
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Cluster
+    loadBalancerClass: io.cilium/bgp-control-plane
+    ipFamilies: [IPv4]
+    ipFamilyPolicy: SingleStack
+    allocateLoadBalancerNodePorts: false
+    loadBalancerSourceRanges:
+      - 172.21.69.0/24
+      - 172.21.70.0/24
+      - 172.21.71.10/32
+    loadBalancerSourceRangesPolicy: Allow

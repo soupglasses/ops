@@ -8,14 +8,14 @@ on:
       - .github/workflows/grafana-oidc.yaml
       - scripts/test_grafana_oidc.py
       - kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml
-      - kubernetes/repositories/helm/victoria-metrics.yaml
+      - kubernetes/repositories/helm/helmrepository.yaml
   push:
     branches: [main]
     paths:
       - .github/workflows/grafana-oidc.yaml
       - scripts/test_grafana_oidc.py
       - kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml
-      - kubernetes/repositories/helm/victoria-metrics.yaml
+      - kubernetes/repositories/helm/helmrepository.yaml
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,7 +43,8 @@ jobs:
           import yaml
           release = yaml.safe_load(Path('kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml').read_text())['spec']
           chart = release['chart']['spec']
-          repository = yaml.safe_load(Path('kubernetes/repositories/helm/victoria-metrics.yaml').read_text())['spec']['url']
+          repositories = yaml.safe_load_all(Path('kubernetes/repositories/helm/helmrepository.yaml').read_text())
+          repository = next(obj['spec']['url'] for obj in repositories if obj['metadata']['name'] == chart['sourceRef']['name'])
           with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as values:
               yaml.safe_dump(release['values'], values)
               values.flush()

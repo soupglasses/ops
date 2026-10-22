@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+kind: Library
+metadata:
+  name: jellyfin-movies
+  annotations:
+    crossplane.io/external-name: Movies
+spec:
+  forProvider:
+    collectionType: movies
+    paths:
+      - /media/movies
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+kind: Library
+metadata:
+  name: jellyfin-tv
+  annotations:
+    crossplane.io/external-name: TV
+spec:
+  forProvider:
+    collectionType: tvshows
+    paths:
+      - /media/tv
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+kind: Library
+metadata:
+  name: jellyfin-music
+  annotations:
+    crossplane.io/external-name: Music
+spec:
+  forProvider:
+    collectionType: music
+    paths:
+      - /media/music

@@ -33,7 +33,7 @@ LDAP schema. Applications should consume that API without embedding directory sc
 or reconciliation workarounds in their own configuration. See
 [Grafana identity configuration](../kubernetes/apps/monitoring/victoria-metrics/identity/README.md).
 
-Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/app/identity.yaml)
+Jellyfin's [GroupOfNames declarations](../kubernetes/apps/media/jellyfin/app/groupofnames.yaml)
 are application-owned and reconciled centrally. New groups contain only the
 non-login platform sentinel, which is continuously ensured without replacing
 human memberships. Canaille controls human membership and ownership. The user
@@ -51,7 +51,7 @@ names roll the workload when policy changes, so Git changes take effect automati
 
 ## Application configuration
 
-Jellyfin's [settings](../kubernetes/apps/media/jellyfin/app/settings.yaml) declare libraries,
+Jellyfin's [settings](../kubernetes/apps/media/jellyfin/app/) declare libraries,
 server settings and LDAP plugin configuration. The namespaced Upjet provider uses
 its ProviderConfig credentials to complete the first setup wizard when necessary,
 then authenticates normally. The application container needs no bootstrap script

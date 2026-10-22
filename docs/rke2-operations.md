@@ -31,7 +31,7 @@ Adapting it here would require a separately reviewed ownership migration and cle
 rebuild test. Installing a second release or treating the current RKE2 chart as a
 one-time bootstrap does not transfer ownership safely.
 
-CoreDNS's LDAP rewrite is declared in `kubernetes/bootstrap/rke2-coredns.yaml` and
+CoreDNS's LDAP rewrite is declared in `kubernetes/bootstrap/helmchartconfig.yaml` and
 installed as an RKE2 `HelmChartConfig` by the host role.
 
 ## Installation and recovery prerequisites

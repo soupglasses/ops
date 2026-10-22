@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: application-identity
+  labels:
+    monitoring.finnes.dev/enabled: "true"
+spec:
+  groups:
+    - name: application.identity
+      rules:
+        # Prefer the recommended Kubernetes label, with legacy labels as fallbacks.
+        - record: namespace_pod:app:info
+          expr: |
+            max by (namespace, pod, app) (
+              label_replace(kube_pod_labels{label_app_kubernetes_io_name!=""}, "app", "$1", "label_app_kubernetes_io_name", "(.+)")
+              or on (namespace, pod)
+              label_replace(kube_pod_labels{label_app!=""}, "app", "$1", "label_app", "(.+)")
+              or on (namespace, pod)
+              label_replace(kube_pod_labels{label_k8s_app!=""}, "app", "$1", "label_k8s_app", "(.+)")
+              or on (namespace, pod)
+              label_replace(kube_pod_labels{label_component!=""}, "app", "$1", "label_component", "(.+)")
+            )
+        - record: namespace_app_persistentvolumeclaim:info
+          expr: |
+            max by (namespace, app, persistentvolumeclaim) (
+              kube_pod_spec_volumes_persistentvolumeclaims_info
+              * on (namespace, pod) group_left (app) namespace_pod:app:info
+            )
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: observability-storage
+  labels:
+    monitoring.finnes.dev/enabled: "true"
+spec:
+  groups:
+    - name: observability.storage
+      rules:
+        - alert: ObservabilityStorageLow
+          expr: |
+            (vm_free_disk_space_bytes / vm_total_disk_space_bytes < 0.2)
+            or (vl_free_disk_space_bytes / vl_total_disk_space_bytes < 0.2)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Observability storage has less than 20% free space
+            description: Check pool capacity and expand the affected ZFS PVC.
+        - alert: ObservabilityStorageReadOnly
+          expr: vm_storage_is_read_only == 1 or vl_storage_is_read_only == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Observability ingestion stopped because storage is read-only
+            description: Inspect free space and storage errors on the affected ZFS volume.

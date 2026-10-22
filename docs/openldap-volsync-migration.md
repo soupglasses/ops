@@ -15,7 +15,7 @@ human account and password. Target state: a volsync-managed PVC `openldap` on
 Facts this plan depends on (verified against the live pod):
 
 - slapd runs as uid/gid 65534 (nobody); mdb files are mode 0600, so the volsync mover
-  runs as 65534 (`VOLSYNC_PUID`/`VOLSYNC_PGID` in `ks.yaml`).
+  runs as 65534 (`VOLSYNC_PUID`/`VOLSYNC_PGID` in `kustomize.yaml`).
 - `slapcat -f /config/slapd.conf` works in the image and dumps the full tree.
 - The image has bash, which the quiesce watcher needs for `kubectl exec`.
 - The data is under 1 MiB; capacity 5Gi is generous headroom.
