@@ -7,7 +7,7 @@ RUN go mod download
 COPY integration ./integration
 RUN CGO_ENABLED=0 go test -c -trimpath -ldflags="-s -w" -buildvcs=false -p=2 -tags=system -o /out/integration ./integration
 
-FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0 AS tests
+FROM alpine:3.23@sha256:21f3e19bafab57a9ff7aa9dd571dac72f868370472c10f450cc0416cc1aca553 AS tests
 LABEL org.opencontainers.image.source="https://github.com/soupglasses/ops"
 RUN apk add --no-cache openldap openldap-back-mdb openldap-overlay-ppolicy openldap-clients python3 py3-pip && \
     apk add --no-cache --virtual .build python3-dev openldap-dev gcc musl-dev && \
