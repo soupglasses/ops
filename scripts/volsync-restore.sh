@@ -8,9 +8,8 @@
 # A destination latestImage may be stale until its next scheduled or manual
 # refresh. Recreating the PVC alone would restore that stale image. This script
 # bumps the RD trigger, waits for the mover to refresh latestImage, scales the
-# workload to 0, deletes the PVC, kicks
-# flux to re-create it, waits for the populator to bind it, then scales the
-# workload back to its original replica count.
+# workload to 0, preserves and replaces the PVC with controllers held, then
+# verifies application contents before releasing the recovery holds.
 #
 # Modes:
 #   scripts/volsync-restore.sh <APP>                  # newest snapshot
@@ -21,18 +20,20 @@
 #   NS              namespace (default: default)
 #   WORKLOAD        type/name to scale (default: auto — deployment/${APP}
 #                   or statefulset/${APP})
-#   FLUX_KS         Kustomization name to reconcile after PVC delete
+#   FLUX_KS         Kustomization name to suspend during recovery
 #                   (default: ${APP} in ${NS}). Set empty to skip.
 #   TIMEOUT         kubectl wait timeout (default: 5m)
 #   RESTIC_IMAGE    image with restic+jq for the picker
-#                   (default: quay.io/backube/volsync:0.15.0)
+#                   (default: running volsync controller image)
 #   ROLLBACK_SNAPSHOT_CLASS
 #                   VolumeSnapshotClass used to preserve the source PVC
 #                   (default: openebs-zfs-snapshot-retain)
 #   YES             set to 1 to skip the confirmation prompt
+#   VERIFY_COMMAND required application-level check, run after rollout and before
+#                   releasing recovery holds (APP, NS and WORKLOAD are exported)
 #
-# Ctrl+C at any point exits cleanly; if the workload was already scaled to 0,
-# it's scaled back to its original replica count on exit.
+# An interrupted or failed restore leaves the workload stopped. Inspect the
+# retained data snapshot before explicitly resuming writes.
 
 set -euo pipefail
 
@@ -43,18 +44,30 @@ trigger_requested=0
 trigger_completed=0
 trigger_cleaned=0
 manual_was_absent=0
+held_controls=()
+held_fields=()
+lock_cleaned=0
 
 on_exit() {
     local code=$?
     trap - EXIT INT TERM
     if [[ $code -ne 0 && $SCALED_DOWN -eq 1 && -n "$WORKLOAD" ]]; then
+        if ! kubectl -n "$NS" scale "$WORKLOAD" --replicas=0; then
+            echo "ERROR: could not confirm writers stopped; stop ${WORKLOAD} before further recovery work." >&2
+        fi
         echo >&2
-        echo "==> Aborted; scaling ${WORKLOAD} back to ${original_replicas}" >&2
-        kubectl -n "$NS" scale "$WORKLOAD" --replicas="$original_replicas" 2>/dev/null || true
+        echo "ERROR: restore failed; ${WORKLOAD} remains stopped to protect application data." >&2
+        echo "    Inspect PVC/${APP} and retained VolumeSnapshot/${rollback_snapshot} before resuming writes." >&2
     fi
     if [[ $trigger_requested -eq 1 && $trigger_cleaned -eq 0 && $manual_was_absent -eq 1 ]]; then
         echo "WARNING: RD/${RD} manual trigger ${restore_trigger} retained: restore and trigger cleanup were not completed." >&2
         echo "    Inspect the mover and replacement PVC; restore the original restoreAsOf before removing spec.trigger.manual." >&2
+    fi
+    if [[ $code -ne 0 && $trigger_requested -eq 1 && $lock_cleaned -eq 0 ]]; then
+        echo "    RD/${RD} recovery lock retained: ${restore_trigger}. Inspect it before another restore." >&2
+    fi
+    if [[ $code -ne 0 && ${#held_controls[@]} -gt 0 ]]; then
+        echo "    Recovery holds retained: ${held_controls[*]}. Inspect data before releasing them." >&2
     fi
     exit $code
 }
@@ -70,41 +83,54 @@ APP="${1:?APP is required (e.g. minecraft)}"
 ARG2="${2:-}"
 NS="${NS:-default}"
 TIMEOUT="${TIMEOUT:-5m}"
-RESTIC_IMAGE="${RESTIC_IMAGE:-quay.io/backube/volsync:0.15.0}"
+RESTIC_IMAGE="${RESTIC_IMAGE:-}"
 ROLLBACK_SNAPSHOT_CLASS="${ROLLBACK_SNAPSHOT_CLASS:-openebs-zfs-snapshot-retain}"
 FLUX_KS="${FLUX_KS-${APP}}"
 RD="${APP}-dst"
 rollback_snapshot="${APP}-pre-restore-$(date -u +%Y%m%d%H%M%S)"
+for name in "$APP" "$NS"; do
+    [[ "$name" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || { echo "ERROR: invalid application or namespace name" >&2; exit 1; }
+done
+# Only a declared backup source authorizes this recovery path. In particular,
+# intentionally unbacked workloads must not acquire recovery resources here.
+source_pvc=$(kubectl -n "$NS" get replicationsource "$APP" -o jsonpath='{.spec.sourcePVC}')
+[[ "$source_pvc" == "$APP" ]] || { echo "ERROR: no declared backup source for PVC/${APP}" >&2; exit 1; }
+policy=$(kubectl get volumesnapshotclass "$ROLLBACK_SNAPSHOT_CLASS" -o jsonpath='{.deletionPolicy}')
+[[ "$policy" == Retain ]] || { echo "ERROR: rollback snapshots require a Retain snapshot class" >&2; exit 1; }
 
 # --- pick or use given timestamp -------------------------------------------
-
-# Hardened pod spec for the ephemeral picker — restricted PSA needs all of
-# these set explicitly, otherwise the pod is rejected outright.
-read -r -d '' PICKER_OVERRIDES <<JSON || true
-{
-    "spec": {
-        "containers": [{
-            "name": "r",
-            "image": "${RESTIC_IMAGE}",
-            "stdin": true,
-            "envFrom": [{"secretRef": {"name": "volsync-${APP}"}}],
-            "command": ["restic", "snapshots", "--no-cache", "--no-lock", "--json"],
-            "securityContext": {
-                "runAsNonRoot": true,
-                "runAsUser": 1000,
-                "allowPrivilegeEscalation": false,
-                "readOnlyRootFilesystem": true,
-                "capabilities": {"drop": ["ALL"]},
-                "seccompProfile": {"type": "RuntimeDefault"}
-            }
-        }]
-    }
-}
-JSON
 
 RESTORE_AS_OF=""
 case "$ARG2" in
     --pick)
+        if [[ -z "$RESTIC_IMAGE" ]]; then
+            RESTIC_IMAGE=$(kubectl -n volsync-system get deployment volsync -o jsonpath='{.spec.template.spec.containers[0].image}')
+            [[ -n "$RESTIC_IMAGE" ]] || { echo "ERROR: cannot determine running VolSync image; set RESTIC_IMAGE" >&2; exit 1; }
+        fi
+        # Hardened pod spec for the ephemeral picker — restricted PSA needs all of
+        # these set explicitly, otherwise the pod is rejected outright.
+        read -r -d '' PICKER_OVERRIDES <<JSON || true
+        {
+            "spec": {
+                "containers": [{
+                    "name": "r",
+                    "image": "${RESTIC_IMAGE}",
+                    "stdin": true,
+                    "envFrom": [{"secretRef": {"name": "volsync-${APP}"}}],
+                    "command": ["restic", "snapshots", "--no-cache", "--no-lock", "--json"],
+                    "securityContext": {
+                        "runAsNonRoot": true,
+                        "runAsUser": 1000,
+                        "allowPrivilegeEscalation": false,
+                        "readOnlyRootFilesystem": true,
+                        "capabilities": {"drop": ["ALL"]},
+                        "seccompProfile": {"type": "RuntimeDefault"}
+                    }
+                }]
+            }
+        }
+JSON
+
         echo "==> Listing restic snapshots from volsync-${APP}"
         snapshots_json=$(kubectl -n "$NS" run "volsync-pick-${APP}-$$" \
             --image="$RESTIC_IMAGE" --restart=Never --rm -i --quiet \
@@ -154,6 +180,20 @@ echo "==> Workload: ${WORKLOAD} (ns: ${NS})"
 original_replicas=$(kubectl -n "$NS" get "$WORKLOAD" -o jsonpath='{.spec.replicas}')
 [[ -z "$original_replicas" ]] && original_replicas=1
 echo "    current replicas: ${original_replicas}"
+workload_json=$(kubectl -n "$NS" get "$WORKLOAD" -o json)
+selector=$(jq -er '.spec.selector.matchLabels | to_entries | map(.key + "=" + .value) | join(",") | select(length > 0)' <<<"$workload_json")
+[[ -n "${VERIFY_COMMAND:-}" ]] || { echo "ERROR: VERIFY_COMMAND must check restored application contents" >&2; exit 1; }
+if jq -e '(.spec.selector.matchExpressions // [] | length) > 0' <<<"$workload_json" >/dev/null; then
+    echo "ERROR: workload selector expressions require an explicit recovery plan." >&2
+    exit 1
+fi
+
+original_pvc=$(kubectl -n "$NS" get pvc "$APP" -o json)
+original_pvc_uid=$(jq -er '.metadata.uid' <<<"$original_pvc")
+if ! jq -e --arg destination "$RD" '.spec.dataSourceRef.kind == "ReplicationDestination" and .spec.dataSourceRef.name == $destination' <<<"$original_pvc" >/dev/null; then
+    echo "ERROR: PVC does not declare the expected recovery destination" >&2
+    exit 1
+fi
 
 # --- bump RD trigger ------------------------------------------------------
 
@@ -163,7 +203,9 @@ if ! kubectl -n "$NS" get replicationdestination "$RD" >/dev/null 2>&1; then
     if [[ -n "$FLUX_KS" ]] && command -v flux >/dev/null 2>&1; then
         flux reconcile ks "$FLUX_KS" -n "$NS" --with-source
     fi
+    destination_deadline=$(( $(date +%s) + 600 ))
     until kubectl -n "$NS" get replicationdestination "$RD" >/dev/null 2>&1; do
+        [[ $(date +%s) -lt $destination_deadline ]] || { echo "ERROR: restore destination was not recreated" >&2; exit 1; }
         sleep 3
     done
 fi
@@ -171,11 +213,21 @@ fi
 echo "==> Patching RD/${RD} to refresh latestImage"
 restore_trigger="refresh-$(date +%s)-$$-${RANDOM}"
 original_rd=$(kubectl -n "$NS" get replicationdestination "$RD" -o json)
+if ! jq -e '
+    ((.metadata.annotations["ops.soupglasses.dev/recovery-operation"] // "") == "") and
+    (.spec.paused != true) and
+    ((.status.lastSyncStartTime // "") == "") and
+    ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0) and
+    ((.spec.trigger.manual // "") == (.status.lastManualSync // ""))
+    ' <<<"$original_rd" >/dev/null; then
+    echo "ERROR: restore destination is paused or has an unfinished request; refusing to replace its trigger" >&2
+    exit 1
+fi
 manual_was_absent=$(jq -r 'if ((.spec.trigger // {}) | has("manual")) then 0 else 1 end' <<<"$original_rd")
 rd_uid=$(jq -r '.metadata.uid' <<<"$original_rd")
 prev=$(jq -r '.status.latestImage.name // ""' <<<"$original_rd")
-patch=$(jq -nc --arg trigger "$restore_trigger" --arg before "$RESTORE_AS_OF" \
-    '{spec: {trigger: {manual: $trigger}, restic: {
+patch=$(jq -nc --arg trigger "$restore_trigger" --arg before "$RESTORE_AS_OF" --argjson original "$original_rd" \
+    '{metadata: {resourceVersion: $original.metadata.resourceVersion, annotations:{"ops.soupglasses.dev/recovery-operation":$trigger}}, spec: {trigger: {manual: $trigger}, restic: {
         restoreAsOf: (if $before == "" then null else $before end)}}}')
 # A lost patch response can still have started a mover; retain its trigger on failure.
 trigger_requested=1
@@ -217,9 +269,7 @@ if [[ "${YES:-0}" != "1" ]]; then
     echo "  - scale ${WORKLOAD} in ns/${NS} from ${original_replicas} → 0"
     echo "  - preserve pvc/${APP} as volumesnapshot/${rollback_snapshot}"
     echo "  - delete pvc/${APP} in ns/${NS}"
-    if [[ -n "$FLUX_KS" ]] && command -v flux >/dev/null 2>&1; then
-        echo "  - reconcile flux ks/${FLUX_KS} so it re-creates the PVC"
-    fi
+    echo "  - hold GitOps, backup and application controllers during replacement"
     echo "  - wait for the populator to bind the new PVC from latestImage"
     echo "  - scale ${WORKLOAD} back to ${original_replicas}"
     read -rp "Continue? [y/N] " confirm
@@ -231,12 +281,67 @@ fi
 
 # --- preserve, replace, and rebind ----------------------------------------
 
+# Hold the controllers that could otherwise restart writers during recovery.
+# Already-paused controls retain their original state on successful completion.
+hold_control() {
+    local resource=$1 field=$2 object patch
+    object=$(kubectl -n "$NS" get "$resource" -o json)
+    if [[ -n $(jq -r '.metadata.annotations["ops.soupglasses.dev/recovery-operation"] // ""' <<<"$object") ]]; then
+        echo "ERROR: another recovery holds $resource" >&2
+        exit 1
+    fi
+    if jq -e '[.status.conditions[]? | select(.type == "Reconciling" and .status == "True")] | length > 0' <<<"$object" >/dev/null; then
+        echo "ERROR: $resource is reconciling; wait for it to finish" >&2
+        exit 1
+    fi
+    if [[ $(jq -r --arg field "$field" '.spec[$field] // false' <<<"$object") != true ]]; then
+        patch=$(jq -nc --arg field "$field" --arg token "$restore_trigger" --argjson original "$object" \
+            '{metadata:{resourceVersion:$original.metadata.resourceVersion,annotations:{"ops.soupglasses.dev/recovery-operation":$token}},spec:{($field):true}}')
+        # Record before patching: a lost response must not be treated as no hold.
+        held_controls+=("$resource")
+        held_fields+=("$field")
+        kubectl -n "$NS" patch "$resource" --type=merge -p "$patch"
+    fi
+}
+source_state=$(kubectl -n "$NS" get "replicationsource/$APP" -o json)
+if ! jq -e '((.status.lastSyncStartTime // "") == "") and ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0)' <<<"$source_state" >/dev/null; then
+    echo "ERROR: backup is active; wait for it to finish before replacing its source PVC" >&2
+    exit 1
+fi
+if [[ -n "$FLUX_KS" ]]; then
+    hold_control "kustomization.kustomize.toolkit.fluxcd.io/$FLUX_KS" suspend
+fi
+hold_control "replicationsource/$APP" paused
+# Pausing does not cancel an already-started backup. Recheck after the hold.
+source_state=$(kubectl -n "$NS" get "replicationsource/$APP" -o json)
+if ! jq -e '((.status.lastSyncStartTime // "") == "") and ([.status.conditions[]? | select(.type == "Synchronizing" and .status == "True")] | length == 0)' <<<"$source_state" >/dev/null; then
+    echo "ERROR: backup started while taking recovery holds; wait for it to finish" >&2
+    exit 1
+fi
+controller=$(jq -r '.metadata.ownerReferences[]? | select(.controller == true) | .kind + "/" + .name' <<<"$workload_json")
+helm_object=$workload_json
+if [[ -n "$controller" ]]; then
+    case "$controller" in
+        VMSingle/*)
+            controller="vmsingle.operator.victoriametrics.com/${controller#*/}"
+            hold_control "$controller" paused
+            helm_object=$(kubectl -n "$NS" get "$controller" -o json)
+            ;;
+        *) echo "ERROR: unsupported workload controller: $controller; recovery holds retained" >&2; exit 1 ;;
+    esac
+fi
+release=$(jq -r '.metadata.annotations["meta.helm.sh/release-name"] // ""' <<<"$helm_object")
+if [[ -n "$release" ]]; then
+    hold_control "helmrelease.helm.toolkit.fluxcd.io/$release" suspend
+fi
+
 echo "==> Scaling ${WORKLOAD} to 0"
 SCALED_DOWN=1
 kubectl -n "$NS" scale "$WORKLOAD" --replicas=0
-kubectl -n "$NS" wait --for=delete pod \
-    -l "app.kubernetes.io/instance=${APP}" \
-    --timeout="$TIMEOUT" 2>/dev/null || true
+pods=$(kubectl -n "$NS" get pods -l "$selector" -o jsonpath='{.items[*].metadata.name}')
+if [[ -n "$pods" ]]; then
+    kubectl -n "$NS" wait --for=delete pod -l "$selector" --timeout="$TIMEOUT"
+fi
 
 echo "==> Preserving PVC/${APP} as VolumeSnapshot/${rollback_snapshot}"
 kubectl -n "$NS" create -f - <<EOF
@@ -255,15 +360,15 @@ EOF
 kubectl -n "$NS" wait --for=jsonpath='{.status.readyToUse}'=true \
     "volumesnapshot/${rollback_snapshot}" --timeout="$TIMEOUT"
 
+current_uid=$(kubectl -n "$NS" get pvc "$APP" -o jsonpath='{.metadata.uid}')
+[[ "$current_uid" == "$original_pvc_uid" ]] || { echo "ERROR: source PVC changed; refusing deletion" >&2; exit 1; }
 echo "==> Deleting PVC/${APP} (if present)"
 kubectl -n "$NS" delete pvc "$APP" --ignore-not-found --wait=true --timeout="$TIMEOUT"
 
-if [[ -n "$FLUX_KS" ]] && command -v flux >/dev/null 2>&1; then
-    echo "==> Reconciling flux ks/${FLUX_KS} to re-create the PVC"
-    flux reconcile ks "$FLUX_KS" -n "$NS" --with-source
-else
-    echo "==> Skipping flux reconcile; relying on its next interval to re-create PVC"
-fi
+# Recreate the declared claim directly while Flux and Helm remain suspended;
+# reconciling either controller here could restart writers before validation.
+jq '{apiVersion:"v1",kind:"PersistentVolumeClaim",metadata:{name:.metadata.name,namespace:.metadata.namespace,labels:.metadata.labels},spec:.spec} | del(.spec.volumeName)' <<<"$original_pvc" \
+    | kubectl -n "$NS" create -f -
 
 echo "==> Waiting for PVC/${APP} to be re-created and Bound"
 recreate_deadline=$(( $(date +%s) + 600 ))
@@ -274,15 +379,10 @@ done
 kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Bound \
     "pvc/${APP}" --timeout="$TIMEOUT"
 
-echo "==> Scaling ${WORKLOAD} back to ${original_replicas}"
-kubectl -n "$NS" scale "$WORKLOAD" --replicas="$original_replicas"
-SCALED_DOWN=0
-
 # Keep manual precedence over cron through confirmation and PVC binding so a
 # scheduled refresh cannot replace the selected historical image mid-restore.
-if [[ $manual_was_absent -eq 1 ]]; then
-    cleanup=$(jq -nc --arg uid "$rd_uid" --arg token "$restore_trigger" \
-        --arg before "$RESTORE_AS_OF" --argjson original "$original_rd" '
+cleanup=$(jq -nc --arg uid "$rd_uid" --arg token "$restore_trigger" \
+        --arg before "$RESTORE_AS_OF" --argjson original "$original_rd" --argjson remove_manual "$manual_was_absent" '
         ($original.spec.restic // {}) as $restic |
         ($restic + (if $before == "" then {} else {restoreAsOf:$before} end) |
             if $before == "" then del(.restoreAsOf) else . end) as $expected |
@@ -296,16 +396,45 @@ if [[ $manual_was_absent -eq 1 ]]; then
             elif $before != "" then
             [{op:"remove", path:"/spec/restic/restoreAsOf"}]
             else [] end) +
-        [{op:"remove", path:"/spec/trigger/manual"}]')
+        (if $remove_manual == 1 then [{op:"remove", path:"/spec/trigger/manual"}] else [] end)')
     if ! kubectl -n "$NS" patch replicationdestination "$RD" --type=json -p "$cleanup"; then
         echo "ERROR: trigger cleanup conflicted or failed; inspect RD/${RD} before resuming its schedule." >&2
         exit 1
     fi
-    trigger_cleaned=1
-fi
+trigger_cleaned=1
+
+echo "==> Scaling ${WORKLOAD} back to ${original_replicas}"
+kubectl -n "$NS" scale "$WORKLOAD" --replicas="$original_replicas"
 
 echo "==> Waiting for ${WORKLOAD} rollout"
-kubectl -n "$NS" rollout status "$WORKLOAD" --timeout="$TIMEOUT"
+if ! kubectl -n "$NS" rollout status "$WORKLOAD" --timeout="$TIMEOUT"; then
+    kubectl -n "$NS" scale "$WORKLOAD" --replicas=0
+    exit 1
+fi
+echo "==> Verifying restored application contents"
+export APP NS WORKLOAD
+if ! bash -c "$VERIFY_COMMAND"; then
+    kubectl -n "$NS" scale "$WORKLOAD" --replicas=0
+    echo "ERROR: application recovery verification failed; recovery holds and rollback snapshot retained" >&2
+    exit 1
+fi
+SCALED_DOWN=0
+for ((index=${#held_controls[@]}-1; index>=0; index--)); do
+    resource=${held_controls[$index]}
+    field=${held_fields[$index]}
+    patch=$(jq -nc --arg field "$field" --arg token "$restore_trigger" '[
+        {op:"test",path:"/metadata/annotations/ops.soupglasses.dev~1recovery-operation",value:$token},
+        {op:"test",path:("/spec/"+$field),value:true},
+        {op:"replace",path:("/spec/"+$field),value:false},
+        {op:"remove",path:"/metadata/annotations/ops.soupglasses.dev~1recovery-operation"}]')
+    kubectl -n "$NS" patch "$resource" --type=json -p "$patch"
+done
+held_controls=()
+lock_cleanup=$(jq -nc --arg token "$restore_trigger" '[
+    {op:"test",path:"/metadata/annotations/ops.soupglasses.dev~1recovery-operation",value:$token},
+    {op:"remove",path:"/metadata/annotations/ops.soupglasses.dev~1recovery-operation"}]')
+kubectl -n "$NS" patch replicationdestination "$RD" --type=json -p "$lock_cleanup"
+lock_cleaned=1
 
 echo "==> Restore complete."
 echo "    Rollback snapshot retained: volumesnapshot/${rollback_snapshot}"

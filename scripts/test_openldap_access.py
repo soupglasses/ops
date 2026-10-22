@@ -96,7 +96,7 @@ class NativeAccess(unittest.TestCase):
             "-ec",
             "mkdir -p /data/config; chown -R 389:389 /data; sleep infinity",
         )
-        for filename in ("configure-access.sh", "run-slapd.sh", "access-policy.ldif"):
+        for filename in ("configure-access.sh", "run-slapd.sh", "access-policy.ldif", "backup.sh"):
             docker("cp", str(SOURCE / filename), setup + ":/source/" + filename)
         configuration = f"""include /etc/openldap/schema/core.schema
 include /etc/openldap/schema/cosine.schema
@@ -422,6 +422,26 @@ member: uid=charlie,ou=users,{BASE}
             "uid",
         ).stdout
         self.assertEqual(attributes(administrators, "uid"), [b"charlie"])
+
+    def test_native_backup_restores_identity_password_and_group_membership(self):
+        # Restore into new native databases; a successful export alone is not proof.
+        self.stop_server()
+        docker(*self.init_arguments())
+        self.start_server()
+        alice = "uid=alice,ou=users," + BASE
+        self.exec("/bin/sh", "/source/backup.sh")
+        self.exec("ldapmodify", "-x", "-H", URI, "-D", ADMIN, "-w", PASSWORD,
+                  data=f"dn: {alice}\nchangetype: modify\nreplace: sn\nsn: Changed after checkpoint\n\n".encode())
+        self.assertEqual(attributes(self.search(ADMIN, alice, "sn"), "sn"), [b"Changed after checkpoint"])
+        self.stop_server()
+        self.exec("/bin/sh", "-ec", "mv /data/config /data/config-before-restore; mkdir /data/config; rm /data/db/*.mdb")
+        self.exec("slapadd", "-F", "/data/config", "-n", "0", "-l", "/data/backup/current/config.ldif")
+        self.exec("slapadd", "-F", "/data/config", "-n", "1", "-l", "/data/backup/current/directory.ldif")
+        self.start_server()
+        self.exec("ldapwhoami", "-x", "-H", URI, "-D", alice, "-w", PASSWORD)
+        self.assertEqual(attributes(self.search(ADMIN, alice, "sn"), "sn"), [b"Fixture"])
+        self.assertIn(alice.encode(), attributes(self.search(ADMIN, GROUP, "member"), "member"))
+        self.assertEqual(attributes(self.search(SERVICE, alice, "jpegPhoto"), "jpegPhoto"), [PHOTO])
 
 
 if __name__ == "__main__":

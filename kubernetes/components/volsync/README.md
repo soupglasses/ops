@@ -70,7 +70,7 @@ Etcd snapshots are not part of recovery. The backup command does not reset RKE2.
 ## Restore before first start
 
 The populator blocks PVC binding until the ReplicationDestination has a `latestImage`.
-VolSync 0.15 can initialize a missing repository and publish an **empty** image when no
+VolSync can initialize a missing repository and publish an **empty** image when no
 snapshot matches. A Bound PVC or successful mover therefore does not prove recovery.
 This component has no empty-seed Job. OpenLDAP and Minecraft additionally check for
 their database/world files before starting; their backup hooks withhold the snapshot
@@ -92,39 +92,75 @@ and then never again. Implications:
   the *frozen* `latestImage`, which is whatever the RD restored at its first
   fire. New RS backups don't update it. ⚠️
 
-To force a fresh restore without a full rebuild, use `scripts/volsync-restore.sh`
-(also exposed via `task volsync:restore APP=<name>`). It bumps the RD trigger,
-waits for `latestImage` to refresh, scales the workload to 0, preserves the
-current PVC in a `VolumeSnapshot`, deletes + rebinds the PVC, then scales the
-workload back up. The rollback snapshot uses the Retain class. After application
-validation, patch its bound `VolumeSnapshotContent` deletion policy to `Delete`
-before deleting the VolumeSnapshot so the controller also cleans up the backend
-ZFS snapshot. Point-in-time variants:
+For PVC-only recovery, use `scripts/volsync-restore.sh` through the tasks below.
+It refreshes the destination and waits for its own successful mover before touching
+the source claim. An active backup, pending destination request, or another recovery
+operation blocks replacement. Never delete a backed-up PVC directly to request a restore.
+
+The helper suspends the application's Flux Kustomization, HelmRelease and backup
+source. For an operator-owned VMSingle it also pauses the operator resource. It
+stops the workload, requires every selected pod to terminate, creates a ready
+**Retain** rollback snapshot, and replaces the claim with the same declared recovery
+source. Application validation runs before these holds are released. Preexisting
+holds remain in place. Failure or interruption after shutdown leaves writers stopped,
+controllers held, and the rollback snapshot retained; inspect the failed operation
+before manually releasing its `ops.soupglasses.dev/recovery-operation` annotations.
+
+`VERIFY_COMMAND` is required. It runs locally with `APP`, `NS`, and `WORKLOAD` exported
+and must fail unless known restored contents are usable through the application.
+A readiness response or directory existing is insufficient. Use a reviewed check
+for a known world, directory identity and group, metric series, or log record.
+Do not put credentials in this argument or print them from the check.
 
 ```bash
-task volsync:restore APP=minecraft                          # newest snapshot
-task volsync:restore-pick APP=minecraft                     # interactive picker
-task volsync:restore-at APP=minecraft AT=2026-05-01T12:00:00Z
+task volsync:restore APP=minecraft VERIFY_COMMAND="$RECOVERY_CHECK"
+task volsync:restore-pick APP=minecraft VERIFY_COMMAND="$RECOVERY_CHECK"
+task volsync:restore-at APP=minecraft AT=<checkpoint-time> VERIFY_COMMAND="$RECOVERY_CHECK"
+# OpenLDAP uses APP=openldap-directory NS=identity WORKLOAD=deployment/openldap.
 ```
 
-Switching to `trigger.schedule` would refresh automatically at the cost of an
-extra restore cycle per period; we accept the trade because cluster-rebuild
-is the actual disaster scenario and PVC-only recovery is rare and scripted.
+`RECOVERY_CHECK` is an operator-supplied command, not a bundled acceptance test. For a data
+migration rollback, pair the pre-upgrade data checkpoint with its original image
+and configuration. Stop writers and keep controllers held while preparing that
+state; rolling back only the image against migrated data is unsafe. The helper does
+not automatically choose an image, undo schema changes, or prove downgrade support.
+Keep backups paused until the restored application's contents and desired Git state
+agree. The retained snapshot preserves the state immediately **before restore**;
+it does not replace a known-good **pre-upgrade** off-cluster checkpoint.
 
-## Manual backup validation
+After validation, patch the retained snapshot's bound `VolumeSnapshotContent`
+deletion policy to `Delete` before deleting the `VolumeSnapshot`; otherwise its
+backend ZFS snapshot remains. Do not discard either recovery point during diagnosis.
 
-On 2026-09-27, the bulk task completed fresh backups for Minecraft, OpenLDAP,
-VictoriaLogs and VictoriaMetrics in about 36 seconds. All four reported successful
-new completion times, their original schedules remained, and no temporary manual
-triggers remained. A scoped monitoring run also verified mover waiting/running
-progress. Fourteen local tests cover failures, stale status, concurrency and cleanup.
+## Recovery checks in CI
 
-The fresh OpenLDAP snapshot `e9a1c0ff` was restored into an isolated memory-backed
-Pod. Its native database export exactly matched the paired backup export: 89 entries,
-including four `inetOrgPerson` entries, with SHA-256
-`3a6f4e5ffae23f300c76094ce6de638629a705459392988837282aa17fd61f1a`.
-The Pod and plaintext were removed afterward. This verifies that recovery point;
-other applications still need application-level restore checks before a destructive drill.
+The path-scoped Application recovery workflow runs the restore CLI's controller,
+concurrency and failure cases, then starts real VictoriaMetrics and VictoriaLogs
+with disposable storage and restic repositories. Each drill writes data through the
+native API, backs up a stopped application, opens it with the candidate image,
+writes more data, and verifies both recovery points through that API. The older
+checkpoint is reopened with the base branch's image. It also reads all synthetic
+repository data with `restic check --read-data`.
+
+The OpenLDAP workflow runs its production backup hook on a synthetic directory,
+imports the paired exports into new native databases, and checks password login,
+group membership, directory access and rollback of a later attribute change.
+These tests use no cluster credentials or production data. Run them locally with:
+
+```bash
+APPLICATION_RECOVERY_TEST=1 mise exec -- python3 -m unittest discover -s scripts -p test_application_data_recovery.py -v
+OPENLDAP_ACCESS_TEST=1 mise exec -- python3 -m unittest scripts.test_openldap_access.NativeAccess.test_native_backup_restores_identity_password_and_group_membership -v
+```
+
+These checks do not prove CSI/populator races, S3 availability, independent cold
+credentials, protected historical backups, or Minecraft world recovery. Live backup
+success is not restore proof. Track those gaps in
+[#121](https://github.com/soupglasses/ops/issues/121),
+[#123](https://github.com/soupglasses/ops/issues/123),
+[#127](https://github.com/soupglasses/ops/issues/127),
+[#128](https://github.com/soupglasses/ops/issues/128) and
+[#129](https://github.com/soupglasses/ops/issues/129).
+Jellyfin configuration and media intentionally have no backups and are excluded.
 
 For standalone restic checks, VolSync's `backup .` stores relative volume contents:
 restore `config/`, `db/` and `backup/` into the chosen data directory, without an extra

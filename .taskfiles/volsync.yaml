@@ -58,28 +58,36 @@ tasks:
     cmd: python3 scripts/zfs-clone.py promote {{.CLI_ARGS}}
   restore:
     desc: Restore an app's PVC from the newest restic snapshot [APP=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}}
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP]
+      vars: [APP, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh
   restore-pick:
     desc: Pick a snapshot interactively and restore [APP=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} --pick
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+      --pick
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP]
+      vars: [APP, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh
   restore-at:
     desc: Restore as of an RFC3339 timestamp [APP=required AT=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} {{.AT}}
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+      {{.AT | shellQuote}}
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP, AT]
+      vars: [APP, AT, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh

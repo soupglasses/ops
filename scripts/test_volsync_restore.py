@@ -10,72 +10,123 @@ import tempfile
 import unittest
 
 FAKE = r"""#!/usr/bin/python3
-import json, os, pathlib, sys
+import json, os, pathlib, signal, sys
 p = pathlib.Path(os.environ['STATE'])
 s = json.loads(p.read_text())
 a = sys.argv[1:]
 s['calls'].append(a)
-a = a[2:]
-code = 0
-out = ''
-if a[0] == 'get' and a[1] == 'deployment/demo':
-    out = '1'
-elif a[0] == 'get' and a[1] == 'replicationdestination':
-    if '-o' in a:
-        if s.get('requested'):
-            if s['mode'] == 'failure':
-                p.write_text(json.dumps(s))
-                sys.exit(1)
-            s['rd']['status'] = {
-                'latestImage': {'name': 'fresh'},
-                'lastManualSync': s['rd']['spec']['trigger']['manual'],
-                'latestMoverStatus': {'result': 'Successful'},
-                'conditions': [{'type': 'Synchronizing', 'status': 'False'}]}
+if a[:1] == ['-n']: a = a[2:]
+code, out = 0, ''
+
+def patch_object(obj, operations):
+    for op in operations:
+        parts = [v.replace('~1', '/').replace('~0', '~') for v in op['path'].strip('/').split('/')]
+        parent = obj
+        for part in parts[:-1]: parent = parent[part]
+        key = parts[-1]
+        if op['op'] == 'test':
+            if parent.get(key) != op['value']: return 1
+        elif op['op'] == 'remove': del parent[key]
+        else: parent[key] = op['value']
+    return 0
+
+if a[0] == 'get':
+    resource = a[1]
+    if resource == 'volumesnapshotclass':
+        out = 'Delete' if s['mode'] == 'delete-policy' else 'Retain'
+    elif resource == 'replicationsource':
+        out = '' if s['mode'] == 'unbacked' else 'demo'
+    elif resource == 'pods':
+        out = 'old-pod'
+    elif resource == 'pvc':
+        if any('metadata.uid' in v for v in a):
+            out = 'concurrent-pvc' if s['mode'] == 'pvc-concurrent' else 'original-pvc'
+        elif '-o' in a:
+            out = json.dumps({'metadata': {'name': 'demo', 'namespace': 'default', 'uid': 'original-pvc'},
+                'spec': {'volumeName': 'old-volume', 'dataSourceRef': {'kind': 'ReplicationDestination', 'name': 'demo-dst'}}})
+    elif resource == 'replicationdestination':
+        if s['mode'] == 'busy-destination': s['rd']['status']['lastSyncStartTime'] = 'running'
+        if s['mode'] == 'locked-destination': s['rd']['metadata']['annotations'] = {'ops.soupglasses.dev/recovery-operation': 'other'}
+        if s.get('requested') and '-o' in a:
+            if s['mode'] == 'failure': code = 1
+            else:
+                s['rd']['status'] = {'latestImage': {'name': 'fresh'},
+                    'lastManualSync': s['rd']['spec']['trigger']['manual'],
+                    'latestMoverStatus': {'result': 'Successful'},
+                    'conditions': [{'type': 'Synchronizing', 'status': 'False'}]}
         out = json.dumps(s['rd'])
+    elif resource == 'deployment/demo':
+        if any('replicas' in v for v in a): out = '1'
+        elif '-o' in a:
+            out = json.dumps({'metadata': {'annotations': {'meta.helm.sh/release-name': 'demo'}},
+                'spec': {'selector': {'matchLabels': {'app': 'demo'}}}})
+    elif resource in s['controls']:
+        if s['mode'] == 'busy-source' and resource == 'replicationsource/demo': s['controls'][resource]['status']['lastSyncStartTime'] = 'running'
+        if s['mode'] == 'already-held' and resource.startswith('helmrelease.'): s['controls'][resource]['spec']['suspend'] = True
+        out = json.dumps(s['controls'][resource])
+    else:
+        raise AssertionError(('unexpected get', a))
 elif a[0] == 'patch':
     patch = json.loads(a[a.index('-p') + 1])
+    obj = s['rd'] if a[1] == 'replicationdestination' else s['controls'][a[1]]
     if '--type=merge' in a:
-        s['rd']['spec']['trigger'].update(patch['spec']['trigger'])
-        s['rd']['spec']['restic'].pop('restoreAsOf', None)
-        if patch['spec']['restic']['restoreAsOf'] is not None:
-            s['rd']['spec']['restic']['restoreAsOf'] = patch['spec']['restic']['restoreAsOf']
-        s['requested'] = True
-        s['token'] = patch['spec']['trigger']['manual']
+        obj['metadata'].setdefault('annotations', {}).update(patch['metadata'].get('annotations', {}))
+        if obj is s['rd']:
+            obj['spec']['trigger'].update(patch['spec']['trigger'])
+            obj['spec']['restic'].pop('restoreAsOf', None)
+            if patch['spec']['restic']['restoreAsOf'] is not None:
+                obj['spec']['restic']['restoreAsOf'] = patch['spec']['restic']['restoreAsOf']
+            s['requested'] = True
+            s['token'] = patch['spec']['trigger']['manual']
+        else: obj['spec'].update(patch['spec'])
     else:
-        if s['mode'] == 'concurrent':
-            s['rd']['spec']['trigger']['manual'] = 'human-request'
-        assert s.get('bound'), 'cleanup before PVC bound'
-        assert s.get('scaled_back'), 'cleanup before workload restarted'
-        if s['mode'] == 'selection-concurrent':
-            s['rd']['spec']['restic']['restoreAsOf'] = 'human-selection'
-        for op in patch:
-            if op['op'] == 'test':
-                actual = s['rd']
-                for part in op['path'].strip('/').split('/'):
-                    actual = actual[part]
-                if actual != op['value']:
-                    code = 1
-                    break
-            elif op['op'] == 'remove':
-                target = s['rd']
-                parts = op['path'].strip('/').split('/')
-                for part in parts[:-1]: target = target[part]
-                del target[parts[-1]]
-            elif op['op'] == 'add':
-                target = s['rd']
-                parts = op['path'].strip('/').split('/')
-                for part in parts[:-1]: target = target[part]
-                target[parts[-1]] = op['value']
+        is_cleanup = any(op['path'] == '/spec/restic' for op in patch)
+        if is_cleanup:
+            assert s.get('bound'), 'cleanup before PVC bound'
+            assert s.get('replicas') == 0, 'cleanup while writers running'
+            if s['mode'] == 'concurrent': obj['spec']['trigger']['manual'] = 'human-request'
+            if s['mode'] == 'selection-concurrent': obj['spec']['restic']['restoreAsOf'] = 'human-selection'
+        elif obj is not s['rd']:
+            assert s.get('verified'), 'controllers released before application verification'
+        code = patch_object(obj, patch)
 elif a[0] == 'delete' and a[1] == 'pvc':
+    assert s['replicas'] == 0
+    assert s.get('snapshot_ready'), 'delete without rollback snapshot'
     assert s['rd']['spec']['trigger']['manual'] == s['token'], 'cron unfrozen before replacement'
     s['selection_at_delete'] = s['rd']['spec']['restic'].get('restoreAsOf')
-elif a[0] == 'wait' and any('phase' in value for value in a):
-    if s['mode'] == 'bind-failure': code = 1
-    else: s['bound'] = True
-elif a[0] == 'scale' and '--replicas=1' in a:
-    s['scaled_back'] = True
+    s['deleted'] = True
+elif a[0] == 'wait':
+    if any('phase' in value for value in a):
+        if s['mode'] == 'bind-failure': code = 1
+        else: s['bound'] = True
+    elif '--for=delete' in a:
+        if s['mode'] == 'pod-failure': code = 1
+    else:
+        if s['mode'] == 'snapshot-failure': code = 1
+        else: s['snapshot_ready'] = True
+elif a[0] == 'scale':
+    s['replicas'] = int(next(v.split('=')[1] for v in a if v.startswith('--replicas=')))
+elif a[0] == 'rollout':
+    if s['mode'] == 'rollout-failure': code = 1
 elif a[0] == 'create':
-    sys.stdin.read()
+    manifest = sys.stdin.read()
+    if manifest.startswith('{'):
+        claim = json.loads(manifest)
+        assert 'volumeName' not in claim['spec']
+        assert claim['spec']['dataSourceRef']['name'] == 'demo-dst'
+        s['replacement'] = True
+    else:
+        assert s['replicas'] == 0
+elif a[0] == 'verify':
+    assert s['bound'] and s['replicas'] == 1
+    if s['mode'] == 'validation-failure': code = 1
+    elif s['mode'] == 'interrupted':
+        p.write_text(json.dumps(s))
+        os.kill(os.getppid(), signal.SIGTERM)
+        sys.exit(1)
+    else: s['verified'] = True
+else:
+    raise AssertionError(('unexpected command', a))
 p.write_text(json.dumps(s))
 print(out)
 sys.exit(code)
@@ -98,10 +149,14 @@ class RestoreTests(unittest.TestCase):
                     {
                         "mode": mode,
                         "calls": [],
+                        "controls": {
+                            name: {"metadata": {"resourceVersion": "1"}, "spec": {}, "status": {}}
+                            for name in ["replicationsource/demo", "kustomization.kustomize.toolkit.fluxcd.io/demo", "helmrelease.helm.toolkit.fluxcd.io/demo"]
+                        },
                         "rd": {
-                            "metadata": {"uid": "original-rd"},
+                            "metadata": {"uid": "original-rd", "resourceVersion": "1"},
                             "spec": {"trigger": trigger, "restic": ({"restoreAsOf": original_before} if original_before else {})},
-                            "status": {"latestImage": {"name": "old"}},
+                            "status": {"latestImage": {"name": "old"}, "lastManualSync": manual or ""},
                         },
                     }
                 )
@@ -113,7 +168,8 @@ class RestoreTests(unittest.TestCase):
                     "PATH": f"{root}:/usr/bin:/bin",
                     "STATE": str(state),
                     "YES": "1" if confirm else "0",
-                    "FLUX_KS": "",
+                    "FLUX_KS": "demo",
+                    "VERIFY_COMMAND": "kubectl verify",
                 },
                 input="n\n" if not confirm else None,
                 capture_output=True,
@@ -180,7 +236,53 @@ class RestoreTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(state["rd"]["spec"]["trigger"]["manual"], state["token"])
         self.assertNotEqual(state["token"], "restore-once")
-        self.assertFalse(any("--type=json" in call for call in state["calls"]))
+        self.assertTrue(state["verified"])
+
+
+    def test_failures_keep_writers_stopped_and_controls_held(self):
+        for mode in ["pod-failure", "snapshot-failure", "pvc-concurrent", "bind-failure", "rollout-failure", "validation-failure", "interrupted"]:
+            with self.subTest(mode=mode):
+                result, state = self.run_restore(mode)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(state["replicas"], 0)
+                self.assertTrue(state["controls"]["replicationsource/demo"]["spec"]["paused"])
+                self.assertTrue(state["controls"]["helmrelease.helm.toolkit.fluxcd.io/demo"]["spec"]["suspend"])
+                if mode in ["pod-failure", "snapshot-failure", "pvc-concurrent"]:
+                    self.assertFalse(state.get("deleted", False))
+
+    def test_unbacked_workloads_and_nonretaining_snapshots_are_rejected(self):
+        for mode in ["unbacked", "delete-policy", "busy-destination", "locked-destination"]:
+            with self.subTest(mode=mode):
+                result, state = self.run_restore(mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(state.get("requested", False))
+                self.assertFalse(state.get("deleted", False))
+
+    def test_historical_restore_does_not_leave_a_selection_on_manual_destination(self):
+        result, state = self.run_restore("success", manual="restore-once", before="2026-10-01T00:00:00Z")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("restoreAsOf", state["rd"]["spec"]["restic"])
+        self.assertEqual(state["rd"]["spec"]["trigger"]["manual"], state["token"])
+
+    def test_active_backup_prevents_claim_replacement(self):
+        result, state = self.run_restore("busy-source")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(state.get("deleted", False))
+        self.assertNotIn("replicas", state)
+
+    def test_preexisting_controller_suspension_is_preserved(self):
+        result, state = self.run_restore("already-held")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(state["controls"]["helmrelease.helm.toolkit.fluxcd.io/demo"]["spec"]["suspend"])
+
+    def test_success_releases_owned_holds_only_after_data_verification(self):
+        result, state = self.run_restore("success")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(state["verified"])
+        for name, obj in state["controls"].items():
+            self.assertFalse(obj["spec"].get("paused", obj["spec"].get("suspend")))
+            self.assertNotIn("ops.soupglasses.dev/recovery-operation", obj["metadata"].get("annotations", {}))
+        self.assertNotIn("ops.soupglasses.dev/recovery-operation", state["rd"]["metadata"]["annotations"])
 
 
 if __name__ == "__main__":
