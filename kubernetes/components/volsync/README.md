@@ -143,6 +143,25 @@ After validation, patch the retained snapshot's bound `VolumeSnapshotContent`
 deletion policy to `Delete` before deleting the `VolumeSnapshot`; otherwise its
 backend ZFS snapshot remains. Do not discard either recovery point during diagnosis.
 
+## Scheduled repository integrity checks
+
+Each declared restic source receives a weekly `*-backup-check` CronJob running
+`restic check --read-data`. The default is Monday 01:15 UTC; override
+`VOLSYNC_CHECK_SCHEDULE` for an application's backup and maintenance window. The job
+uses its existing repository Secret inside the Pod, has no Kubernetes API token,
+and mounts only disposable cache storage. It waits up to ten minutes for restic's
+native repository lock and has a two-hour job deadline. Full reads consume download
+bandwidth; choose schedules according to repository size and backup windows.
+
+A failed integrity or refresh Job alerts after fifteen minutes. A later successful
+run clears the alert even if a failed Job is retained for diagnostics. Inspect the
+failed Job without publishing private repository diagnostics. Do not prune or repair
+a damaged repository before retaining evidence and validating an older recovery point.
+A passing integrity check establishes encrypted data integrity, not application usability
+or protection from writer deletion. See the
+[Hetzner history-protection procedure](../../../docs/backup-history-protection.md)
+for independent credentials, policy and versioned recovery requirements.
+
 ## Recovery checks in CI
 
 The path-scoped Application recovery workflow runs the restore CLI's controller,
@@ -151,7 +170,8 @@ with disposable storage and restic repositories. Each drill writes data through 
 native API, backs up a stopped application, opens it with the candidate image,
 writes more data, and verifies both recovery points through that API. The older
 checkpoint is reopened with the base branch's image. It also reads all synthetic
-repository data with `restic check --read-data`.
+repository data with `restic check --read-data`, verifies injected corruption fails,
+and checks failure/clearance of the maintenance alert through VictoriaMetrics.
 
 The OpenLDAP workflow runs its production backup hook on a synthetic directory,
 imports the paired exports into new native databases, and checks password login,

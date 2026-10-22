@@ -27,13 +27,24 @@ def verify(path):
         assert next(env for env in container['env'] if env['name'] == 'NS')['valueFrom']['fieldRef']['fieldPath'] == 'metadata.namespace'
         config = index['ConfigMap', namespace, pod['volumes'][0]['configMap']['name']]
         assert config['data']['refresh.sh'] == expected_script, 'Flux changed runtime shell variables'
+        assert pod['automountServiceAccountToken'] is True
+        check = index['CronJob', namespace, app + '-backup-check']['spec']['jobTemplate']['spec']['template']['spec']
+        assert check['automountServiceAccountToken'] is False
+        checker = check['containers'][0]
+        assert checker['command'] == ['restic', 'check', '--read-data', '--retry-lock=10m']
+        source = index['ReplicationSource', namespace, app]
+        assert checker['envFrom'] == [{'secretRef': {'name': source['spec']['restic']['repository']}}]
+        assert all('persistentVolumeClaim' not in volume for volume in check['volumes'])
+        assert index['PrometheusRule', namespace, app + '-backup-maintenance']['metadata']['labels']['monitoring.finnes.dev/enabled'] == 'true'
         role = index['Role', namespace, name]
         assert role['rules'] == [
             {'apiGroups': ['volsync.backube'], 'resources': ['replicationsources'], 'resourceNames': [app], 'verbs': ['get']},
             {'apiGroups': ['volsync.backube'], 'resources': ['replicationdestinations'], 'resourceNames': [app + '-dst'], 'verbs': ['get', 'patch']}]
     for obj in objects:
-        if obj.get('kind') == 'CronJob' and obj['metadata']['name'].endswith('-restore-refresh'):
-            assert (obj['metadata']['namespace'], obj['metadata']['name'].removesuffix('-restore-refresh')) in sources
+        if obj.get('kind') == 'CronJob':
+            for suffix in ['-restore-refresh', '-backup-check']:
+                if obj['metadata']['name'].endswith(suffix):
+                    assert (obj['metadata']['namespace'], obj['metadata']['name'].removesuffix(suffix)) in sources
     print('VolSync refresher source ownership, RBAC and runtime shell contracts passed')
 
 

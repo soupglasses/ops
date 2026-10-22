@@ -284,6 +284,8 @@ spec:
     kube-state-metrics:
       enabled: true
       collectors:
+        - jobs
+        - cronjobs
         - nodes
         - pods
         - persistentvolumeclaims
