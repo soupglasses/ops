@@ -23,12 +23,12 @@ COPY --from=generate /src/config/schema.json /generated/schema.json
 FROM build AS test-build
 RUN CGO_ENABLED=0 go test -c -tags=integration -buildvcs=false -p=2 -o /out/tests .
 
-FROM alpine:3.23@sha256:21f3e19bafab57a9ff7aa9dd571dac72f868370472c10f450cc0416cc1aca553 AS tests
+FROM alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35 AS tests
 RUN apk add --no-cache ca-certificates
 COPY --from=test-build /out/tests /tests
 ENTRYPOINT ["/tests"]
 
-FROM alpine:3.23@sha256:21f3e19bafab57a9ff7aa9dd571dac72f868370472c10f450cc0416cc1aca553 AS runtime
+FROM alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35 AS runtime
 LABEL org.opencontainers.image.source="https://github.com/soupglasses/ops"
 RUN apk add --no-cache ca-certificates
 COPY --from=build /out/provider /provider
