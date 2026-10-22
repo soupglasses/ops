@@ -21,7 +21,7 @@ spec:
       serviceAccountName: ${APP}-volsync-quiesce
       containers:
         - name: watcher
-          image: docker.io/bitnami/kubectl:latest@sha256:999d5eb28f404b45f15117f2a110ff23c6164f76edac261d75d783b6e88252b7
+          image: docker.io/bitnami/kubectl:latest@sha256:9b58231669c7c371ecd976626a61d72ae7e46326f30932e8934a087f5f26fbd8
           env:
             - name: NS
               valueFrom:
