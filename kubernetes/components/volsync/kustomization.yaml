@@ -10,3 +10,8 @@ resources:
   - ./replicationdestination.yaml
   - ./replicationsource.yaml
   - ./secret.yaml
+  - ./refresh.yaml
+configMapGenerator:
+  - name: ${APP}-restore-refresh
+    files:
+      - refresh.sh

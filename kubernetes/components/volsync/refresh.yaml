@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${APP}-restore-refresh
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${APP}-restore-refresh
+rules:
+  - apiGroups: [volsync.backube]
+    resources: [replicationsources]
+    resourceNames: ["${APP}"]
+    verbs: [get]
+  - apiGroups: [volsync.backube]
+    resources: [replicationdestinations]
+    resourceNames: ["${APP}-dst"]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${APP}-restore-refresh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${APP}-restore-refresh
+subjects:
+  - kind: ServiceAccount
+    name: ${APP}-restore-refresh
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${APP}-restore-refresh
+spec:
+  schedule: "*/5 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: ${APP}-restore-refresh
+          automountServiceAccountToken: true
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: refresh
+              image: docker.io/bitnami/kubectl:latest@sha256:9b58231669c7c371ecd976626a61d72ae7e46326f30932e8934a087f5f26fbd8
+              command: [/bin/bash, /scripts/refresh.sh]
+              env:
+                - name: APP
+                  value: ${APP}
+                - name: NS
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            - name: scripts
+              configMap:
+                name: ${APP}-restore-refresh

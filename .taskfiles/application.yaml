@@ -11,7 +11,7 @@ tasks:
       5m
 
   verify-render:
-    desc: Verify Jellyfin storage, no-backup policy and private-route invariants in the final Flux render
+    desc: Verify application storage, backup ownership and private-route contracts in the final Flux render
     vars:
       RENDER:
         sh: mktemp
@@ -19,3 +19,4 @@ tasks:
       - defer: rm -f {{.RENDER | shellQuote}}
       - task flate:build > {{.RENDER | shellQuote}}
       - python3 scripts/verify-jellyfin-render.py {{.RENDER | shellQuote}}
+      - python3 scripts/verify-volsync-render.py {{.RENDER | shellQuote}}

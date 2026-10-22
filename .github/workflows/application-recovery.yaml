@@ -8,6 +8,8 @@ on:
       - "scripts/volsync-restore.sh"
       - "scripts/test_volsync_restore.py"
       - "scripts/test_application_data_recovery.py"
+      - "scripts/test_volsync_refresh.py"
+      - "kubernetes/components/volsync/**"
       - "kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"
       - "kubernetes/apps/monitoring/victoria-logs/app/helmrelease.yaml"
       - ".github/workflows/application-recovery.yaml"
@@ -31,7 +33,7 @@ jobs:
           version: 2026.10.15
           install_args: aqua:restic/restic aqua:mikefarah/yq
       - name: Exercise restore failures and controller holds
-        run: python3 -m unittest discover -s scripts -p test_volsync_restore.py -v
+        run: python3 -m unittest scripts.test_volsync_restore scripts.test_volsync_refresh -v
       - name: Restore historical application contents with the pre-upgrade image
         env:
           APPLICATION_RECOVERY_TEST: "1"

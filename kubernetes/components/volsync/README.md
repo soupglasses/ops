@@ -81,16 +81,27 @@ For a genuinely new application, explicitly initialize and validate its data, ta
 first backup, then adopt this component. Never use that path to bypass missing history.
 See [the recovery sequence](../../../docs/rke2-operations.md#application-recovery).
 
-## Gotcha: RD `latestImage` is frozen between full rebuilds
+## Restore-image freshness
 
-The RD uses `trigger.manual: restore-once`, so it fires **once** at creation
-and then never again. Implications:
+A successful backup and a successful restore image are separate checkpoints.
+The per-application `*-restore-refresh` CronJob checks every five minutes and requests
+a destination refresh only after a new successful, idle backup. It waits for its own
+completed mover and a new image before recording the backup checkpoint. Subsequent
+runs do no restore work until another backup succeeds. A retried job resumes its own
+pending request instead of replacing the trigger with a newer checkpoint.
 
-- **Full cluster rebuild** (RD recreated from scratch): RD fires on creation,
-  pulls the newest restic snapshot, populator restores newest. ✅
-- **PVC-only deletion** (RD intact, only the PVC re-created): populator copies
-  the *frozen* `latestImage`, which is whatever the RD restored at its first
-  fire. New RS backups don't update it. ⚠️
+This adds a restore/download cycle after each backup. Existing snapshot cleanup remains
+VolSync-owned. The service account can only read its named source and read/patch its
+named destination; it cannot read Secrets or change application PVCs and workloads.
+Paused resources, unfinished requests, explicit recovery locks and historical selections
+block automatic refresh. Failed or timed-out refreshes retain their lock for diagnosis
+and retry; inspect the CronJob and mover before clearing it manually.
+
+The destination's `ops.soupglasses.dev/restore-checkpoint` annotation identifies the
+successful backup covered by its image. Refresh is asynchronous: until polling and
+the mover complete, PVC-only recreation can still use the preceding image. A new
+cluster's initial destination restore pulls the newest available backup. For an
+explicit recovery point or a destructive drill, use the controlled helper below.
 
 For PVC-only recovery, use `scripts/volsync-restore.sh` through the tasks below.
 It refreshes the destination and waits for its own successful mover before touching
