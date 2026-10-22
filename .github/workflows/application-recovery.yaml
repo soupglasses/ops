@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Application recovery
+on:
+  pull_request:
+    paths:
+      - "scripts/volsync-restore.sh"
+      - "scripts/test_volsync_restore.py"
+      - "scripts/test_application_data_recovery.py"
+      - "kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"
+      - "kubernetes/apps/monitoring/victoria-logs/app/helmrelease.yaml"
+      - ".github/workflows/application-recovery.yaml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: application-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          version: 2026.10.15
+          install_args: aqua:restic/restic aqua:mikefarah/yq
+      - name: Exercise restore failures and controller holds
+        run: python3 -m unittest discover -s scripts -p test_volsync_restore.py -v
+      - name: Restore historical application contents with the pre-upgrade image
+        env:
+          APPLICATION_RECOVERY_TEST: "1"
+          RECOVERY_BASE_REF: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: python3 -m unittest discover -s scripts -p test_application_data_recovery.py -v
