@@ -8,7 +8,7 @@ go 1.26.8
 require (
 	dario.cat/mergo v1.0.2
 	github.com/ThePhaseless/terraform-provider-jellyfin v0.0.0
-	github.com/crossplane/crossplane-runtime/v2 v2.4.0
+	github.com/crossplane/crossplane-runtime/v2 v2.4.3
 	github.com/crossplane/crossplane/apis/v2 v2.4.3
 	github.com/crossplane/upjet/v2 v2.5.1
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
@@ -122,8 +122,8 @@ require (
 	github.com/yuin/goldmark v1.8.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.0.3 // indirect
-	go.opentelemetry.io/otel v1.44.0 // indirect
-	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	go.opentelemetry.io/otel v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
