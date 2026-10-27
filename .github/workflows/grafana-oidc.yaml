@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
-          version: 2026.10.18
+          version: 2026.10.19
           install_args: aqua:helm python
       - name: Install fixture dependencies
         run: python3 -m pip install 'PyYAML==6.0.3' 'cryptography==50.0.1'
