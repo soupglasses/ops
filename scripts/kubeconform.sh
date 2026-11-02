@@ -80,11 +80,13 @@ if grep -Eq '^kind: (CiliumGatewayClassConfig|CiliumNetworkPolicy|CiliumClusterw
     CILIUM_SCHEMA_VERSION="v$(curl --fail --silent --show-error --max-time 30 \
         "https://raw.githubusercontent.com/rancher/rke2-charts/main/assets/rke2-cilium/rke2-cilium-${CILIUM_CHART_VERSION}.tgz" \
         | tar -xzO rke2-cilium/Chart.yaml | yq -er '.appVersion')"
-    for definition in v2alpha1/ciliumgatewayclassconfig v2/ciliumnetworkpolicy v2/ciliumclusterwidenetworkpolicy; do
+    for definition in v2alpha1/ciliumgatewayclassconfigs v2/ciliumnetworkpolicies v2/ciliumclusterwidenetworkpolicies; do
         schema_version=${definition%/*}
         schema_kind=${definition#*/}
+        schema_kind=${schema_kind%?}
+        case "$schema_kind" in *policie) schema_kind=${schema_kind%ie}y ;; esac
         curl --fail --silent --show-error --max-time 30 \
-            "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/${definition}s.yaml" \
+            "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/${definition}.yaml" \
             | SCHEMA_VERSION="$schema_version" yq -e -o=json \
                 '.spec.versions[] | select(.name == strenv(SCHEMA_VERSION)) | .schema.openAPIV3Schema' \
             >"$schema_dir/${schema_kind}_${schema_version}.json"
