@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: victoria-logs-backup-cleanup
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 3600
+  template:
+    spec:
+      serviceAccountName: victoria-logs-backup-cleanup
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-backup-removal
+          image: docker.io/bitnami/kubectl:latest@sha256:9b58231669c7c371ecd976626a61d72ae7e46326f30932e8934a087f5f26fbd8
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              for resource in replicationsource.volsync.backube/victoria-logs job/volsync-src-victoria-logs; do
+                while true; do
+                  remaining=$(kubectl -n monitoring get "$resource" --ignore-not-found -o name)
+                  test -n "$remaining" || break
+                  echo "Waiting for Flux and garbage collection to remove $resource"
+                  sleep 5
+                done
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+      containers:
+        - name: delete-repository
+          image: docker.io/amazon/aws-cli:2.34.0@sha256:97cc5f847898f54432492c128408c62e0df2153d9ad36573be8e5a03826123b0
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              # Credentials stay in the container environment; never print the URL.
+              case "$RESTIC_REPOSITORY" in s3:https://*) ;; *) echo "Expected HTTPS S3 repository"; exit 1 ;; esac
+              location=$(printf '%s' "$RESTIC_REPOSITORY" | sed 's#^s3:##')
+              endpoint=$(printf '%s' "$location" | sed 's#\(https://[^/]*\)/.*#\1#')
+              path=$(printf '%s' "$location" | sed 's#https://[^/]*/##')
+              bucket=$(printf '%s' "$path" | cut -d/ -f1)
+              case "$path" in
+                volsync-victoria-logs) prefix="" ;;
+                */volsync-victoria-logs) prefix=$(printf '%s/' "$path" | cut -d/ -f2-) ;;
+                *) echo "Refusing to delete a repository other than volsync-victoria-logs"; exit 1 ;;
+              esac
+              s3() { aws --endpoint-url "$endpoint" s3api "$@"; }
+              # Delete versions and delete markers as well as current objects.
+              # Repeatedly remove the first page so pagination cannot skip deletions.
+              total=0
+              while true; do
+                s3 list-object-versions --bucket "$bucket" --prefix "$prefix" \
+                  --max-keys 1000 --no-paginate \
+                  --query '{Objects: [Versions,DeleteMarkers][].{Key:Key,VersionId:VersionId}, Quiet: `true`}' \
+                  --output json > /tmp/delete.json
+                count=$(grep -c '"Key":' /tmp/delete.json || true)
+                test "$count" -gt 0 || break
+                s3 delete-objects --bucket "$bucket" --delete file:///tmp/delete.json \
+                  --query Errors --output json > /tmp/errors.json
+                if ! grep -qx null /tmp/errors.json; then
+                  echo "S3 refused one or more deletions"; exit 1
+                fi
+                total=$((total + count))
+                echo "Deleted $total repository objects/versions"
+              done
+              remaining=$(s3 list-objects-v2 --bucket "$bucket" --prefix "$prefix" \
+                --max-keys 1 --no-paginate --query KeyCount --output text)
+              test "$remaining" = 0
+              echo "Verified: VictoriaLogs repository has zero objects, versions, or delete markers"
+          envFrom:
+            - secretRef:
+                name: volsync-victoria-logs
+          env:
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_EC2_METADATA_DISABLED
+              value: "true"
+            - name: AWS_PAGER
+              value: ""
+            - name: HOME
+              value: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+      volumes:
+        - name: temporary
+          emptyDir: {}

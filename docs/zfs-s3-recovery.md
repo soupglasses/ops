@@ -8,7 +8,8 @@ SPDX-License-Identifier: 0BSD
 
 The imported `zfspool` is a five-disk RAIDZ1 pool left by Talos. Its old `pvc-*`
 datasets have no Kubernetes metadata and are not adopted into the rebuilt cluster.
-VolSync/restic in S3 is the authoritative recovery path.
+VolSync/restic in S3 is the authoritative recovery path for backed-up applications.
+VictoriaLogs and Jellyfin intentionally have no backups and start without restored data.
 
 This is deliberately a two-pass recovery. It proves remote recovery before erasing the
 remaining local copy, then proves the same recovery onto the final storage layout.
