@@ -11,6 +11,7 @@ resources:
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
   - ./persistentvolumeclaim.yaml
+  - ./replicationdestination.yaml
 
 configMapGenerator:
   - name: vector-k8s-monitoring-dashboard
