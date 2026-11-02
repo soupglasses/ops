@@ -69,9 +69,9 @@ if grep -q '^kind: CustomResourceDefinition$' "$@"; then
     KUBECONFORM_ARGS+=("-schema-location=$schema_dir/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json")
 fi
 
-# This CRD is missing from the catalog. Extract its schema from the versioned
-# upstream definition instead of maintaining a copy in this repository.
-if grep -q '^kind: CiliumGatewayClassConfig$' "$@"; then
+# Resolve Cilium schemas from the bundled release; the community catalog may
+# omit these definitions or fail to serve them during validation.
+if grep -Eq '^kind: (CiliumGatewayClassConfig|CiliumNetworkPolicy|CiliumClusterwideNetworkPolicy)$' "$@"; then
     # Match the Cilium bundled by the inventory's RKE2 release.
     RKE2_VERSION="$(yq -r '.rke2_version' "$REPO_ROOT/ansible/inventories/home/group_vars/all/main.yml")"
     CILIUM_CHART_VERSION="$(curl --fail --silent --show-error --max-time 30 \
@@ -80,10 +80,15 @@ if grep -q '^kind: CiliumGatewayClassConfig$' "$@"; then
     CILIUM_SCHEMA_VERSION="v$(curl --fail --silent --show-error --max-time 30 \
         "https://raw.githubusercontent.com/rancher/rke2-charts/main/assets/rke2-cilium/rke2-cilium-${CILIUM_CHART_VERSION}.tgz" \
         | tar -xzO rke2-cilium/Chart.yaml | yq -er '.appVersion')"
-    curl --fail --silent --show-error --max-time 30 \
-        "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml" \
-        | yq -e -o=json '.spec.versions[] | select(.name == "v2alpha1") | .schema.openAPIV3Schema' \
-        >"$schema_dir/ciliumgatewayclassconfig_v2alpha1.json"
+    for definition in v2alpha1/ciliumgatewayclassconfig v2/ciliumnetworkpolicy v2/ciliumclusterwidenetworkpolicy; do
+        schema_version=${definition%/*}
+        schema_kind=${definition#*/}
+        curl --fail --silent --show-error --max-time 30 \
+            "https://raw.githubusercontent.com/cilium/cilium/${CILIUM_SCHEMA_VERSION}/pkg/k8s/apis/cilium.io/client/crds/${definition}s.yaml" \
+            | SCHEMA_VERSION="$schema_version" yq -e -o=json \
+                '.spec.versions[] | select(.name == strenv(SCHEMA_VERSION)) | .schema.openAPIV3Schema' \
+            >"$schema_dir/${schema_kind}_${schema_version}.json"
+    done
     KUBECONFORM_ARGS+=("-schema-location=$schema_dir/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json")
 fi
 
