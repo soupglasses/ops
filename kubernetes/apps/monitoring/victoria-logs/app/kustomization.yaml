@@ -11,12 +11,6 @@ resources:
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
   - ./persistentvolumeclaim.yaml
-  - ./job.yaml
-  - ./rbac.yaml
-  - ./serviceaccount.yaml
-  # Retain restore credentials until the retired repository is deleted.
-  - ../../../../components/volsync/replicationdestination.yaml
-  - ../../../../components/volsync/secret.yaml
 
 configMapGenerator:
   - name: vector-k8s-monitoring-dashboard

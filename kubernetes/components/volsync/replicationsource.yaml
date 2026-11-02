@@ -9,7 +9,6 @@ metadata:
 spec:
   sourcePVC: ${APP}
   trigger:
-    manual: cache-expansion-20261102
     schedule: ${VOLSYNC_SCHEDULE:=15 6 * * *}
   restic:
     accessModes:
