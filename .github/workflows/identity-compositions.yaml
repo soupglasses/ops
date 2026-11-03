@@ -30,7 +30,7 @@ jobs:
       - name: Install test tools
         uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
-          version: 2026.10.21
+          version: 2026.10.25
           install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq aqua:crossplane/cli aqua:kubernetes-sigs/kind
       - name: Build integration fixtures
         run: docker build --target tests -t ops-identity-tests:ci packages/identity-tests
