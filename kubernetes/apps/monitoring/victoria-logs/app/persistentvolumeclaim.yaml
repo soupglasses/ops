@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: victoria-logs
+  labels:
+    # The existing bound claim has an immutable VolSync dataSourceRef.
+    # Preserve it; a fresh installation creates an empty claim without recovery.
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: openebs-zfs

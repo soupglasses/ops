@@ -10,8 +10,7 @@ resources:
   - ./configmap.yaml
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
-components:
-  - ../../../../components/volsync
+  - ./persistentvolumeclaim.yaml
 
 configMapGenerator:
   - name: vector-k8s-monitoring-dashboard
