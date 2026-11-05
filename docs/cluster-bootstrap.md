@@ -9,7 +9,8 @@ SPDX-License-Identifier: 0BSD
 This procedure replaces the cluster on an already prepared host. It does not reinstall
 Ubuntu or reconfigure accounts, networking, disks, host hardening or GPU drivers.
 RKE2 starts with fresh state; Flux recreates applications from Git, and VolSync restores
-new volumes from S3. There is no etcd restore path.
+backed-up volumes from S3. VictoriaLogs and Jellyfin intentionally start without
+restored data. There is no etcd restore path.
 
 `task rke2:bootstrap` changes nothing when RKE2 is already running or transitioning.
 It returns before gathering facts, loading credentials, prompting or touching storage.
@@ -164,7 +165,8 @@ guards to make an application Ready. For older known-good recovery points, follo
 [application recovery](rke2-operations.md#application-recovery) before allowing startup.
 
 Confirm existing LDAP users and group membership over TLS, the Minecraft world, and
-historical VictoriaMetrics/VictoriaLogs queries. Verify new writes and public endpoints.
+historical VictoriaMetrics queries. Confirm VictoriaLogs accepts and queries new logs;
+its historical logs are intentionally not restored. Verify new writes and public endpoints.
 Then run:
 
 ```bash
