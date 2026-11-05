@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+- name: Finish backups and uninstall RKE2 using its bundled uninstaller
+  hosts: "{{ rke2_uninstall_node | default('all:!all') }}"
+  become: true
+  gather_facts: false
+  vars:
+    backup_coordinator: >-
+      {{ (groups['rke2_servers'] | difference([inventory_hostname]) | first)
+         | default(inventory_hostname) }}
+    backup_helper_dir: /usr/local/libexec/rke2-uninstall
+  tasks:
+    - name: Install backup maintenance helpers on the inventory control plane
+      delegate_to: "{{ backup_coordinator }}"
+      tags: [backup-hold]
+      block:
+        - name: Create helper directory
+          ansible.builtin.file:
+            path: "{{ backup_helper_dir }}"
+            state: directory
+            mode: "0700"
+
+        - name: Copy backup maintenance helpers
+          ansible.builtin.copy:
+            src: "../../scripts/{{ item }}"
+            dest: "{{ backup_helper_dir }}/{{ item }}"
+            mode: "0700"
+          loop:
+            - volsync-replication-sync.py
+            - volsync-uninstall-hold.py
+
+        - name: Finish fresh backups and hold further runs and Flux reconciliation
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - "{{ backup_helper_dir }}/volsync-uninstall-hold.py"
+              - prepare
+          environment:
+            KUBECONFIG: /etc/rancher/rke2/rke2.yaml
+            PATH: /var/lib/rancher/rke2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          changed_when: true
+
+    # A failed uninstaller may already have stopped RKE2. Keep the hold and its
+    # journal so a surviving cluster cannot resume backups of disrupted workloads.
+    - name: Run the official RKE2 uninstaller
+      tags: [rke2-uninstall]
+      ansible.builtin.command: /usr/local/bin/rke2-uninstall.sh
+      changed_when: true

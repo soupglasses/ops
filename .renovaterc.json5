@@ -28,6 +28,9 @@
   "helm-values": {
     managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
   },
+  crossplane: {
+    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+  },
   kubernetes: {
     managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
   },
@@ -35,6 +38,16 @@
     managerFilePatterns: ["/(^|/)kustomization\\.ya?ml$/"],
   },
   packageRules: [
+    {
+      matchManagers: ["crossplane"],
+      pinDigests: true,
+    },
+    {
+      description: "Review Jellyfin plugin upgrades with the tested runtime build",
+      matchPackageNames: ["jellyfin/jellyfin-plugin-ldapauth"],
+      automerge: false,
+      pinDigests: true,
+    },
     {
       description: "Vector tag and digest are updated together by its regex manager",
       matchFileNames: ["kubernetes/apps/monitoring/log-collector/app/helmrelease.yaml"],
@@ -168,6 +181,28 @@
     },
   ],
   customManagers: [
+    {
+      description: "Jellyfin LDAP release and verified archive checksum",
+      customType: "regex",
+      managerFilePatterns: ["/^packages/jellyfin-runtime/plugins\\.lock\\.json$/"],
+      matchStrings: [
+        '"repository":\\s*"(?<depName>jellyfin/jellyfin-plugin-ldapauth)"[\\s\\S]*?"tag":\\s*"(?<currentValue>v[0-9]+)"\\s*,\\s*"sha256":\\s*"(?<currentDigest>[a-f0-9]{64})"',
+      ],
+      datasourceTemplate: "github-release-attachments",
+      versioningTemplate: "loose",
+    },
+    {
+      description: "Kubernetes editor schemas follow the grouped RKE2 release",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "yaml-language-server: \\$schema=https://raw\\.githubusercontent\\.com/yannh/kubernetes-json-schema/[^/]+/(?<currentValue>v\\d+\\.\\d+\\.\\d+)[/-]"
+      ],
+      depNameTemplate: "rancher/rke2",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>\\d+\\.\\d+\\.\\d+)\\+rke2r\\d+$",
+      versioningTemplate: "semver"
+    },
     {
       description: "Vector image tag and digest, keeping its version label valid",
       customType: "regex",

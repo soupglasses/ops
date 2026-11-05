@@ -7,8 +7,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: flux-system
 resources:
-  - cluster-apps.yaml
-  - cluster-repositories.yaml
+  - ./kustomize.yaml
   - secret.sops.yaml
   - ./flux-system
   # Use parts of components directly, gotk defines flux-system directly causing a conflict otherwise.

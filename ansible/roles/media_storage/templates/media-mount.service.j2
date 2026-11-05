@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+[Unit]
+Description=Mount the dedicated media dataset before exporting it
+Requires=zfspool-import-nomount.service
+After=zfspool-import-nomount.service
+Before=nfs-server.service rke2-server.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -ec '/usr/sbin/zfs get -H -o value mounted {{ media_storage_dataset_name }} | /usr/bin/grep -qx yes || exec /usr/sbin/zfs mount {{ media_storage_dataset_name }}'
+
+[Install]
+WantedBy=multi-user.target

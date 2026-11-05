@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: 0BSD
 # yaml-language-server: $schema=https://raw.githubusercontent.com/google/yamlfmt/refs/heads/main/schema.json
 # vi: ft=yaml
+match_type: doublestar
 exclude:
-  - "clusters/**/gotk-*.yaml"
+  - "kubernetes/clusters/**/gotk-*.yaml"
 formatter:
   type: basic
-  match_type: doublestar
   max_line_length: 100
   retain_line_breaks: true

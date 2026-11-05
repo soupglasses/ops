@@ -4,216 +4,104 @@ SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 SPDX-License-Identifier: 0BSD
 -->
 
-Hermes agents must read [HERMES.md](HERMES.md) first. Consult that file when requesting
-Hermes reviews or delegation.
+# Working in ops
 
-# Agent Guidelines
+Git and Flux own durable production state. Work in an isolated worktree, preserve
+unrelated changes, and stage explicit paths.
 
-## Working Loop
+## Desired end state
 
-Commits and pushes to `main` are how changes deploy; you are expected to do both and
-then verify the result live. The loop:
+- Services must converge automatically from an empty installation to their declared
+  state using Git, external backups and the minimum documented recovery credentials.
+  Prove fresh installation and recovery, including configuration and usable data.
+- Prefer typed, declarative APIs for application settings and identities. Reuse
+  Terraform providers through Crossplane Upjet, compositions and CRDs where useful.
+  Use Components, templating and native Helm tests to share platform behavior.
+  Keep implementation workarounds inside the platform, out of application declarations.
+- Apply file-based configuration at startup. Make Flux changes take effect through
+  native reloads or workload rollouts without manual intervention. Use generated
+  ConfigMap names or equivalent change tracking when a restart is needed.
+- Use the shared LDAP identities and SSO where supported. Applications must not
+  maintain independent human account lists. A first-configuration or recovery
+  administrator is an explicit exception. Prefer directory-backed service identities.
+- Restore backed-up state automatically from S3 through VolSync when local data is
+  absent. Block startup until recovery and required image pulls complete. Declare
+  intentional fresh initialization and cost-versus-rebuild exceptions explicitly:
+  Jellyfin configuration and media have no backups because rebuilding is cheaper.
+- Pin deployable artifacts and automate updates with Renovate. Validate behavior
+  through the real application interfaces, not duplicated versions or snapshots
+  of today's deployment.
 
-1. Edit manifests, then `task flux-local:test` (must pass).
-2. Commit with `mise exec -- git commit ...` (pre-commit hooks need mise's PATH to find
-   `ec` and friends). Small logical commits, conventional style (`feat(scope):`,
-   `fix(scope):`), written in a human voice.
-3. Stage explicit paths only; the human keeps WIP on `main`, so never `git add -A`.
-4. Push, `task flux:reconcile` (or `flux reconcile ks <name> -n <ns> --with-source`),
-   and observe with kubectl until the change demonstrably works. Retry and fix forward;
-   do not stop at "committed".
-5. Backup or restore changes additionally get a restore drill: pull the data back out
-   and check the contents (see docs/openldap-volsync-migration.md for the pattern).
-6. Throwaway verification resources (test pods, one-off CRs) must be deleted before
-   finishing. End state is always Flux-managed.
-7. Record new findings in TODO.md and tick off what you complete.
+## Manifest filenames
 
-## Data Survival Is a Merge Gate
+Name Kubernetes YAML files after their lowercase resource kind, such as
+`prometheusrule.yaml`, `pluginsettings.yaml`, or `systemconfiguration.yaml`.
+For files containing related kinds from one API group, use the relevant segment
+of `apiVersion`, such as `rbac.yaml` for Role and RoleBinding resources in
+`rbac.authorization.k8s.io/v1`.
+Split unrelated kinds into separate files and combine resources of the same kind
+within a directory. Use `kustomize.yaml` for Flux Kustomizations, keeping
+`kustomization.yaml` for Kustomize build configuration. Keep required tool-generated
+filenames and the `.sops.yaml` suffix. Name patches after their target kind with a
+`-patch` suffix.
 
-The machine and cluster are disposable; application data is not. A clean recovery must
-work from this repository, off-cluster backups, and the minimum documented recovery
-keys. No required state may exist only in the live cluster, on one node, in an agent's
-workspace, or in an image registry with no recovery plan.
+## Documentation and follow-up work
 
-Request independent resilience review when the completed rendered diff
-adds, removes, or materially changes any of the following:
+Keep durable usage and ownership guidance in the relevant README. Reserve `docs/`
+for material such as architecture and disaster recovery that needs a separate home.
+Track unfinished work and operational evidence in GitHub issues. Do not grow TODO.md
+into a change log. Remove completed entries and obsolete migration notes.
 
-- a PVC, StatefulSet, storage class, VolumeSnapshot, or reclaim policy;
-- a database, datastore, migration, restore script, retention policy, or backup job;
-- VolSync resources, quiesce hooks, native dumps, pgBackRest, or equivalent tooling;
-- destructive pruning, volume replacement, application reinstallation, or image/chart
-  lifecycle assumptions.
+Do not duplicate pins, commit hashes, resource inventories or current environment
+snapshots in maintained prose or tests. Ordinary dependency and environment updates
+should not require editing unrelated documentation or incidental assertions.
 
-A stateful change is not complete until the review establishes all applicable items:
+## Delivery and verification
 
-1. **Automatic rebuild:** deleting and recreating the application or PVC through Flux
-   restores usable data without undocumented manual state. For ordinary PVC workloads,
-   use the repository's VolSync component and its `ReplicationDestination` plus PVC
-   `dataSourceRef` pattern.
-2. **Corruption recovery:** an operator can select an older known-good recovery point.
-   Databases that need point-in-time recovery use a database-native mechanism such as
-   pgBackRest (or a justified equivalent); a crash-consistent volume snapshot alone is
-   not sufficient.
-3. **Application consistency:** quiesce writes or produce a portable native dump before
-   snapshots where the workload requires it. Match mover UID/GID so backup jobs can
-   actually read the data.
-4. **Independent survival:** backups are off-cluster and survive node, ZFS pool, and
-   clean-cluster loss. Document the minimal keys, credentials, endpoints, and ordering
-   needed to recover them. Never commit those credentials.
-5. **Retention and history:** keep enough independently usable recovery points to
-   survive delayed corruption discovery. Do not silently reduce retention or make the
-   writer credential capable of erasing the only copy without explicit review.
-6. **Observable failure:** alert on failed and stale backups without noisy per-run
-   paging. A green controller condition proves execution, not restorability.
-7. **Proven restore:** run a restore drill and validate application-level contents, not
-   only PVC binding, pod readiness, or backup-controller status. Record evidence in the
-   issue or PR.
-8. **Safe destruction:** never delete or overwrite the only known-good local copy before
-   the replacement has been restored and validated. Preserve a rollback point through
-   migrations.
-9. **Artifact recovery:** required container images and charts must remain fetchable
-   after a clean rebuild, or have a documented mirror, digest, source, and rebuild path.
+- Use `mise exec -- ...` for tools managed by the repository's Mise configuration.
+  Run other commands, including `git` and `gh`, directly.
+- For manifest changes, run `task flate:test` and inspect `task flate:diff` before
+  shipping. Use `BASE=origin/main` when comparing a branch. These tasks align local
+  rendering with CI, including CRDs and the Kubernetes version.
+- Format changed YAML with `yamlfmt`. Pass the configured pre-commit checks, and
+  preserve SPDX notices. Match neighboring licenses for new files using
+  `task license:0bsd FILE=...` or `task license:mit FILE=...`.
+- For pull requests, wait with `gh pr checks <n> --watch --interval 30`, then fetch
+  the current head, results, comments, and Flux Local diff. Base the verdict on that
+  head and evidence relevant to the change.
+- Push production changes to `main`, reconcile with `task flux:reconcile`, and verify
+  the affected application live. Keep branch preparation distinct from deployment.
+- Remove temporary verification resources and leave the end state Flux-managed.
+  Record actionable follow-up findings in GitHub issues.
 
-The reviewer must request changes when recovery evidence is missing. "The backup job
-succeeded" and "the pod became Ready" are not acceptable substitutes for a restore
-test. See `kubernetes/components/volsync/README.md` for the standard PVC contract and
-`docs/openldap-volsync-migration.md` for a migration and restore-drill pattern.
+## Data and access
 
-## Review and Collaboration
+Backed-up application data must survive a clean rebuild from Git, off-cluster backups,
+and independently held recovery keys. For changes affecting recovery, preserve a rollback
+copy until restored application contents have been validated. Use the
+[VolSync contract](kubernetes/components/volsync/README.md) and
+[restore-drill example](docs/openldap-volsync-migration.md) for recovery changes.
+Use native database recovery where a volume copy cannot provide consistency.
 
-An agent must not approve its own implementation. RBAC or trust-boundary changes need
-security review. Stateful or destructive lifecycle changes need resilience
-review. Changes requiring both need both reviews; one specialty does not substitute for
-the other.
+Use the credentials assigned to the current runtime. Mise defaults `KUBECONFIG` to
+`.secure/kubeconfig`; when using an externally supplied credential, select it after
+mise loads the project environment:
+`mise exec -- env KUBECONFIG=<assigned-path> kubectl ...`.
 
-For pull requests, wait for all required CI to complete before review or delegation,
-then re-fetch the current head, check results, comments, and Flux Local rendered diff.
-Use one blocking CLI wait rather than spending model turns polling or streaming workflow
-logs. A routine image/chart update is not specialist-gated solely because the workload
-is stateful or security-sensitive. Delegate whenever broad specialist judgment would
-materially improve a decision, especially for ambiguous, novel, or high-consequence
-questions revealed by the rendered diff, upstream behavior, or operational context.
-Unchanged pre-existing debt is non-blocking and should be tracked separately.
+Keep `.secure/` and its contents unread. Existing `.sops.yaml` files are user-managed:
+if one needs editing, ask the user to make the change and wait for confirmation.
+Never decrypt, rotate, view plaintext, or copy values from existing secrets. A new
+secret may be encrypted exactly once with
+`sops --encrypt --in-place <new-file>.sops.yaml`; this is the only permitted SOPS
+operation. User-edited secrets may be committed after confirming their values remain
+encrypted. Secret names, key names, and opaque encrypted blobs may be inspected.
 
-All agents optimize for effective, practical outcomes rather than checklist completion.
-They consider their full domain, including subtle interactions and omissions, while
-ranking concerns by evidence, likelihood, impact, and recoverability. A merge blocker
-must have a plausible material failure path tied to the proposed change. Agents clearly
-separate blockers from non-blocking improvements and pre-existing debt, use the smallest
-sufficient test or mitigation, avoid duplicate work, and delegate focused questions when
-specialist judgment materially improves a decision.
+## CI and optional skills
 
-A trusted collaborator's actionable issue or PR ping authorizes the addressed agent to
-follow the normal safe workflow autonomously. Unless clarification is genuinely required,
-the agent owns the next actions: discover current state, implement or delegate focused
-work, validate, open a PR, wait for CI without model-turn polling, respond to results,
-obtain only materially useful specialist input, merge when policy permits, and verify
-Flux and live behavior. Review requests get an actual verdict and the next permitted
-action. Agents do not stop at assessments, plans, checklists, or “requires review” while
-a safe next action is available. Ask the user only for information that cannot be
-discovered, a material intent choice, unavailable credentials or permissions, or an
-exceptional irreversible action.
+Pin GitHub Actions to full commit digests. Keep workflow permissions explicit and
+restrict write operations to trusted contexts.
 
-## Formatting & Validation
-
-### YAML Formatting
-
-All YAML files MUST be formatted with `yamlfmt` before presenting changes to the user. Run:
-```bash
-yamlfmt file.yaml
-```
-
-Config is in `.yamlfmt`: max 100 char lines, retains line breaks, excludes `clusters/**/gotk-*.yaml`.
-
-### Pre-Commit Hooks
-
-Pre-commit hooks run on commit. The hooks are: `editorconfig-checker`, `kubeconform`, `reuse`, `yamlfmt`, and `forbid-secrets`. If you create or modify files, ensure they pass these checks.
-
-### License Headers
-
-Every file requires SPDX license headers. Use:
-```bash
-task license:mit FILE=path/to/file   # For MIT
-task license:0bsd FILE=path/to/file  # For 0BSD
-```
-
-Check existing files in the same directory to match the correct license.
-Use the user's identity for new SPDX copyright notices. Preserve existing notices.
-
-### Kubernetes Manifest Validation
-
-Run `flux-local test` to validate Flux Kustomizations and HelmReleases:
-```bash
-task flux-local:test
-```
-
-Run `flux-local diff` to see rendered manifest changes:
-```bash
-task flux-local:diff
-```
-
-**Important**: flux-local emits `SubstituteReference` warnings due to a traversal order limitation. These are cosmetic — do not attempt to fix them. They are filtered from task command output.
-
-**Do NOT use** `--path-orig` or `--branch-orig` flags with flux-local in task commands. These bypass flux-local's internal git worktree creation and break ConfigMap resolution for `substituteFrom` references.
-
-## CI/CD (GitHub Actions)
-
-Workflows are in `.github/workflows/` and run on GitHub-hosted runners.
-
-- Pin actions to full commit digests.
-- Keep workflow permissions explicit and avoid write operations for fork-originated pull requests.
-
-## Creating New Encrypted Secrets (.sops.yaml)
-
-### Permitted Workflow (One-Time Only)
-
-When creating a **NEW** secret file:
-
-1. **Write the file** with plaintext values and `.sops.yaml` extension:
-
-   ```yaml
-   # secret.sops.yaml
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: my-secret
-   stringData:
-     KEY: "plaintext-value"
-   ```
-
-2. **Encrypt exactly once** using ONLY this command:
-
-   ```bash
-   sops --encrypt --in-place secret.sops.yaml
-   ```
-
-### Critical Restrictions
-
-**NEVER do any of the following:**
-
-- Modify an existing `.sops.yaml` file (encrypted or not)
-- Use `sops --decrypt` on any file
-- Use `sops -d` (decrypt) in any form
-- Use `sops --rotate` or `sops -r`
-- Use `sops` with any flags other than `--encrypt --in-place`
-- Edit or view decrypted secret contents
-- Copy secret values from one file to another
-- **NEVER READ** .secure OR FILES WITHIN WITH _ANY_ COMMAND OR HELPER TOOL.
-
-### Existing Secrets
-
-**If you need changes to secrets that already exist:**
-
-1. **STOP your work immediately**
-2. **Ask the user** to make the changes
-3. **Wait for confirmation** before continuing
-
-When the user has edited a sops file themselves, you may commit it for them: first
-confirm it is encrypted (key names and `ENC[AES256_GCM` markers are visible; values
-must never be), then commit it like any other change.
-
-You have **NO ACCESS** to secret values. You can only see:
-
-- Secret names (from `metadata.name`)
-- Key names (from `stringData` or `data` keys)
-- The encrypted blobs (which are opaque to you)
+Project skills live in `.agents/skills/`: `ops-deliver`, `ops-incident`,
+`ops-observability`, `ops-security`, and `ops-recovery`. Their descriptions determine
+when to select them. Each can also be invoked with `$<name>`. Specialist reviews are
+available when requested.

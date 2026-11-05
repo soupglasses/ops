@@ -224,8 +224,8 @@ def main():
     if not args.on_node:
         command = shlex.join(["python3", "-", *sys.argv[1:], "--on-node"])
         result = subprocess.run(["ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-                                 "-i", os.path.expanduser("~/.ssh/ansible"), "-o", "StrictHostKeyChecking=yes",
-                                 "-o", "HostKeyAlias=nas.home.finnes.dev", "ansible@172.21.71.10", command],
+                                 "-i", os.path.expanduser("~/.ssh/gpg.pub"), "-o", "StrictHostKeyChecking=yes",
+                                 "-o", "HostKeyAlias=nas.home.finnes.dev", "sofie@172.21.71.10", command],
                                 input=pathlib.Path(__file__).read_text(), text=True)
         return result.returncode
     operate(args)

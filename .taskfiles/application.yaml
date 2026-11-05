@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+version: "3"
+tasks:
+  test:
+    desc: Run a Helm release's native acceptance tests
+    requires:
+      vars: [NAMESPACE, RELEASE]
+    cmd: helm test {{.RELEASE | shellQuote}} --namespace {{.NAMESPACE | shellQuote}} --logs --timeout
+      5m
+
+  verify-render:
+    desc: Verify application storage, backup ownership and private-route contracts in the final Flux render
+    vars:
+      RENDER:
+        sh: mktemp
+    cmds:
+      - defer: rm -f {{.RENDER | shellQuote}}
+      - task flate:build > {{.RENDER | shellQuote}}
+      - python3 scripts/verify-jellyfin-render.py {{.RENDER | shellQuote}}
+      - python3 scripts/verify-volsync-render.py {{.RENDER | shellQuote}}

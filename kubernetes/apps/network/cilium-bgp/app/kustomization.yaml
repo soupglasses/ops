@@ -6,7 +6,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ./bgp-peer-config.yaml
-  - ./bgp-cluster-config.yaml
-  - ./bgp-advertisement.yaml
-  - ./bgp-ip-pool.yaml
+  - ./ciliumbgppeerconfig.yaml
+  - ./ciliumbgpclusterconfig.yaml
+  - ./ciliumbgpadvertisement.yaml
+  - ./ciliumloadbalancerippool.yaml

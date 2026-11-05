@@ -59,11 +59,9 @@ through its own metrics and health checks.
 
 Alertmanager email delivery was confirmed by the operator on 2026-09-26.
 
-The etcd freshness collector initially ignored compressed snapshot names because
-their timestamp ends in `.zip`. Correcting that parser found 24 scheduled S3
-snapshots, including September 26 at 18:00 UTC. Retention remains 28 snapshots.
-The next alert evaluation cleared the stale-snapshot alert. No alerts were firing
-at 19:24 UTC. Retention was pending at 24/28 during the initial seven-day fill.
+The earlier etcd collector and its snapshot history were retired on September 27.
+Etcd backups are no longer part of recovery; see the [clean bootstrap guide](cluster-bootstrap.md).
+The application-level restore evidence above remains relevant to that path.
 
 ## ZFS clone cleanup
 

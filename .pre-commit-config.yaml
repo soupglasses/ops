@@ -17,8 +17,16 @@ repos:
         # resolve before validation (e.g. ${VAR:=1000} -> 1000 satisfies
         # typed-int schema fields like runAsUser).
         entry: scripts/kubeconform.sh
+        require_serial: true
         language: system
         files: ^kubernetes/.*\.ya?ml$
+        stages: [pre-commit]
+      - id: kubernetes-schema-headers
+        name: Kubernetes schema headers match RKE2
+        entry: python3 scripts/kubernetes-schema-headers.py
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-commit]
       - id: reuse
         name: reuse

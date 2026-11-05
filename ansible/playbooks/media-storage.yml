@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+- name: Maintain the dedicated compressed media dataset and private NFS export
+  hosts: rke2_servers
+  become: true
+  gather_facts: true
+  roles:
+    - media_storage

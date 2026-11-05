@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./deployment.yaml
+  - ./service.yaml
+  - ./ciliumnetworkpolicy.yaml
+  - ./httproute.yaml
+  - ./persistentvolumeclaim.yaml
+  - ./prometheusrule.yaml
+  - ./storageclass.yaml
+  - ./validatingadmissionpolicy.yaml
+  - ./validatingadmissionpolicybinding.yaml
+  - ./secret.sops.yaml
+  - ./serviceaccount.yaml
+  - ./groupofnames.yaml
+  - ./providerconfig.yaml
+  - ./systemconfiguration.yaml
+  - ./networkingconfiguration.yaml
+  - ./brandingconfiguration.yaml
+  - ./library.yaml
+  - ./pluginsettings.yaml
+patches:
+  - target:
+      group: jellyfin.ops.finnes.dev
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: media
+  - target:
+      kind: Secret
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: media
+  - target:
+      group: jellyfin.ops.finnes.dev
+      kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library
+    patch: |-
+      - op: add
+        path: /spec/managementPolicies
+        value: [Observe, Create, Update]
+      - op: add
+        path: /spec/providerConfigRef
+        value:
+          kind: ProviderConfig
+          name: jellyfin
+  - target:
+      group: ops.finnes.dev
+    patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: media

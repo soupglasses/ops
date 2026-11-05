@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jellyfin-media
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 172.21.71.10
+  share: /srv/media
+  subDir: library
+  onDelete: retain
+  mountPermissions: "0"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions: [vers=4.2, hard, nosuid, nodev]

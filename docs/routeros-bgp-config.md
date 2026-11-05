@@ -326,3 +326,41 @@ remove a live route's authentication merely to recover connectivity.
 
 References: [configuration and Safe Mode](https://help.mikrotik.com/docs/spaces/ROS/pages/328155/Configuration+Management),
 [encrypted backups](https://help.mikrotik.com/docs/spaces/ROS/pages/40992852/Backup).
+
+## Private application gateway
+
+The private IPv4 Gateway uses `172.21.68.11/32`. Import this exact BGP prefix
+alongside the existing public `172.21.68.10/32`; keep the terminal reject rule.
+The private address has no WAN NAT mapping or public IPv6 counterpart.
+
+After an encrypted off-device backup, apply
+[`scripts/router-private-gateway.rsc`](../scripts/router-private-gateway.rsc)
+through the native import parser under Safe Mode:
+
+```sh
+scp -O scripts/router-private-gateway.rsc router:ops-private-gateway.rsc
+ssh router '/import file-name=ops-private-gateway.rsc'
+```
+
+Keep a separate interactive `ssh router` session in Safe Mode while importing.
+Verify a fresh administrator connection, rule ordering, public service reachability
+and the intended changes before releasing Safe Mode. The script adds named rules
+only when absent and requires the existing public/BGP rejection anchors. It allows
+TCP 443 from the trusted LAN, VPN and NAS with both source prefixes and incoming
+interfaces constrained, then drops other forwarding to the private VIP. Public NAT
+rules remain unchanged. Do not invoke multiline script contents as individual SSH
+CLI lines; use `/import` so conditional blocks are parsed together.
+
+The encrypted RouterOS 7.24.3 pre-change backup is stored under
+`ansible/backups/router/pre-private-bgp-20261017.backup`, with its independently
+SOPS-encrypted recovery password alongside it. Recovery requires the corresponding
+age private key and compatible RouterOS hardware/software. Keep those recovery keys
+off-cluster. The maintained source recipe and script remain necessary for hardware
+replacement; the binary backup alone is not a portable installation recipe.
+
+To roll back only these private additions under Safe Mode:
+
+```routeros
+/ip/firewall/filter/remove [find where comment~"^ops:cilium:private:"]
+/routing/filter/rule/remove [find where comment="ops:cilium:private:v4:accept"]
+```

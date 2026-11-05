@@ -12,7 +12,7 @@ spec:
   chart:
     spec:
       chart: victoria-logs-single
-      version: 0.13.9
+      version: 0.13.10
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -44,12 +44,12 @@ spec:
     server:
       image:
         repository: victoriametrics/victoria-logs
-        tag: v1.52.0@sha256:47b820890d64c4575a2a0a46415dcd8a4fd59a0f1fcd6a377693d7aea639442e
+        tag: v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
       retentionPeriod: 1y
       initContainers:
         - name: require-restored-logs
           # The server is distroless; the restore guard needs a separate shell image.
-          image: docker.io/library/alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+          image: docker.io/library/alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35
           command: [/bin/sh, -ec]
           args:
             - test -d /storage/partitions && test -n "$(ls -A /storage/partitions)"

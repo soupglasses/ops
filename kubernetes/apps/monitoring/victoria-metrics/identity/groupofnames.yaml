@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: grafana-admins
+spec:
+  cn: monitoring.grafana-admins
+  description: Grafana administrators

@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: ldap
+spec:
+  package: ghcr.io/soupglasses/provider-ldap:v0.5.0@sha256:e5604316a60cda0515a8fe5d43ddbe127d7bde5b84d4d82f09599f9992613be2
+  revisionHistoryLimit: 2
+  runtimeConfigRef:
+    name: ldap

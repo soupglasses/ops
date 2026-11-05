@@ -22,7 +22,7 @@ managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
 - Backups are the one thing that must never silently rot. Anything touching
   `kubernetes/components/volsync*`, storage classes, snapshot classes, or
   `cluster-secrets` is high-risk; slow down and double-check.
-- Validate before handing over: `task flux-local:test` must pass, and pre-commit gates
+- Validate before handing over: `task flate:test` must pass, and pre-commit gates
   formatting, schemas, and SPDX headers.
 - Secrets are sops-encrypted with age. New secrets: write plaintext as `*.sops.yaml`,
   encrypt in place exactly once. Existing secrets: never decrypt, edit, or rotate; stop
@@ -38,7 +38,7 @@ managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
 
 ## Ground rules
 
-- `kubernetes/apps/<namespace>/<app>/` uses the two-level pattern: `ks.yaml` plus an
+- `kubernetes/apps/<namespace>/<app>/` uses the two-level pattern: `kustomize.yaml` plus an
   `app/` folder with no kustomization.yaml inside.
 - `kubernetes/clusters/home/flux-system/` is Flux bootstrap output. Do not touch.
 - Deeper conventions live in DEVELOPMENT.md, agent workflow rules in AGENTS.md, design

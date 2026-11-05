@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-media
+  namespace: media
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: jellyfin-media
+  resources:
+    requests:
+      storage: 1Ti
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: media
+  name: jellyfin
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: openebs-zfs
+  resources:
+    requests:
+      storage: 20Gi

@@ -10,4 +10,4 @@ components:
   - ../../components/common
   - ../../components/privileged
 resources:
-  - ./openebs/ks.yaml
+  - ./openebs/kustomize.yaml

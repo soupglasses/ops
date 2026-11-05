@@ -29,25 +29,17 @@ and retain that unit change. The chart copy is excluded from Grafana discovery.
 
 ## Recovery contract
 
-VolSync snapshots the PVC to the existing off-cluster restic repository every six hours. A clean
-rebuild restores the newest snapshot through the standard `ReplicationDestination` volume-populator
-flow. The generic policy retains seven daily and four weekly recovery points, so backup objects can
-retain older versions of partitions after the live one-year retention expires.
+VictoriaLogs intentionally has no backups. Its existing log data remains on the PVC,
+but a clean rebuild creates an empty volume and starts collecting new logs. Logs lost
+with the node or storage are accepted as disposable operational history.
 
-VictoriaLogs documents filesystem snapshots as a supported backup method. These CSI snapshots are
-crash-consistent rather than a portable per-partition export; recovery can lose up to six hours of logs
-and buffered node data, but does not depend on a live VictoriaLogs process. For an older recovery point,
-use `task volsync:restore-at APP=victoria-logs AT=<timestamp>`, then verify the restored partitions with
-a LogSQL query before removing the rollback snapshot. The completed restore drill is recorded in
-[recovery verification](../../../../docs/rke2-recovery-verification.md).
-
-The Vector checkpoint host path is deliberately not backed up. After node loss, Vector resumes from the
-available journal and CRI files; entries already rotated off the rebuilt node cannot be recovered.
+The Vector checkpoint host path is also not backed up. After node loss, Vector resumes
+from available journal and CRI files; entries already rotated off the node are lost.
 
 ## Searchable fields
 
 Vector parses JSON, Kubernetes klog, logfmt, and timestamped console logs before
-shipping them. Minecraft and OpenLDAP connection statistics use parsers scoped to
+shipping them. Jellyfin, Minecraft and OpenLDAP connection statistics use parsers scoped to
 their app labels. Kubernetes labels remain unchanged. Unrecognized text is retained.
 The container timestamp remains the event time, including for formats without a date.
 
@@ -77,6 +69,8 @@ level:="error"
 
 Parsed application fields live under `log`, including `log.logger`, `log.thread`,
 and logfmt keys such as `log.module`. Grafana uses the stored `level` for severity.
+Jellyfin console lines expose their message, logger, thread and time under `log`;
+Serilog severity abbreviations are normalized to the same levels.
 Older entries retain their original schema. Parser changes do not replay stored logs.
 
 Parser fixtures are native Vector tests alongside the collector configuration. Run

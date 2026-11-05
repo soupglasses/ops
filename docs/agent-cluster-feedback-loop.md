@@ -36,7 +36,7 @@ For new files, license headers are mandatory: `task license:0bsd FILE=path` (or 
 
 ## Substitution model
 
-Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `ConfigMap/cluster-settings` and `Secret/cluster-secrets` in `flux-system` (wired by `clusters/home/cluster-apps.yaml`). Per-app vars go in the app's `ks.yaml` under `spec.postBuild.substitute:`. Kustomize Components reference these as `${VAR}` / `${VAR:=default}`.
+Flux runs `postBuild.substitute` on every Kustomization. Global vars come from `ConfigMap/cluster-settings` and `Secret/cluster-secrets` in `flux-system` (wired by `clusters/home/kustomize.yaml`). Per-app vars go in the app's `kustomize.yaml` under `spec.postBuild.substitute:`. Kustomize Components reference these as `${VAR}` / `${VAR:=default}`.
 
 ## Useful task targets
 

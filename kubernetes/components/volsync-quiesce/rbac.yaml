@@ -23,6 +23,10 @@ rules:
     resources: [pods/exec]
     verbs: [create]
 ---
+# SPDX-FileCopyrightText: 2026 Sofie <sofie+git@mailbox.org>
+#
+# SPDX-License-Identifier: 0BSD
+
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:

@@ -15,7 +15,7 @@ spec:
   chart:
     spec:
       chart: victoria-metrics-k8s-stack
-      version: 0.93.0
+      version: 0.96.0
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -43,7 +43,7 @@ spec:
       spec:
         image:
           repository: victoriametrics/victoria-metrics
-          tag: v1.152.0@sha256:86ca5fdb6d87d56ba047b044039019ba2bd9042b36e35f6ea34e437b6c825cef
+          tag: v1.154.1@sha256:c7884f32920dd45a9d86542a717227e63af03e060e53bbf8031e6e6fd0e1e05d
         managedMetadata:
           labels:
             monitoring.finnes.dev/enabled: "true"
@@ -56,7 +56,7 @@ spec:
               claimName: victoria-metrics
         initContainers:
           - name: require-restored-metrics
-            image: victoriametrics/victoria-metrics:v1.152.0@sha256:86ca5fdb6d87d56ba047b044039019ba2bd9042b36e35f6ea34e437b6c825cef
+            image: victoriametrics/victoria-metrics:v1.154.1@sha256:c7884f32920dd45a9d86542a717227e63af03e060e53bbf8031e6e6fd0e1e05d
             command: [/bin/sh, -ec]
             args:
               - test -d /data/data && test -d /data/metadata
@@ -171,6 +171,11 @@ spec:
       enabled: false
     grafana:
       enabled: true
+      image:
+        registry: ghcr.io
+        repository: soupglasses/grafana
+        tag: 13.2.4-oidc.1
+        sha: c8728c56838cb34441455ae4912806be1a19a4c81db82ab1df9aeb8a383f6bb9
       rbac:
         create: true
         namespaced: true
@@ -181,9 +186,15 @@ spec:
         existingSecret: grafana-auth
         userKey: admin-user
         passwordKey: admin-password
+      extraSecretMounts:
+        - name: grafana-oidc
+          secretName: grafana-oidc
+          mountPath: /etc/secrets/grafana-oidc
+          readOnly: true
+          defaultMode: 0440
       defaultDashboardsTimezone: browser
       plugins:
-        - victoriametrics-logs-datasource@0.32.0
+        - victoriametrics-logs-datasource@0.33.1
       ingress:
         enabled: false
       persistence:
@@ -214,6 +225,34 @@ spec:
         analytics:
           check_for_updates: false
           reporting_enabled: false
+        auth:
+          oauth_allow_insecure_email_lookup: false
+        auth.generic_oauth:
+          enabled: true
+          name: Canaille
+          allow_sign_up: true
+          auto_login: false
+          client_id: monitoring.grafana
+          client_secret: $__file{/etc/secrets/grafana-oidc/client-secret}
+          auth_style: InParams
+          scopes: openid profile email groups
+          auth_url: https://auth.${DOMAIN}/oauth/authorize
+          token_url: https://auth.${DOMAIN}/oauth/token
+          api_url: https://auth.${DOMAIN}/oauth/userinfo
+          use_pkce: true
+          validate_id_token: true
+          jwk_set_url: https://auth.${DOMAIN}/oauth/jwks.json
+          use_refresh_token: true
+          login_attribute_path: sub
+          email_attribute_path: email
+          name_attribute_path: name
+          groups_attribute_path: groups
+          allowed_groups: monitoring.grafana-admins
+          role_attribute_path: >-
+            contains(groups || `[]`, 'monitoring.grafana-admins') && 'GrafanaAdmin' || ''
+          role_attribute_strict: true
+          allow_assign_grafana_admin: true
+          skip_org_role_sync: false
         auth.anonymous:
           enabled: false
         security:

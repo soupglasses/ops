@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: rke2-host-metrics-ipv4
+  labels:
+    app.kubernetes.io/name: rke2-host-metrics
+    kubernetes.io/service-name: rke2-host-metrics
+addressType: IPv4
+ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+endpoints:
+  - addresses:
+      - 172.21.71.10
+    conditions:
+      ready: true

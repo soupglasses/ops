@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2025 Sofie <sofie+git@mailbox.org>
 #
-# SPDX-License-Identifier: 0BSD
+# SPDX-License-Identifier: MIT
 
 # EditorConfig helps developers define and maintain consistent
 # coding styles between different editors and IDEs
@@ -28,6 +28,18 @@ trim_trailing_whitespace = unset
 
 # Ignore REUSE folder
 [/LICENSES/**]
+indent_style = unset
+indent_size = unset
+end_of_line = unset
+charset = unset
+trim_trailing_whitespace = unset
+insert_final_newline = unset
+
+[*.go]
+indent_style = tab
+
+# Encrypted native router backups are binary artifacts.
+[*.backup]
 indent_style = unset
 indent_size = unset
 end_of_line = unset

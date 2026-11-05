@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin
+  namespace: media
+spec:
+  path: ./kubernetes/apps/media/jellyfin/app
+  dependsOn:
+    - name: jellyfin-provider
+      namespace: crossplane-system
+    - name: ldap-system-users
+      namespace: identity
+    - name: csi-driver-nfs
+      namespace: kube-system
+    - name: cilium-private-gateway
+      namespace: network
+    - name: openebs
+      namespace: openebs-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: jellyfin
+      namespace: media
+  interval: 10m
+  retryInterval: 2m
+  timeout: 10m
+  prune: false

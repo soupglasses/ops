@@ -1,0 +1,217 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: groupofnames-ldap
+spec:
+  compositeTypeRef:
+    apiVersion: ops.finnes.dev/v1alpha1
+    kind: GroupOfNames
+  mode: Pipeline
+  pipeline:
+    - step: render-group
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{/* SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+            SPDX-License-Identifier: MIT */}}
+            {{- $xr := getCompositeResource . -}}
+            {{- $spec := $xr.spec -}}
+            {{- $name := printf "group-%s" $xr.metadata.uid -}}
+            {{- $entry := getComposedResource . "ldap-entry" -}}
+            {{- $attributes := dict "cn" (list $spec.cn) -}}
+            {{- if hasKey $spec "description" -}}
+            {{- $_ := set $attributes "description" (ternary (list $spec.description) (list) (ne $spec.description "")) -}}
+            {{- end }}
+            apiVersion: ldap.finnes.dev/v1alpha1
+            kind: Entry
+            metadata:
+              name: {{ $name }}
+              namespace: {{ $xr.metadata.namespace }}
+              labels:
+                ops.finnes.dev/group-uid: {{ $xr.metadata.uid | quote }}
+              annotations:
+                {{ setResourceNameAnnotation "ldap-entry" }}
+                gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (not (empty (and $entry (eq (getResourceCondition "Ready" $entry).Status "True") (eq (getResourceCondition "Synced" $entry).Status "True") (eq (toString (dig "status" "atProvider" "observedGeneration" 0 $entry)) (toString $entry.metadata.generation)) (deepEqual $entry.spec.forProvider (dict "dn" (printf "cn=%s,%s" $spec.cn $spec.baseDN) "attributes" $attributes "sharedAttributes" (dict "objectClass" (list "groupOfNames") "member" (list $spec.sentinelDN))))))) | quote }}
+            spec:
+              managementPolicies: {{ ternary "[Observe, Create, Update]" "[Observe, Create, Update, Delete]" (eq ($spec.deletionPolicy | default "Delete") "Orphan") }}
+              providerConfigRef:
+                kind: {{ $spec.backendRef.kind | default "ClusterProviderConfig" }}
+                name: {{ $spec.backendRef.name | quote }}
+              forProvider:
+                dn: {{ printf "cn=%s,%s" $spec.cn $spec.baseDN | quote }}
+                attributes:
+                  {{- $attributes | toYaml | nindent 18 }}
+                sharedAttributes:
+                  objectClass: [groupOfNames]
+                  member: [{{ $spec.sentinelDN | quote }}]
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: oauth2client-ldap
+spec:
+  compositeTypeRef:
+    apiVersion: ops.finnes.dev/v1alpha1
+    kind: OAuth2Client
+  mode: Pipeline
+  pipeline:
+    - step: render-client
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{/* SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+            SPDX-License-Identifier: MIT */}}
+            {{- $xr := getCompositeResource . -}}
+            {{- $spec := $xr.spec -}}
+            {{- $namespace := $xr.metadata.namespace -}}
+            {{- $name := printf "oauth2-%s" $xr.metadata.uid -}}
+            {{- $entry := getComposedResource . "ldap-entry" -}}
+            {{- $dn := printf "oauthClientID=%s,%s" $spec.clientID "ou=clients,ou=oauth,dc=finnes,dc=dev" -}}
+            {{- $public := eq $spec.tokenEndpointAuthMethod "none" -}}
+            {{- $attributes := dict
+                "objectClass" (list "oauthClient")
+                "oauthClientName" (list ($spec.displayName | default $spec.clientID))
+                "oauthClientID" (list $spec.clientID)
+                "oauthRedirectURIs" $spec.redirectURIs
+                "oauthGrantType" $spec.grantTypes
+                "oauthResponseType" (list "code")
+                "oauthScope" $spec.scopes
+                "oauthTokenEndpointAuthMethod" (list $spec.tokenEndpointAuthMethod)
+                "oauthIdTokenSignedResponseAlg" (list "RS256") -}}
+            {{- $_ := set $attributes "oauthPostLogoutRedirectURI" ($spec.postLogoutRedirectURIs | default list) -}}
+            {{- if $public -}}
+            {{- $_ := set $attributes "oauthClientSecret" (list) -}}
+            {{- end -}}
+            {{- $_ := set $attributes "oauthAudience" (list $dn) -}}
+            {{- $parameters := dict "dn" $dn "attributes" $attributes -}}
+            {{- if not $public -}}
+            {{- $_ := set $parameters "attributeSecretRefs" (dict "oauthClientSecret" $spec.clientSecretRef) -}}
+            {{- end -}}
+            apiVersion: ldap.finnes.dev/v1alpha1
+            kind: Entry
+            metadata:
+              name: {{ $name }}
+              namespace: {{ $namespace }}
+              labels:
+                ops.finnes.dev/client-uid: {{ $xr.metadata.uid | quote }}
+              annotations:
+                {{ setResourceNameAnnotation "ldap-entry" }}
+                gotemplating.fn.crossplane.io/ready: {{ ternary "True" "False" (not (empty (and $entry (eq (getResourceCondition "Ready" $entry).Status "True") (eq (getResourceCondition "Synced" $entry).Status "True") (eq (toString (dig "status" "atProvider" "observedGeneration" 0 $entry)) (toString $entry.metadata.generation)) (deepEqual $entry.spec.forProvider $parameters)))) | quote }}
+            spec:
+              managementPolicies: {{ ternary "[Observe, Create, Update]" "[Observe, Create, Update, Delete]" (eq ($spec.deletionPolicy | default "Delete") "Orphan") }}
+              providerConfigRef:
+                kind: {{ $spec.backendRef.kind | default "ClusterProviderConfig" }}
+                name: {{ $spec.backendRef.name | quote }}
+              forProvider: {{ $parameters | toJson }}
+---
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: serviceaccount-ldap
+spec:
+  compositeTypeRef:
+    apiVersion: ops.finnes.dev/v1alpha1
+    kind: ServiceAccount
+  mode: Pipeline
+  pipeline:
+    - step: ldap
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource -}}
+            {{- $spec := $xr.spec -}}
+            {{- $entry := getComposedResource . "entry" -}}
+            {{- $secret := getComposedResource . "password" -}}
+            {{- $rotation := $spec.rotationID | default "" -}}
+            {{- $password := "" -}}
+            {{- $rotationMatches := and $secret (eq (dig "metadata" "annotations" "ops.finnes.dev/rotation-id" "" $secret) $rotation) -}}
+            {{- if and $rotationMatches (dig "data" "password" "" $secret) -}}
+              {{- $password = $secret.data.password -}}
+            {{- else -}}
+              {{- $password = randAlphaNum 32 | b64enc -}}
+            {{- end -}}
+            {{- $ldapPassword := "" -}}
+            {{- if and $rotationMatches (dig "data" "password" "" $secret) (dig "data" "ldap-password" "" $secret) -}}
+              {{- $ldapPassword = index $secret.data "ldap-password" -}}
+            {{- else -}}
+              {{- $ldapPassword = printf "{CRYPT}%s" (bcrypt ($password | b64dec)) | b64enc -}}
+            {{- end -}}
+            {{- $attributes := dict "cn" (list $spec.cn) "sn" (list "Service") -}}
+            {{- if hasKey $spec "description" -}}
+              {{- $_ := set $attributes "description" (ternary (list $spec.description) (list) (ne $spec.description "")) -}}
+            {{- end -}}
+            {{- if $spec.passwordPolicyDN -}}
+              {{- $_ := set $attributes "pwdPolicySubentry" (list $spec.passwordPolicyDN) -}}
+            {{- end -}}
+            {{- $secretName := dig "metadata" "name" "" ($secret | default dict) -}}
+            {{- $parameters := dict "dn" (printf "uid=%s,%s" $spec.cn $spec.baseDN) "attributes" $attributes "sharedAttributes" (dict "objectClass" (list "inetOrgPerson")) "attributeSecretRefs" (dict "userPassword" (dict "name" $secretName "key" "ldap-password")) -}}
+            {{- $entryReady := and $entry (eq (getResourceCondition "Ready" $entry).Status "True") (eq (getResourceCondition "Synced" $entry).Status "True") -}}
+            {{- $generationMatches := and $entry (eq (toString (dig "status" "atProvider" "observedGeneration" 0 $entry)) (toString $entry.metadata.generation)) -}}
+            {{- $versionMatches := and $entry $secret (eq (dig "status" "atProvider" "observedSecretVersions" "userpassword" "" $entry) $secret.metadata.resourceVersion) -}}
+            {{- $ready := not (empty (and $rotationMatches (dig "data" "ldap-password" "" ($secret | default dict)) $entryReady $generationMatches $versionMatches (deepEqual $entry.spec.forProvider $parameters))) -}}
+            ---
+            apiVersion: {{ $xr.apiVersion }}
+            kind: {{ $xr.kind }}
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            status:
+              {{- if $ready }}
+              secretRef:
+                name: {{ $secret.metadata.name | quote }}
+                resourceVersion: {{ $secret.metadata.resourceVersion | quote }}
+              {{- else if dig "status" "secretRef" false $xr }}
+              secretRef: {{ dig "status" "secretRef" dict $xr | toJson }}
+              {{- end }}
+            ---
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              namespace: {{ $xr.metadata.namespace }}
+              annotations:
+                {{ setResourceNameAnnotation "password" }}
+                gotemplating.fn.crossplane.io/ready: "True"
+                ops.finnes.dev/rotation-id: {{ $rotation | quote }}
+            type: Opaque
+            data:
+              password: {{ $password | quote }}
+              ldap-password: {{ $ldapPassword | quote }}
+            {{- if or $entry (and $secret (dig "data" "password" "" $secret)) }}
+            ---
+            apiVersion: ldap.finnes.dev/v1alpha1
+            kind: Entry
+            metadata:
+              namespace: {{ $xr.metadata.namespace }}
+              annotations:
+                {{ setResourceNameAnnotation "entry" }}
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            spec:
+              {{- if not $secret }}
+              {{- $entry.spec | toYaml | nindent 2 }}
+              {{- else }}
+              managementPolicies: {{ if eq ($spec.deletionPolicy | default "Delete") "Delete" }}[Observe, Create, Update, Delete]{{ else }}[Observe, Create, Update]{{ end }}
+              providerConfigRef: {{ $spec.backendRef | toJson }}
+              forProvider: {{ $parameters | toJson }}
+              {{- end }}
+            {{- end }}

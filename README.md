@@ -15,13 +15,12 @@ physical host, native systemd-networkd configuration, CIS-oriented baseline, ZFS
 RKE2, and its day-zero Cilium configuration. Flux owns applications and post-bootstrap
 cluster policy.
 
-The former Talos configuration is retained temporarily as a rollback and migration
-reference. Remove it only after the documented S3 restore drills pass on the final
-storage layout.
+Recovery uses the [RKE2 bootstrap guide](docs/cluster-bootstrap.md).
 
 ### Network layout
 
-Mikrotik RB5009 Router handling forwarded connections from a VPS through Wireguard.
+The MikroTik RB5009 routes the home WAN directly to Kubernetes services. WireGuard
+provides remote access; the former public VPS tunnel is retired.
 
 Load balancing is BGP based: Cilium's BGP control plane peers with the router and
 announces the LoadBalancer IP, which the router DNATs public traffic to. Details in
@@ -36,12 +35,32 @@ organized into namespaced groups under `.taskfiles/`:
 task --list
 ```
 
+With mise activated, run restic using shared cluster backup credentials:
+
+```bash
+task volsync:restic APP=openldap -- snapshots
+```
+
+This task reads the backup fields from `flux-system/cluster-secrets` into its own
+environment and selects the `volsync-<APP>` repository. It needs Kubernetes access
+to that Secret. Other commands do not load backup credentials. Without shell
+activation, prefix the task command with `mise exec --`.
+
+Run `mise exec -- task check` to run every pre-commit check on tracked files.
+The separate Pre-commit Checks workflow runs the same task for pull requests and
+pushes to main. Commit signature verification remains a local pre-push hook.
+After changing the RKE2 version, run `mise exec -- task schemas:update` to align
+Kubernetes editor schema comments. The checks reject stale versions.
+
 ### Host and RKE2
 
 | Task | Description |
 |---|---|
 | `ansible:deps` | Install pinned Ansible collections |
 | `ansible:test` | Run Ansible syntax and lint checks |
+| `rke2:bootstrap` | Bootstrap on a prepared host; confirm old volume deletion; running clusters are unchanged |
+| `rke2:uninstall NODE=nas` | Finish and hold backups, then run RKE2's supplied node uninstaller |
+| `ansible:bootstrap-flux` | Resume the Flux handoff after host setup |
 | `ansible:check` | Preview host changes |
 | `ansible:apply` | Maintain Ubuntu and the pinned RKE2 version |
 | `ansible:network` | Explicit network setup or maintenance |
@@ -69,21 +88,41 @@ before committing. Mise and CI use the same pinned release and render settings.
 | `flate:test` | Validate all Kustomizations and HelmReleases |
 | `flate:diff` | Show diff of rendered manifests against HEAD |
 | `flate:build` | Render all managed manifests, excluding Secrets |
+| `flate:count` | Count rendered resources by kind |
 | `flate:get-ks` | List all Kustomizations |
 | `flate:get-hr` | List all HelmReleases |
 
 Use `task flate:diff BASE=origin/main` to compare against another revision, or add
 `OUTPUT=html` to save a browsable diff. CI attaches both text and HTML diffs to each
 pull request. Rendering includes CRDs, excludes Secret objects and uses the pinned
-RKE2 Kubernetes version. Existing `flux-local:*` task names remain aliases.
+RKE2 Kubernetes version.
 
 ### Kubernetes
 
 | Task | Description |
 |---|---|
-| `kube:clean-pods` | Delete all Failed/Pending/Succeeded pods |
+| `kube:kubeconfig` | Fetch and verify the RKE2 administrator kubeconfig |
+| `kube:clean-pods` | Delete Failed/Succeeded pods, preserving Pending restores |
 | `kube:fetch-agekey` | Fetch age key from the cluster |
-| `talos:shell` | Spawn a temporary root shell on a node |
+| `kube:shell NODE=nas` | Spawn a temporary root shell on a node |
+
+Bootstrap and the resumed Flux handoff run pod cleanup automatically after Flux
+reconciliation, using the host connection without requiring a local kubeconfig.
+
+### Backups
+
+Run `task volsync:replication-sync` to trigger fresh backups for all scheduled restic
+sources, display progress, and wait for every backup to complete. Use `TIMEOUT=1h`
+for a longer wait or `-- --namespace identity` to limit the selection. Existing
+schedules remain intact. Backup completion alone does not prove restorability; validate restored application
+contents before accepting recovery.
+
+See the [VolSync guide](kubernetes/components/volsync/README.md) for details.
+
+Uninstall holds backups and Flux reconciliation before stopping the node. If keeping
+the existing cluster, verify its application storage before `task volsync:resume NODE=nas`
+(select the inventory node that coordinated the hold).
+A fresh bootstrap reconstructs normal schedules from Git.
 
 ### License
 
@@ -91,6 +130,9 @@ RKE2 Kubernetes version. Existing `flux-local:*` task names remain aliases.
 |---|---|
 | `license:mit` | License files as MIT |
 | `license:0bsd` | License files as 0BSD |
+| `license:apache2` | License files as Apache-2.0 |
+
+Pass file paths after `--`, for example `task license:apache2 -- path/to/file`.
 
 ## Getting started on a new controller
 
@@ -103,6 +145,8 @@ cd ansible
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/ansible-galaxy collection install -r requirements.yml
+cd ..
+export PATH="$PWD/ansible/.venv/bin:$PATH"
 ```
 
 Never treat the cluster as the only copy of its age identity, RKE2 token, restic
@@ -110,13 +154,18 @@ password, or S3 credentials.
 
 ## Recover the cluster
 
-1. Install Ubuntu 26.04 LTS with OpenSSH and temporary passwordless sudo access.
-2. Bootstrap and converge the host using `ansible/README.md`.
-3. Install the committed controllers with `task flux:install`, import existing Git
-   and SOPS credentials with `task flux:bootstrap:import-secrets` as the human operator, then run
-   `task flux:bootstrap`. See `docs/rke2-operations.md` for staged application recovery.
-4. Restore fresh PVCs from S3 and validate application contents as described in
-   `docs/zfs-s3-recovery.md`.
+Follow the [step-by-step bootstrap guide](docs/cluster-bootstrap.md) for prerequisites,
+inventory, recovery keys and post-bootstrap checks.
+
+1. Install a supported Ubuntu release with OpenSSH and temporary passwordless sudo access.
+2. Review the inventory and recovery keys. For an existing cluster, run
+   `task rke2:uninstall NODE=nas`, then `task rke2:bootstrap`. Bootstrap asks before
+   deleting old OpenEBS volumes and restores new ones from S3. Running clusters are
+   unchanged; host setup is separate. Missing application data blocks startup.
+3. Fetch access with `task kube:kubeconfig`, then watch `flux get kustomizations -A --watch`
+   and `kubectl get pods -A --watch` as applications recover.
+4. Validate restored application contents before removing rollback copies. The guide
+   also covers resuming a failed Flux handoff.
 
 ## Recovery
 

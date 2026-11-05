@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Retire host etcd backups without restarting the control plane
+  hosts: rke2_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Keep native snapshots and uploads disabled on subsequent starts
+      ansible.builtin.import_tasks: ../roles/rke2/tasks/snapshot-policy.yml
+
+    - name: Remove host backup infrastructure and local snapshots
+      ansible.builtin.import_tasks: ../roles/rke2/tasks/retire-etcd-backups.yml

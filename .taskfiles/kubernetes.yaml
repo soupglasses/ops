@@ -19,12 +19,8 @@ tasks:
     cmd: bash scripts/kubeconfig.sh {{.CLI_ARGS}}
 
   clean-pods:
-    desc: Delete all pods with a Failed/Pending/Succeeded status
-    cmds:
-      - for:
-          matrix:
-            PHASE: [Failed, Pending, Succeeded]
-        cmd: kubectl delete pods --all-namespaces --field-selector status.phase={{.ITEM.PHASE}} --ignore-not-found=true
+    desc: Delete terminal Failed/Succeeded pods, preserving pending restores
+    cmd: bash scripts/kube-clean-pods.sh
     preconditions:
       - which kubectl
       - test -f "$KUBECONFIG"

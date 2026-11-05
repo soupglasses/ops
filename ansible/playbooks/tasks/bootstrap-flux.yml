@@ -1,0 +1,207 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Install committed Flux controllers through the host Kubernetes client
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: >-
+      {{ lookup('ansible.builtin.file', playbook_dir + '/../../kubernetes/clusters/home/flux-system/gotk-components.yaml')
+      }}
+  changed_when: true
+
+- name: Wait for Flux controllers
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - flux-system
+      - rollout
+      - status
+      - "deployment/{{ item }}"
+      - --timeout=180s
+  loop: [source-controller, kustomize-controller, helm-controller]
+  changed_when: false
+
+# Lookup evaluation happens only during the operator's bootstrap run. Keep secret
+# bytes in task memory/stdin, never facts, registered results, or temporary files.
+- name: Import existing Flux credentials from the operator's encrypted sources
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - flux-system
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ lookup('community.sops.sops', playbook_dir + '/../../' + item) }}"
+  loop:
+    - kubernetes/clusters/home/secret.sops.yaml
+    - kubernetes/components/common/sops/secret.sops.yaml
+  no_log: true
+  diff: false
+  changed_when: true
+
+- name: Wait for the bundled snapshot controller
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - deployment/rke2-snapshot-controller
+      - --timeout=180s
+  changed_when: false
+
+- name: Render public bootstrap manifests on the controller
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - kustomize
+      - "{{ playbook_dir }}/../../{{ item }}"
+  loop:
+    - kubernetes/apps/network/cilium-gateway/crds
+    - kubernetes/clusters/home/flux-system
+  delegate_to: localhost
+  become: false
+  register: bootstrap_flux_manifests
+  changed_when: false
+
+- name: Install Gateway API definitions before Cilium discovers them
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[0].stdout }}"
+  changed_when: true
+
+- name: Wait for Gateway API definitions to become established
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - wait
+      - --for=condition=Established
+      - --timeout=120s
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[0].stdout }}"
+  changed_when: false
+
+- name: Restart Cilium operator to discover Gateway API definitions
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - restart
+      - deployment/cilium-operator
+  changed_when: true
+
+- name: Wait for Cilium operator after Gateway API discovery
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - deployment/cilium-operator
+      - --timeout=180s
+  changed_when: false
+
+- name: Connect Flux to the committed cluster configuration
+  ansible.builtin.command:
+    argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig=/etc/rancher/rke2/rke2.yaml
+      - apply
+      - --server-side
+      - -f
+      - '-'
+    stdin: "{{ bootstrap_flux_manifests.results[1].stdout }}"
+  changed_when: true
+
+- name: Reconcile Flux and wait for the current Git revision to be applied
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - -c
+      - |
+        import datetime
+        import json
+        import subprocess
+        import time
+
+        kube = ['/var/lib/rancher/rke2/bin/kubectl',
+                '--kubeconfig=/etc/rancher/rke2/rke2.yaml',
+                '--request-timeout=15s', '-n', 'flux-system']
+        source = 'gitrepository.source.toolkit.fluxcd.io/flux-system'
+        root = 'kustomization.kustomize.toolkit.fluxcd.io/flux-system'
+
+        def command(*args):
+            return subprocess.check_output(kube + list(args), text=True, timeout=20)
+
+        def read(resource):
+            return json.loads(command('get', resource, '-o', 'json'))
+
+        def ready(resource):
+            generation = resource['metadata']['generation']
+            return any(c.get('type') == 'Ready' and c.get('status') == 'True'
+                       and c.get('observedGeneration') == generation
+                       for c in resource.get('status', {}).get('conditions', []))
+
+        # Requests are hints, not completion tokens: concurrent reconciliation or
+        # the root applying its own metadata can supersede the annotation.
+        requested = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        for resource in (source, root):
+            command('annotate', '--overwrite', resource,
+                    'reconcile.fluxcd.io/requestedAt=' + requested)
+        deadline = time.monotonic() + 300
+        while time.monotonic() < deadline:
+            git = read(source)
+            revision = git.get('status', {}).get('artifact', {}).get('revision')
+            applied = read(root)
+            if (revision and ready(git) and ready(applied)
+                    and applied.get('status', {}).get('lastAppliedRevision') == revision):
+                # Follow a concurrently published commit instead of waiting for
+                # an obsolete fixed revision that may never be applied again.
+                current = read(source)
+                if (ready(current)
+                        and current.get('status', {}).get('artifact', {}).get('revision') == revision):
+                    print('Flux applied current Git revision: ' + revision)
+                    break
+            time.sleep(3)
+        else:
+            raise SystemExit('Flux did not apply its current ready Git source within 300 seconds')
+  tags: [bootstrap-reconcile]
+  changed_when: true
+
+- name: Clean terminal pods after the Flux handoff
+  ansible.builtin.command:
+    argv: [/bin/bash, -s]
+    stdin: "{{ lookup('ansible.builtin.file', playbook_dir + '/../../scripts/kube-clean-pods.sh') }}"
+  environment:
+    KUBECONFIG: /etc/rancher/rke2/rke2.yaml
+    PATH: /var/lib/rancher/rke2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  register: bootstrap_pod_cleanup
+  changed_when: "'deleted' in bootstrap_pod_cleanup.stdout"
+  tags: [bootstrap-clean-pods]

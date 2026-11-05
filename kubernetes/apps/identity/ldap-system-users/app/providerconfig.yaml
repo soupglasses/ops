@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ldap.finnes.dev/v1beta1
+kind: ProviderConfig
+metadata:
+  name: directory-admin
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: identity
+      name: openldap
+      key: connection.yaml

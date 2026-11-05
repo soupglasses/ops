@@ -7,5 +7,20 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: identity
 resources:
-  - ./terraform.yaml
+  - ./providerconfig.yaml
+  - ./entry.yaml
+  - ./groupofnames.yaml
   - ./secret.sops.yaml
+patches:
+  - target:
+      group: ldap.finnes.dev
+      kind: Entry
+    patch: |-
+      - op: add
+        path: /spec/managementPolicies
+        value: [Observe, Create, Update]
+      - op: add
+        path: /spec/providerConfigRef
+        value:
+          kind: ProviderConfig
+          name: directory-admin

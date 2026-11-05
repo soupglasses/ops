@@ -6,8 +6,49 @@ version: "3"
 
 set: [pipefail]
 
-# All tasks accept NS=<namespace> (default: default).
+# Restore tasks accept NS=<namespace> (default: default).
 tasks:
+  restic:
+    desc: Run restic for an app using shared cluster credentials [APP=required -- restic arguments]
+    requires:
+      vars: [APP]
+    preconditions:
+      - sh: '[[ {{.APP | shellQuote}} =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]'
+        msg: APP must be a Kubernetes application name
+    silent: true
+    cmd: |
+      set -eu
+      backup_field() {
+        value=$(kubectl -n flux-system get secret cluster-secrets -o "jsonpath={.data.$1}" | base64 --decode)
+        test -n "$value" || { echo "Missing backup field: $1" >&2; return 1; }
+        printf '%s' "$value"
+      }
+      # Task env values yield to inherited variables; assign here to enforce APP's repository.
+      endpoint=$(backup_field SECRET_S3_ENDPOINT)
+      RESTIC_REPOSITORY="${endpoint%/}/volsync-{{.APP}}"
+      RESTIC_PASSWORD=$(backup_field SECRET_PASSWORD)
+      AWS_ACCESS_KEY_ID=$(backup_field SECRET_AWS_ACCESS_KEY_ID)
+      AWS_SECRET_ACCESS_KEY=$(backup_field SECRET_AWS_SECRET_ACCESS_KEY)
+      export RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+      unset RESTIC_REPOSITORY_FILE RESTIC_PASSWORD_FILE RESTIC_PASSWORD_COMMAND
+      unset RESTIC_HOST RESTIC_TAG AWS_SESSION_TOKEN
+      exec restic {{.CLI_ARGS}}
+
+  resume:
+    dir: ansible
+    desc: Resume held backups and Flux on their coordinating node [NODE=required]
+    requires:
+      vars: [NODE]
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmd: ansible-playbook playbooks/resume-backups.yml -e {{printf "rke2_backup_coordinator=%s" .NODE
+      | shellQuote}} {{.CLI_ARGS}}
+
+  replication-sync:
+    desc: Trigger all scheduled restic backups and show progress until completion [TIMEOUT=30m]
+    cmd: python3 scripts/volsync-replication-sync.py --timeout {{.TIMEOUT | default "30m" | shellQuote}}
+      {{.CLI_ARGS}}
+
   zfs-inspect:
     desc: Inspect a restored PVC's ZFS origin [-- PVC --namespace NS]
     cmd: python3 scripts/zfs-clone.py inspect {{.CLI_ARGS}}
@@ -17,28 +58,36 @@ tasks:
     cmd: python3 scripts/zfs-clone.py promote {{.CLI_ARGS}}
   restore:
     desc: Restore an app's PVC from the newest restic snapshot [APP=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}}
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP]
+      vars: [APP, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh
   restore-pick:
     desc: Pick a snapshot interactively and restore [APP=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} --pick
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+      --pick
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP]
+      vars: [APP, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh
   restore-at:
     desc: Restore as of an RFC3339 timestamp [APP=required AT=required NS=default]
-    cmd: NS={{.NS | default "default"}} scripts/volsync-restore.sh {{.APP}} {{.AT}}
+    cmd: NS={{.NS | default "default" | shellQuote}} scripts/volsync-restore.sh {{.APP | shellQuote}}
+      {{.AT | shellQuote}}
+    env:
+      VERIFY_COMMAND: "{{.VERIFY_COMMAND}}"
     interactive: true
     requires:
-      vars: [APP, AT]
+      vars: [APP, AT, VERIFY_COMMAND]
     preconditions:
       - test -f "$KUBECONFIG"
       - test -x scripts/volsync-restore.sh

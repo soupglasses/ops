@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: ops.finnes.dev/v1alpha1
+kind: GroupOfNames
+metadata:
+  name: directory-admin-group
+spec:
+  backendRef:
+    kind: ProviderConfig
+    name: directory-admin
+  cn: admin
+  deletionPolicy: Orphan

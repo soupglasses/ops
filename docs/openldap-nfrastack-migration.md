@@ -12,7 +12,7 @@ standard configuration into persistent `cn=config`; normal starts need no root
 initializer, custom image, or repeated data conversion.
 
 Production resources are in [the application directory](../kubernetes/apps/identity/openldap/app),
-with standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/ks.yaml).
+with standard VolSync components selected by [its Flux configuration](../kubernetes/apps/identity/openldap/kustomize.yaml).
 The one-time migration harness was removed after validation; its scripts and test
 fixtures remain in Git history at `f8945a9`. Recovery uses the backed-up native
 configuration and directory, not those migration fixtures.
@@ -98,8 +98,10 @@ The first backup from the production `openldap-directory` PVC completed at
 **09:35:58 UTC**. The manual trigger was removed and the normal daily schedule
 restored. The native-export hook completed before the copy trigger was released.
 Temporary migration Pods, ConfigMaps, NetworkPolicies, seed ReplicationSource,
-and repository bootstrap Kustomization were removed; the two rollback PVCs remain
-Flux-managed with pruning disabled. No permanent resource uses a `v2` name.
+and repository bootstrap Kustomization were removed. The two rollback PVCs were
+initially retained with pruning disabled. Their declarations have since been removed
+so clean rebuilds do not recreate migration artifacts; the existing protected copies
+remain on the original cluster. No permanent resource uses a `v2` name.
 
 No end-user plaintext password was requested or inspected;
 real user-password/OTP contents were compared by aggregate directory digest, while

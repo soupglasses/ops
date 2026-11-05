@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: private
+  namespace: network
+  annotations:
+    external-dns.kubernetes.io/target: 172.21.68.11
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  gatewayClassName: cilium-private
+  infrastructure:
+    labels:
+      networking.finnes.dev/exposure: private
+      bgp: "enabled"
+    annotations:
+      lbipam.cilium.io/ips: 172.21.68.11
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: private-gateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: media

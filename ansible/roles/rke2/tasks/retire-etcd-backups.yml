@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+- name: Discover obsolete etcd backup units
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ item }}"
+  loop:
+    - rke2-etcd-restic-backup.timer
+    - rke2-etcd-snapshot-metrics.timer
+    - rke2-etcd-restic-backup.service
+    - rke2-etcd-snapshot-metrics.service
+  register: rke2_obsolete_backup_units
+
+# Stop timers before services so no new backup can start during retirement.
+- name: Stop and disable obsolete etcd backup units
+  ansible.builtin.systemd_service:
+    name: "{{ item.item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ rke2_obsolete_backup_units.results }}"
+  when: item.stat.exists
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Remove obsolete backup helpers and local recovery artifacts
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/rke2-etcd-restic-backup.timer
+    - /etc/systemd/system/rke2-etcd-restic-backup.service
+    - /etc/systemd/system/rke2-etcd-snapshot-metrics.timer
+    - /etc/systemd/system/rke2-etcd-snapshot-metrics.service
+    - /usr/local/libexec/rke2-restic-backup
+    - /usr/local/libexec/rke2-bootstrap-restore
+    - /usr/local/libexec/rke2-etcd-snapshot-metrics
+    - /var/lib/rke2-restic-backup
+    - /var/lib/prometheus/node-exporter/rke2-etcd-restic.prom
+    - /var/lib/prometheus/node-exporter/rke2-etcd-s3-snapshots.prom
+    - /opt/etcd-recovery
+    # Delete only snapshots; the live datastore and server token are outside this path.
+    - /var/lib/rancher/rke2/server/db/snapshots
+
+- name: Reload systemd after removing obsolete backup units
+  ansible.builtin.systemd_service:
+    daemon_reload: true

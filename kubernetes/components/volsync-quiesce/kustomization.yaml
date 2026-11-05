@@ -10,4 +10,4 @@ resources:
   - ./rbac.yaml
   - ./deployment.yaml
 patches:
-  - path: ./pvc-trigger-patch.yaml
+  - path: ./persistentvolumeclaim-patch.yaml

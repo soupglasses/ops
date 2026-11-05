@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+name: Jellyfin
+on:
+  pull_request:
+    paths:
+      - "packages/jellyfin-runtime/**"
+      - ".github/workflows/jellyfin.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/jellyfin-runtime/**"
+      - ".github/workflows/jellyfin.yaml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jellyfin-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  jellyfin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Test plugin launcher and health checks
+        run: |
+          python3 -m unittest discover -s packages/jellyfin-runtime/tests -v
+      - name: Build pinned Jellyfin and plugins
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: packages/jellyfin-runtime/build.sh ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha
+          }}
+      - name: Publish
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }}
+          version=$(sed -n 's|^FROM jellyfin/jellyfin:\([^@]*\)@.*|\1|p' packages/jellyfin-runtime/Dockerfile)
+          test -n "$version"
+          docker tag ghcr.io/soupglasses/ops/jellyfin-runtime:${{ github.sha }} ghcr.io/soupglasses/ops/jellyfin-runtime:"$version"
+          docker push ghcr.io/soupglasses/ops/jellyfin-runtime:"$version"

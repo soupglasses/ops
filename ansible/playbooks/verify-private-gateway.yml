@@ -1,0 +1,128 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+- name: Verify private Gateway isolation and Jellyfin TLS
+  hosts: rke2_servers
+  become: true
+  gather_facts: false
+  vars:
+    kubectl_argv:
+      - /var/lib/rancher/rke2/bin/kubectl
+      - --kubeconfig
+      - /etc/rancher/rke2/rke2.yaml
+    private_gateway_hostname: jellyfin.home.finnes.dev
+    private_gateway_address: 172.21.68.11
+    public_gateway_address: 172.21.68.10
+    public_gateway_ipv6_address: 2a13:e745:1ee8:68::10
+  tasks:
+    - name: Read the generated private Gateway Service
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'network', 'get', 'service/cilium-gateway-private', '-o', 'json']
+          }}"
+      register: private_gateway_service
+      changed_when: false
+
+    - name: Require the dedicated private IPv4 BGP LoadBalancer without NodePorts
+      ansible.builtin.assert:
+        that:
+          - private_service.spec.type == 'LoadBalancer'
+          - private_service.spec.loadBalancerClass == 'io.cilium/bgp-control-plane'
+          - private_service.spec.ipFamilies == ['IPv4']
+          - not private_service.spec.allocateLoadBalancerNodePorts
+          - private_service.spec.ports | map(attribute='nodePort', default=0) | select('ne', 0) | list
+            | length == 0
+          - private_service.metadata.labels.get('bgp', '') == 'enabled'
+          - private_service.spec.loadBalancerSourceRanges | sort == private_gateway_sources | sort
+          - private_service.status.loadBalancer.ingress | map(attribute='ip') | list == [private_gateway_address]
+      vars:
+        private_service: "{{ private_gateway_service.stdout | from_json }}"
+        private_gateway_sources: [172.21.69.0/24, 172.21.70.0/24, 172.21.71.10/32]
+
+    - name: Read the Jellyfin route
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'media', 'get', 'httproute/jellyfin', '-o', 'json'] }}"
+      register: private_gateway_route
+      changed_when: false
+
+    - name: Require the route to attach exclusively to the private HTTPS listener
+      ansible.builtin.assert:
+        that:
+          - private_route.spec.parentRefs | length == 1
+          - private_route.spec.parentRefs[0].name == 'private'
+          - private_route.spec.parentRefs[0].namespace == 'network'
+          - private_route.spec.parentRefs[0].sectionName == 'https'
+          - private_route.spec.hostnames == [private_gateway_hostname]
+          - private_route.metadata.annotations['external-dns.kubernetes.io/target'] == private_gateway_address
+          - private_route.metadata.annotations['external-dns.alpha.kubernetes.io/cloudflare-proxied']
+            == 'false'
+          - private_parent.conditions | selectattr('type', 'equalto', 'Accepted') | map(attribute='status')
+            | list == ['True']
+          - private_parent.conditions | selectattr('type', 'equalto', 'ResolvedRefs') | map(attribute='status')
+            | list == ['True']
+      vars:
+        private_route: "{{ private_gateway_route.stdout | from_json }}"
+        private_parent: "{{ private_route.status.parents | selectattr('parentRef.name', 'equalto', 'private')
+          | first }}"
+
+    - name: Read the BGP route advertised to the router
+      ansible.builtin.command:
+        argv: "{{ kubectl_argv + ['-n', 'kube-system', 'exec', 'daemonset/cilium', '--', 'cilium-dbg',
+          'bgp', 'routes', 'advertised', 'ipv4', 'unicast'] }}"
+      register: private_gateway_bgp_routes
+      changed_when: false
+
+    - name: Require the private VIP and existing public VIP advertisements
+      ansible.builtin.assert:
+        that:
+          - private_gateway_bgp_routes.stdout is search('172\\.21\\.68\\.11/32')
+          - private_gateway_bgp_routes.stdout is search('172\\.21\\.68\\.10/32')
+
+    - name: Validate the Jellyfin health endpoint through trusted TLS at the private address
+      ansible.builtin.command:
+        argv:
+          - curl
+          - --fail
+          - --silent
+          - --show-error
+          - --noproxy
+          - '*'
+          - --connect-timeout
+          - '10'
+          - --max-time
+          - '30'
+          - --resolve
+          - '{{ private_gateway_hostname }}:443:{{ private_gateway_address }}'
+          - 'https://{{ private_gateway_hostname }}/health'
+      register: private_gateway_health
+      changed_when: false
+      failed_when: private_gateway_health.rc != 0 or private_gateway_health.stdout | trim != 'Healthy'
+
+    # This request intentionally uses the private hostname against the public listener.
+    - name: Require both public Gateway addresses to reject the Jellyfin hostname
+      ansible.builtin.command:
+        argv:
+          - curl
+          - --silent
+          - --show-error
+          - --insecure
+          - --noproxy
+          - '*'
+          - --connect-timeout
+          - '10'
+          - --max-time
+          - '30'
+          - --output
+          - /dev/null
+          - --write-out
+          - '%{http_code}'
+          - --resolve
+          - '{{ private_gateway_hostname }}:443:{{ item }}'
+          - 'https://{{ private_gateway_hostname }}/health'
+      loop:
+        - "{{ public_gateway_address }}"
+        - "[{{ public_gateway_ipv6_address }}]"
+      register: private_gateway_public_probe
+      changed_when: false
+      failed_when: private_gateway_public_probe.rc != 0 or private_gateway_public_probe.stdout not in
+        ['404', '421']

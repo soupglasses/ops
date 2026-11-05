@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: jellyfin
+spec:
+  package: ghcr.io/soupglasses/provider-jellyfin:v0.1.0@sha256:0a38de29d459c0f0e77b3dd39042b641eaaa21ef16f26a68945cc83dd39d06e6
+  revisionHistoryLimit: 2
+  runtimeConfigRef:
+    name: jellyfin
