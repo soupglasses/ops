@@ -22,6 +22,13 @@ ingress-nginx HelmChart exists, including clusters already using Cilium Gateway.
 This preserves Flux-managed ingress without rereading or rewriting credentials
 during maintenance. See [RKE2 ingress selection](https://github.com/rancher/rke2/blob/v1.36.4%2Brke2r1/pkg/bootstrap/bootstrap.go).
 
+The same drop-in appends `rke2-gateway-api-crd` to RKE2's disabled components.
+Gateway API CRDs belong to Flux. RKE2's bundled chart otherwise takes Helm ownership
+and can replace the declared schemas during a node upgrade. Its CRDs carry
+`helm.sh/resource-policy: keep`, so disabling an already-installed chart preserves
+the CRDs and their objects; reconcile `network/cilium-gateway-api-crds` afterward
+to restore the Git-declared bundle.
+
 Do not install a second Cilium, CoreDNS or snapshot-controller release through Flux.
 RKE2 already installs Cilium through Helm. Keeping its bundled chart gives a single
 owner and restores networking before Flux starts. Independent Cilium releases are
