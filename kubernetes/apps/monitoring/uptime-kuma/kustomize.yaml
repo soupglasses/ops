@@ -6,6 +6,7 @@ metadata:
   name: uptime-kuma
   namespace: monitoring
 spec:
+  targetNamespace: monitoring
   path: ./kubernetes/apps/monitoring/uptime-kuma/app
   dependsOn:
     - name: uptime-kuma-provider
