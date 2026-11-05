@@ -7,6 +7,8 @@ metadata:
 spec:
   managementPolicies:
     - Observe
+    - Create
+    - Update
     - LateInitialize
   providerConfigRef:
     name: default
