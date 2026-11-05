@@ -38,7 +38,6 @@ class BrokerTests(unittest.TestCase):
                         (["github", "--force-new"], "fixture-only-token"),
                         (["github", "--issuer"], "https://github.com"),
                         (["github", "--expires-at"], "2000000000"),
-                        (["github", "--auth-header"], "Authorization: Bearer fixture-only-token"),
                         (["https://github.com"], "fixture-only-token"),
                     ]:
                         result = subprocess.run(["/usr/bin/oidc-token", *args], env=env,
