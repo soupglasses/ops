@@ -25,11 +25,15 @@ Set these in the app's `kustomize.yaml` `postBuild.substitute`:
 |---|---|---|
 | `APP` | required | PVC name = `${APP}`; RD name = `${APP}-dst`. |
 | `VOLSYNC_CAPACITY` | `5Gi` | PVC size. |
-| `VOLSYNC_CACHE_CAPACITY` | `5Gi` | Disposable restic cache size. |
+| `VOLSYNC_CACHE_CAPACITY` | `10Gi` | Disposable restic cache size. |
 | `VOLSYNC_CACHE_SNAPSHOTCLASS` | `openebs-zfs` | Cache StorageClass; ZFS enforces capacity independently of the root filesystem. |
 | `VOLSYNC_STORAGECLASS` | `openebs-zfs` | Must support CSI snapshots (RS `copyMethod: Snapshot`). |
 | `VOLSYNC_SNAPSHOTCLASS` | `openebs-zfs-snapshot` | Matching VolumeSnapshotClass. |
 | `VOLSYNC_SCHEDULE` | `15 6 * * *` | Cron for the RS backup. |
+
+The cache must fit the repository’s non-pruned metadata, rather than a fixed fraction
+of the live volume. The 10 GiB default provides headroom; it is not an eviction limit.
+See [VolSync cacheCapacity](https://volsync.readthedocs.io/en/stable/usage/restic/index.html#backup-options).
 
 ## Run backups before maintenance
 
@@ -162,7 +166,7 @@ success is not restore proof. Track those gaps in
 [#127](https://github.com/soupglasses/ops/issues/127),
 [#128](https://github.com/soupglasses/ops/issues/128) and
 [#129](https://github.com/soupglasses/ops/issues/129).
-Jellyfin configuration and media intentionally have no backups and are excluded.
+Jellyfin configuration/media and VictoriaLogs intentionally have no backups and are excluded.
 
 For standalone restic checks, VolSync's `backup .` stores relative volume contents:
 restore `config/`, `db/` and `backup/` into the chosen data directory, without an extra
