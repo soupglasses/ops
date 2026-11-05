@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -180,14 +181,10 @@ func TestGroupOfNamesComposition(t *testing.T) {
 	if _, err := xrs.Create(ctx, invalid, metav1.CreateOptions{}); !apierrors.IsInvalid(err) {
 		t.Fatal("unsafe cn was accepted")
 	}
-	current, err := xrs.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
 	oldDN := dn
 	const renamedCN = "renamed-users"
-	_ = unstructured.SetNestedField(current.Object, renamedCN, "spec", "cn")
-	if _, err := xrs.Update(ctx, current, metav1.UpdateOptions{}); err != nil {
+	// Controllers update status concurrently; patch only the field under test.
+	if _, err := xrs.Patch(ctx, name, types.MergePatchType, []byte(`{"spec":{"cn":"`+renamedCN+`"}}`), metav1.PatchOptions{}); err != nil {
 		t.Fatalf("rename group: %v", err)
 	}
 	dn = "cn=" + renamedCN + ",ou=groups," + baseDN
