@@ -10,7 +10,7 @@
     group: root
     mode: "0750"
 
-- name: Keep Cilium as the sole ingress controller
+- name: Keep ingress and Gateway API ownership with Cilium and Flux
   ansible.builtin.copy:
     dest: /etc/rancher/rke2/config.yaml.d/20-cilium-ingress.yaml
     owner: root
@@ -20,3 +20,6 @@
     content: |
       ingress-controller:
         - none
+      # Append without replacing the disabled components in the main config.
+      disable+:
+        - rke2-gateway-api-crd
