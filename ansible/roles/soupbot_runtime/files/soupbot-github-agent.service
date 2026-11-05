@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+[Unit]
+Description=Soupbot GitHub App installation token broker
+Documentation=https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=root
+Group=oidc-shell
+UMask=0077
+LimitCORE=0
+Environment=PYTHONDONTWRITEBYTECODE=1
+LoadCredentialEncrypted=github-app-private-key:/etc/credstore.encrypted/soupbot-github-app-private-key
+RuntimeDirectory=soupbot-github
+RuntimeDirectoryMode=0750
+ExecStartPre=/usr/bin/rm -f /run/soupbot-github/oidc-agent.sock
+ExecStart=/usr/bin/python3 /usr/local/libexec/soupbot-github/github_app_broker.py --socket=/run/soupbot-github/oidc-agent.sock --key-file=%d/github-app-private-key
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=45s
+TimeoutStopSec=15s
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

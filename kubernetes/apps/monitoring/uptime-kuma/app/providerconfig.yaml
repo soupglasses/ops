@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: uptimekuma.ops.finnes.dev/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+spec:
+  endpoint: https://status.finnes.dev
+  usernameSecretRef:
+    name: kuma-credentials
+    key: username
+  passwordSecretRef:
+    name: kuma-credentials
+    key: password

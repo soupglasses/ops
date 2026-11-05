@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: uptimekuma-controller
+  namespace: crossplane-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: uptimekuma-controller
+  namespace: monitoring
+rules:
+  - apiGroups:
+      - uptimekuma.ops.finnes.dev
+    resources:
+      - providerconfigs
+      - gamemonitors
+      - httpmonitors
+      - statuspages
+      - gamemonitors/status
+      - httpmonitors/status
+      - statuspages/status
+      - gamemonitors/finalizers
+      - httpmonitors/finalizers
+      - statuspages/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - ''
+    resources:
+      - events
+    verbs:
+      - create
+      - update
+      - patch
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    resourceNames:
+      - kuma-credentials
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: uptimekuma-controller
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: uptimekuma-controller
+subjects:
+  - kind: ServiceAccount
+    name: uptimekuma-controller
+    namespace: crossplane-system

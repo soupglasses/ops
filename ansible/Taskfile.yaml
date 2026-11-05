@@ -76,3 +76,10 @@ tasks:
       ANSIBLE_VARS_ENABLED: host_group_vars
     cmds:
       - ansible-playbook playbooks/media-storage.yml {{.CLI_ARGS}}
+
+  satellite:
+    desc: Configure satellite bot authentication, default signing and ACME permissions
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/satellite-automation.yml {{.CLI_ARGS}}

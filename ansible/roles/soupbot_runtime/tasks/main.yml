@@ -1,0 +1,261 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+- name: Require the satellite host for this bootstrap
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.hostname == 'satellite'
+    fail_msg: Run satellite-automation.yml on satellite; it configures local credentials and host services.
+- name: Install broker and signing dependencies
+  ansible.builtin.apt:
+    name:
+      - git
+      - gh
+      - openssh-client
+      - openssl
+      - python3
+      - libsodium23
+      - oidc-agent-cli
+    state: present
+- name: Create the broker socket group
+  ansible.builtin.group:
+    name: oidc-shell
+    system: true
+- name: Allow the automation user to access the broker
+  ansible.builtin.user:
+    name: '{{ soupbot_runtime_user }}'
+    groups:
+      - oidc-shell
+    append: true
+- name: Create private user configuration directories
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0700'
+  loop:
+    - '{{ soupbot_runtime_home }}/.ssh'
+    - '{{ soupbot_runtime_home }}/.local/bin'
+- name: Check for the signing key
+  ansible.builtin.stat:
+    path: '{{ soupbot_runtime_home }}/.ssh/soupbot_signing'
+  register: soupbot_runtime_signing_key
+- name: Require an independently held key on a fresh host
+  ansible.builtin.assert:
+    that:
+      - soupbot_runtime_signing_key.stat.exists or soupbot_runtime_signing_key_source | length > 0
+    fail_msg: Supply soupbot_runtime_signing_key_source from an independent private backup; never put
+      it in Git.
+- name: Install the supplied signing key when absent
+  ansible.builtin.copy:
+    src: '{{ soupbot_runtime_signing_key_source }}'
+    dest: '{{ soupbot_runtime_home }}/.ssh/soupbot_signing'
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0600'
+  when: not soupbot_runtime_signing_key.stat.exists
+  no_log: true
+- name: Keep the signing key private
+  ansible.builtin.file:
+    path: '{{ soupbot_runtime_home }}/.ssh/soupbot_signing'
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0600'
+- name: Derive the public signing key
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -y
+      - -f
+      - '{{ soupbot_runtime_home }}/.ssh/soupbot_signing'
+  become: true
+  become_user: '{{ soupbot_runtime_user }}'
+  changed_when: false
+  register: soupbot_runtime_public_key
+  no_log: true
+  check_mode: false
+  when: soupbot_runtime_signing_key.stat.exists or not ansible_check_mode
+- name: Require the repository trusted automation key
+  ansible.builtin.assert:
+    that:
+      - soupbot_runtime_public_key.stdout.split()[:2] | join(' ') in lookup('ansible.builtin.file', role_path
+        + '/../../../.allowed_signers')
+    fail_msg: The supplied key does not match the repository automation signer.
+  when: soupbot_runtime_public_key.stdout is defined
+- name: Install the public signing key
+  ansible.builtin.copy:
+    content: '{{ soupbot_runtime_public_key.stdout }} #magic___^_^___line '
+    dest: '{{ soupbot_runtime_home }}/.ssh/soupbot_signing.pub'
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0644'
+  when: soupbot_runtime_public_key.stdout is defined
+- name: Trust the bot signing identities
+  ansible.builtin.lineinfile:
+    path: '{{ soupbot_runtime_home }}/.ssh/allowed_signers'
+    line: '{{ item }} {{ soupbot_runtime_public_key.stdout.split()[:2] | join('' '') }}'
+    create: true
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0600'
+  loop:
+    - 306269487+soupbot@users.noreply.github.com
+    - bot+ops@finnes.dev
+  when: soupbot_runtime_public_key.stdout is defined
+- name: Create the helper directory
+  ansible.builtin.file:
+    path: /usr/local/libexec
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+- name: Install the default Git configuration helper
+  ansible.builtin.copy:
+    src: ensure_git_defaults.py
+    dest: /usr/local/libexec/ensure-soupbot-git-defaults
+    owner: root
+    group: root
+    mode: '0755'
+- name: Configure default bot identity, authentication and signing
+  ansible.builtin.command:
+    argv: '{{ [''/usr/local/libexec/ensure-soupbot-git-defaults'', ''--home'', soupbot_runtime_home] +
+      ([''--check''] if ansible_check_mode else []) }}'
+  become: true
+  become_user: '{{ soupbot_runtime_user }}'
+  register: soupbot_runtime_git_configuration
+  changed_when: soupbot_runtime_git_configuration.stdout == 'changed'
+  check_mode: false
+  when: not ansible_check_mode
+- name: Create the broker installation directories
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /usr/local/libexec/soupbot-github
+    - /etc/credstore.encrypted
+    - /etc/systemd/system/lego-renew@.service.d
+- name: Check for the encrypted app credential
+  ansible.builtin.stat:
+    path: /etc/credstore.encrypted/soupbot-github-app-private-key
+  register: soupbot_runtime_app_key
+- name: Require an app key on a fresh host
+  ansible.builtin.assert:
+    that:
+      - soupbot_runtime_app_key.stat.exists or soupbot_runtime_github_app_key_source | length > 0
+    fail_msg: Supply soupbot_runtime_github_app_key_source from the soupbot-ai private-key backup; never
+      put it in Git.
+- name: Seal the app key on a fresh host
+  when: not soupbot_runtime_app_key.stat.exists
+  block:
+    - name: Create a private staging file
+      ansible.builtin.tempfile:
+        state: file
+        prefix: soupbot-app-key-
+      register: soupbot_runtime_staged_key
+    - name: Stage the supplied app key
+      ansible.builtin.copy:
+        src: '{{ soupbot_runtime_github_app_key_source }}'
+        dest: '{{ soupbot_runtime_staged_key.path }}'
+        mode: '0600'
+      no_log: true
+    - name: Encrypt the app key for systemd
+      ansible.builtin.command:
+        argv:
+          - systemd-creds
+          - encrypt
+          - --name=github-app-private-key
+          - '{{ soupbot_runtime_staged_key.path }}'
+          - /etc/credstore.encrypted/soupbot-github-app-private-key
+        creates: /etc/credstore.encrypted/soupbot-github-app-private-key
+      no_log: true
+  always:
+    - name: Remove private staging material
+      ansible.builtin.file:
+        path: '{{ soupbot_runtime_staged_key.path }}'
+        state: absent
+      when: soupbot_runtime_staged_key.path is defined
+      no_log: true
+- name: Protect the encrypted app credential
+  ansible.builtin.file:
+    path: /etc/credstore.encrypted/soupbot-github-app-private-key
+    owner: root
+    group: root
+    mode: '0600'
+- name: Install the broker source
+  ansible.builtin.copy:
+    src: '{{ item }}'
+    dest: /usr/local/libexec/soupbot-github/{{ item }}
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - github_app_auth.py
+    - github_app_broker.py
+  notify: Restart soupbot broker
+- name: Install the broker service
+  ansible.builtin.copy:
+    src: soupbot-github-agent.service
+    dest: /etc/systemd/system/soupbot-github-agent.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart soupbot broker
+- name: Install the socket alias configuration
+  ansible.builtin.copy:
+    src: soupbot.conf
+    dest: /etc/tmpfiles.d/soupbot.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Create the shared socket alias
+- name: Enable the app broker
+  ansible.builtin.systemd_service:
+    name: soupbot-github-agent.service
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: Install the Git credential helper
+  ansible.builtin.copy:
+    src: git-credential-soupbot
+    dest: /usr/local/libexec/git-credential-soupbot
+    owner: root
+    group: root
+    mode: '0755'
+- name: Install the fail-closed GitHub CLI wrapper
+  ansible.builtin.copy:
+    src: gh
+    dest: '{{ soupbot_runtime_home }}/.local/bin/gh'
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0755'
+- name: Make user-local commands discoverable on login
+  ansible.builtin.blockinfile:
+    path: '{{ soupbot_runtime_home }}/.profile'
+    create: true
+    owner: '{{ soupbot_runtime_user }}'
+    group: '{{ soupbot_runtime_user }}'
+    mode: '0600'
+    marker: '# {mark} SOUPBOT COMMANDS'
+    block: "case \":$PATH:\" in\n  *\":{{ soupbot_runtime_home }}/.local/bin:\"*) ;;\n  *) PATH=\"{{ soupbot_runtime_home
+      }}/.local/bin:$PATH\" ;;\nesac\nexport PATH"
+  diff: false
+  no_log: true
+- name: Prepare readable public ACME challenges
+  ansible.builtin.file:
+    path: /var/www/acme/.well-known/acme-challenge
+    state: directory
+    owner: root
+    group: www-data
+    mode: '2750'
+- name: Keep renewal challenge permissions correct
+  ansible.builtin.copy:
+    src: acme-webroot.conf
+    dest: /etc/systemd/system/lego-renew@.service.d/acme-webroot.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd units

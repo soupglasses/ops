@@ -1,0 +1,127 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: publicstatuspages.uptimekuma.ops.finnes.dev
+spec:
+  scope: Namespaced
+  group: uptimekuma.ops.finnes.dev
+  names:
+    kind: PublicStatusPage
+    plural: publicstatuspages
+  defaultCompositionRef:
+    name: uptimekuma-public-status-page
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - providerConfigRef
+                - configuration
+                - groups
+              properties:
+                providerConfigRef:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      enum:
+                        - default
+                managementPolicies:
+                  type: array
+                  default:
+                    - Observe
+                    - Create
+                    - Update
+                    - LateInitialize
+                  items:
+                    type: string
+                    enum:
+                      - Observe
+                      - Create
+                      - Update
+                      - LateInitialize
+                configuration:
+                  type: object
+                  required:
+                    - slug
+                    - title
+                  properties:
+                    slug:
+                      type: string
+                      minLength: 1
+                      x-kubernetes-validations:
+                        - rule: self == oldSelf
+                          message: Page slug is immutable.
+                    title:
+                      type: string
+                      minLength: 1
+                    description:
+                      type: string
+                    icon:
+                      type: string
+                    theme:
+                      type: string
+                    customCss:
+                      type: string
+                    footerText:
+                      type: string
+                    published:
+                      type: boolean
+                      default: true
+                      enum:
+                        - true
+                    showTags:
+                      type: boolean
+                    showPoweredBy:
+                      type: boolean
+                    showCertificateExpiry:
+                      type: boolean
+                    domainNameList:
+                      type: array
+                      items:
+                        type: string
+                groups:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - monitorRefs
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                      weight:
+                        type: integer
+                        default: 1
+                      monitorRefs:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: object
+                          required:
+                            - kind
+                            - name
+                          properties:
+                            kind:
+                              type: string
+                              enum:
+                                - GameMonitor
+                                - HTTPMonitor
+                            name:
+                              type: string
+                              minLength: 1
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true

@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: uptime-kuma
+  namespace: monitoring
+spec:
+  path: ./kubernetes/apps/monitoring/uptime-kuma/app
+  dependsOn:
+    - name: uptime-kuma-provider
+      namespace: crossplane-system
+    - name: ldap-provider
+      namespace: identity
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true

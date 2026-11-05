@@ -58,6 +58,14 @@ yq eval-all -o=json -I=0 '[.]' \
     "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/jellyfin/compositeresourcedefinition.yaml" \
     | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
 
+crossplane xpkg get-crds \
+    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/uptime-kuma/provider.yaml" \
+    --output-dir "$schema_dir/uptime-kuma-crds"
+yq eval-all -o=json -I=0 '[.]' \
+    "$schema_dir/uptime-kuma-crds/"*/*/*.yaml \
+    "$REPO_ROOT/kubernetes/apps/crossplane-system/crossplane/providers/uptime-kuma/compositeresourcedefinition.yaml" \
+    | python3 "$REPO_ROOT/scripts/kubeconform-local-schemas.py" "$schema_dir"
+
 # The community catalog omits CRDs themselves; validate those against the
 # selected Kubernetes release's own OpenAPI definitions.
 if grep -q '^kind: CustomResourceDefinition$' "$@"; then

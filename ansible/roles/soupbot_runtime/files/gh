@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+set -eu
+GH_TOKEN=$(OIDC_SOCK=/run/soupbot-github/oidc-agent.sock /usr/bin/timeout --kill-after=5s 40s /usr/bin/oidc-token github --time=300 --name=gh)
+[ -n "$GH_TOKEN" ] || exit 1
+export GH_TOKEN
+exec /usr/bin/gh "$@"

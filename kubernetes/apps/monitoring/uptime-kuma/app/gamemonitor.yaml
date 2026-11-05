@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+kind: GameMonitor
+metadata:
+  name: minecraft
+spec:
+  managementPolicies:
+    - Observe
+    - LateInitialize
+  providerConfigRef:
+    kind: ProviderConfig
+    name: default
+  forProvider:
+    name: Minecraft
+    hostname: mc.finnes.dev
+    port: 25565
+    game: minecraft
+    gamedigGivenPortOnly: true
+    interval: 60
+    retryInterval: 60
+    maxRetries: 0
+    active: true

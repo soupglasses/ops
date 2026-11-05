@@ -1,0 +1,96 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: uptimekuma-public-status-page
+spec:
+  compositeTypeRef:
+    apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+    kind: PublicStatusPage
+  mode: Pipeline
+  pipeline:
+    - step: resolve-monitors-and-page
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := getCompositeResource . -}}
+            {{- $spec := $xr.spec -}}
+            {{- $namespace := $xr.metadata.namespace -}}
+            {{- $extra := get . "extraResources" | default dict -}}
+            {{- $requirements := dict -}}
+            {{- $resolved := true -}}
+            {{- $groups := list -}}
+            {{- $page := getComposedResource . "page" -}}
+            {{- $observed := dig "status" "atProvider" (dict) ($page | default dict) -}}
+            {{- range $group := $spec.groups -}}
+              {{- $monitors := list -}}
+              {{- range $ref := $group.monitorRefs -}}
+                {{- $key := printf "monitor-%s" (sha256sum (printf "%s/%s" $ref.kind $ref.name)) -}}
+                {{- $_ := set $requirements $key (dict "apiVersion" "uptimekuma.ops.finnes.dev/v1alpha1" "kind" $ref.kind "matchName" $ref.name "namespace" $namespace) -}}
+                {{- $items := dig $key "items" (list) $extra -}}
+                {{- if ne (len $items) 1 -}}
+                  {{- $resolved = false -}}
+                {{- else -}}
+                  {{- $monitor := (index $items 0).resource -}}
+                  {{- $id := dig "status" "atProvider" "id" "" $monitor -}}
+                  {{- if or (ne $monitor.metadata.namespace $namespace) (ne $monitor.metadata.name $ref.name) (ne $monitor.kind $ref.kind) (ne (dig "spec" "providerConfigRef" "name" "" $monitor) $spec.providerConfigRef.name) (ne (getResourceCondition "Ready" $monitor).Status "True") (ne (getResourceCondition "Synced" $monitor).Status "True") (not (regexMatch "^[1-9][0-9]*$" $id)) -}}
+                    {{- $resolved = false -}}
+                  {{- else -}}
+                    {{- $monitors = append $monitors (dict "id" (atoi $id) "sendUrl" false) -}}
+                  {{- end -}}
+                {{- end -}}
+              {{- end -}}
+              {{- $configuration := dict "name" $group.name "weight" $group.weight "monitorList" $monitors -}}
+              {{- range $existing := (dig "status" "atProvider" "publicGroupList" (list) ($page | default dict)) -}}
+                {{- if and (eq $existing.name $group.name) (hasKey $existing "id") -}}
+                  {{- $_ := set $configuration "id" $existing.id -}}
+                {{- end -}}
+              {{- end -}}
+              {{- $groups = append $groups $configuration -}}
+            {{- end -}}
+            {{- $configuration := deepCopy $spec.configuration -}}
+            {{- $_ := set $configuration "publicGroupList" $groups -}}
+            {{- $managedSpec := dict "managementPolicies" $spec.managementPolicies "providerConfigRef" (dict "kind" "ProviderConfig" "name" $spec.providerConfigRef.name) "forProvider" $configuration -}}
+            {{- $ready := not (empty (and $resolved $page (eq (getResourceCondition "Ready" $page).Status "True") (eq (getResourceCondition "Synced" $page).Status "True"))) -}}
+            {{- if $ready -}}
+              {{- range $field, $value := $configuration -}}
+                {{- if ne ($value | mustToJson) ((get $observed $field) | mustToJson) -}}
+                  {{- $ready = false -}}
+                {{- end -}}
+              {{- end -}}
+            {{- end }}
+            apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+            kind: ExtraResources
+            requirements:
+              {{- $requirements | toYaml | nindent 2 }}
+            ---
+            apiVersion: {{ $xr.apiVersion }}
+            kind: {{ $xr.kind }}
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            status: {}
+            {{/* Retain the last working page if a referenced monitor is pending or missing. */}}
+            {{- if or $resolved $page }}
+            ---
+            apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+            kind: StatusPage
+            metadata:
+              name: {{ printf "status-page-%s" $xr.metadata.name }}
+              namespace: {{ $namespace }}
+              annotations:
+                {{ setResourceNameAnnotation "page" }}
+                gotemplating.fn.crossplane.io/ready: {{ $ready | ternary "True" "False" | quote }}
+            spec:
+              {{- if $resolved }}
+              {{- $managedSpec | toYaml | nindent 2 }}
+              {{- else }}
+              {{- $page.spec | toYaml | nindent 2 }}
+              {{- end }}
+            {{- end }}

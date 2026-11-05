@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+kind: HTTPMonitor
+metadata:
+  name: auth
+spec:
+  managementPolicies:
+    - Observe
+    - LateInitialize
+  providerConfigRef:
+    kind: ProviderConfig
+    name: default
+  forProvider:
+    name: Auth
+    url: https://auth.finnes.dev/
+    interval: 60
+    retryInterval: 60
+    maxRetries: 0
+    timeout: 48
+    active: true
+    expiryNotification: false
+    ignoreTls: false
+    maxRedirects: 10
+    acceptedStatusCodes:
+      - 200-299
+    method: GET
