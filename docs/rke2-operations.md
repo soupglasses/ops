@@ -28,6 +28,9 @@ and can replace the declared schemas during a node upgrade. Its CRDs carry
 `helm.sh/resource-policy: keep`, so disabling an already-installed chart preserves
 the CRDs and their objects; reconcile `network/cilium-gateway-api-crds` afterward
 to restore the Git-declared bundle.
+If the bundled `safe-upgrades.gateway.networking.k8s.io` admission policy and
+binding remain, remove those Helm-owned guards before reconciling. They reject
+the experimental TLSRoute schema needed to preserve its older served versions.
 
 Do not install a second Cilium, CoreDNS or snapshot-controller release through Flux.
 RKE2 already installs Cilium through Helm. Keeping its bundled chart gives a single
