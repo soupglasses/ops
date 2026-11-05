@@ -1,11 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: uptimekuma-controller
-  namespace: crossplane-system
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

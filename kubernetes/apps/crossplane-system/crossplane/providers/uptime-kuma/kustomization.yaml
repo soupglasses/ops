@@ -8,6 +8,7 @@ resources:
   - ./deploymentruntimeconfig.yaml
   - ./compositeresourcedefinition.yaml
   - ./composition.yaml
+  - ./serviceaccount.yaml
   - ./rbac.yaml
   - ./deployment.yaml
 replacements:
