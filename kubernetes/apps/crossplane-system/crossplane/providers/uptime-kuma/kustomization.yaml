@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./provider.yaml
+  - ./deploymentruntimeconfig.yaml
+  - ./compositeresourcedefinition.yaml
+  - ./composition.yaml
+  - ./serviceaccount.yaml
+  - ./rbac.yaml
+  - ./deployment.yaml
+replacements:
+  - source:
+      kind: Provider
+      name: uptimekuma
+      fieldPath: spec.package
+    targets:
+      - select:
+          kind: Deployment
+          name: uptimekuma-controller
+        fieldPaths:
+          - spec.template.spec.containers.[name=package-runtime].image

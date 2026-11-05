@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -17,10 +16,10 @@ spec:
   timeout: 5m
   prune: true
   wait: true
----
+
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -39,6 +38,40 @@ spec:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider
       name: jellyfin
+  healthCheckExprs:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      current: status.conditions.exists(c, c.type == 'Healthy' && c.status == 'True')
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: uptime-kuma-provider
+  namespace: crossplane-system
+spec:
+  path: ./kubernetes/apps/crossplane-system/crossplane/providers/uptime-kuma
+  dependsOn:
+    - name: crossplane
+      namespace: crossplane-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  healthChecks:
+    - apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      name: uptimekuma
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: uptimekuma-controller
+      namespace: crossplane-system
   healthCheckExprs:
     - apiVersion: pkg.crossplane.io/v1
       kind: Provider

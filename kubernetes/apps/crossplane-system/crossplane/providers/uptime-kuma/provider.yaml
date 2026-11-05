@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: uptimekuma
+spec:
+  package: ghcr.io/soupglasses/provider-uptimekuma:v0.1.0@sha256:b9840adb3d1a30741a152e1b9c55db973c8e1d22a36af9c1245e377d579a210f
+  revisionHistoryLimit: 2
+  runtimeConfigRef:
+    name: uptimekuma

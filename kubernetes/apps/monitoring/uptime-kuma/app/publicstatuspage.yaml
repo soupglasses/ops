@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+kind: PublicStatusPage
+metadata:
+  name: finnes
+spec:
+  managementPolicies:
+    - Observe
+    - LateInitialize
+  providerConfigRef:
+    name: default
+  configuration:
+    slug: default
+    title: finnes.dev
+    icon: /upload/logo1.png?t=1788368512323
+    theme: auto
+    published: true
+    showTags: true
+    customCss: "body {\n  \n}\n"
+    footerText: '[GitHub](https://github.com/soupglasses/ops)'
+    showPoweredBy: true
+    showCertificateExpiry: true
+    domainNameList:
+      - status.finnes.dev
+  groups:
+    - name: Services
+      weight: 1
+      monitorRefs:
+        - kind: GameMonitor
+          name: minecraft
+        - kind: HTTPMonitor
+          name: auth

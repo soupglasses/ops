@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+soupbot_runtime_user: sofie
+soupbot_runtime_home: /home/sofie
+soupbot_runtime_signing_key_source: ''
+soupbot_runtime_github_app_key_source: ''

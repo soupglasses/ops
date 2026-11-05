@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+name: Soupbot runtime
+on:
+  pull_request:
+    paths: ["ansible/roles/soupbot_runtime/**", ".github/workflows/soupbot-runtime.yaml"]
+  push:
+    branches: [main]
+    paths: ["ansible/roles/soupbot_runtime/**", ".github/workflows/soupbot-runtime.yaml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  broker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install the stock OIDC client and crypto library
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends oidc-agent-cli
+          libsodium23 openssl
+      - name: Test encrypted IPC and installation-token behavior
+        working-directory: ansible/roles/soupbot_runtime/files
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest -v test_github_app_broker.py

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: 0BSD
+
+- name: Configure satellite bot automation and ACME webroot permissions
+  hosts: satellite_servers
+  become: true
+  gather_facts: false
+  pre_tasks:
+    - name: Gather only the host identity
+      ansible.builtin.setup:
+        gather_subset: ["!all", "!min", platform]
+        filter: ansible_hostname
+  roles:
+    - soupbot_runtime
