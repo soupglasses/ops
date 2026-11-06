@@ -186,6 +186,16 @@
       addLabels: ["renovate/github-release"],
     },
   ],
+  // Only propose plugin versions available from Grafana's installer catalog.
+  customDatasources: {
+    "grafana-plugins": {
+      "defaultRegistryUrlTemplate": "https://grafana.com/api/plugins/{{packageName}}/versions",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [items[status = \"active\"].{\"version\": version, \"releaseTimestamp\": createdAt, \"sourceUrl\": url}]}"
+      ]
+    }
+  },
   customManagers: [
     {
       description: "Jellyfin LDAP release and verified archive checksum",
@@ -255,9 +265,8 @@
       matchStrings: [
         "victoriametrics-logs-datasource@(?<currentValue>\\d+\\.\\d+\\.\\d+)"
       ],
-      depNameTemplate: "VictoriaMetrics/victorialogs-datasource",
-      datasourceTemplate: "github-releases",
-      extractVersionTemplate: "^v(?<version>.*)$"
+      depNameTemplate: "victoriametrics-logs-datasource",
+      datasourceTemplate: "custom.grafana-plugins"
     },
     {
       description: "Annotated Mise backends without native Renovate support",
