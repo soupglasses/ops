@@ -13,6 +13,12 @@
     ":disableRateLimiting",
     ":semanticCommits",
   ],
+  // Routine creation and existing-branch maintenance share a weekly window.
+  timezone: "Europe/Copenhagen",
+  schedule: ["* * * * 1"],
+  updateNotScheduled: false,
+  vulnerabilityAlerts: {"enabled":true,"schedule":["at any time"],"minimumReleaseAge":null},
+  lockFileMaintenance: {"schedule":["* * * * 1"]},
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   rebaseWhen: "conflicted",
