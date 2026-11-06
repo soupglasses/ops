@@ -38,6 +38,11 @@ class GrafanaOIDC(unittest.TestCase):
             ).read_text()
         )["spec"]["values"]["grafana"]
         settings = values["grafana.ini"]
+        # Install the declared plugin pins before accepting a healthy startup.
+        # GitHub releases can precede availability in Grafana's catalog.
+        settings.setdefault("plugins", {})["preinstall_sync"] = ",".join(
+            values.get("plugins", [])
+        )
         provider = settings["auth.generic_oauth"]
         self.assertFalse(provider["auto_login"])
         self.assertFalse(settings["users"]["allow_sign_up"])
