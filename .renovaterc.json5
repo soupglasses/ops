@@ -6,19 +6,12 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    "config:recommended",
+    "github>soupglasses/renovate-configs#v0.1.0",
     "docker:enableMajor",
-    "helpers:pinGitHubActionDigests",
     ":dependencyDashboard",
     ":disableRateLimiting",
     ":semanticCommits",
   ],
-  // Routine creation and existing-branch maintenance share a weekly window.
-  timezone: "Europe/Copenhagen",
-  schedule: ["* * * * 1"],
-  updateNotScheduled: false,
-  vulnerabilityAlerts: {"enabled":true,"schedule":["at any time"],"minimumReleaseAge":null},
-  lockFileMaintenance: {"schedule":["* * * * 1"]},
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   rebaseWhen: "conflicted",
