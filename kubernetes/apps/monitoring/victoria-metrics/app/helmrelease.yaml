@@ -194,7 +194,7 @@ spec:
           defaultMode: 0440
       defaultDashboardsTimezone: browser
       plugins:
-        - victoriametrics-logs-datasource@0.33.1
+        - victoriametrics-logs-datasource@0.34.0
       ingress:
         enabled: false
       persistence:
