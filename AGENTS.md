@@ -27,7 +27,9 @@ unrelated changes, and stage explicit paths.
 - Restore backed-up state automatically from S3 through VolSync when local data is
   absent. Block startup until recovery and required image pulls complete. Declare
   intentional fresh initialization and cost-versus-rebuild exceptions explicitly:
-  Jellyfin configuration and media have no backups because rebuilding is cheaper.
+  Jellyfin configuration and media have no backups because rebuilding is cheaper,
+  and VictoriaMetrics and VictoriaLogs have none because monitoring history is
+  disposable.
 - Pin deployable artifacts and automate updates with Renovate. Validate behavior
   through the real application interfaces, not duplicated versions or snapshots
   of today's deployment.
@@ -82,6 +84,8 @@ copy until restored application contents have been validated. Use the
 [VolSync contract](kubernetes/components/volsync/README.md) and
 [restore-drill example](docs/openldap-volsync-migration.md) for recovery changes.
 Use native database recovery where a volume copy cannot provide consistency.
+Backups must be well formed and simple to restore; add no scheduled checks, test
+frameworks or other verification beyond that without the owner's approval.
 
 Use the credentials assigned to the current runtime. Mise defaults `KUBECONFIG` to
 `.secure/kubeconfig`; when using an externally supplied credential, select it after
