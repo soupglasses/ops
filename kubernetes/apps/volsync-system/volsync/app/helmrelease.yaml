@@ -22,9 +22,9 @@ spec:
       retries: 3
   values:
     manageCRDs: true
-    # Clear stale exporter series after retiring the VictoriaLogs source.
+    # Clear stale exporter series after retiring a backup source.
     podAnnotations:
-      kubectl.kubernetes.io/restartedAt: "2026-11-02T16:11:58Z"
+      kubectl.kubernetes.io/restartedAt: "2026-11-15T19:12:46Z"
     metrics:
       disableAuth: true
     podSecurityContext:

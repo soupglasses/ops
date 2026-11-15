@@ -54,25 +54,6 @@ spec:
           - name: data
             persistentVolumeClaim:
               claimName: victoria-metrics
-        initContainers:
-          - name: require-restored-metrics
-            image: victoriametrics/victoria-metrics:v1.155.0@sha256:f60dc268b54ecf87f6e09d740c2b732838aa9193090cc741417c9f6386a130df
-            command: [/bin/sh, -ec]
-            args:
-              - test -d /data/data && test -d /data/metadata
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 65534
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop: [ALL]
-              seccompProfile:
-                type: RuntimeDefault
-            volumeMounts:
-              - name: data
-                mountPath: /data
-                readOnly: true
         extraArgs:
           storage.minFreeDiskSpaceBytes: 5GB
         useStrictSecurity: true
