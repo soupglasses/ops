@@ -12,5 +12,4 @@ resources:
   - ./prometheusrule.yaml
   - ./rbac.yaml
   - ./helmrelease.yaml
-components:
-  - ../../../../components/volsync
+  - ./persistentvolumeclaim.yaml

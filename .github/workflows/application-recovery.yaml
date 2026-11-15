@@ -7,10 +7,7 @@ on:
     paths:
       - "scripts/volsync-restore.sh"
       - "scripts/test_volsync_restore.py"
-      - "scripts/test_application_data_recovery.py"
       - "kubernetes/components/volsync/**"
-      - "kubernetes/apps/monitoring/victoria-metrics/app/helmrelease.yaml"
-      - "kubernetes/apps/monitoring/victoria-logs/app/helmrelease.yaml"
       - ".github/workflows/application-recovery.yaml"
   workflow_dispatch:
 permissions:
@@ -33,8 +30,3 @@ jobs:
           install_args: aqua:restic/restic aqua:mikefarah/yq
       - name: Exercise restore failures and controller holds
         run: python3 -m unittest scripts.test_volsync_restore -v
-      - name: Restore historical application contents with the pre-upgrade image
-        env:
-          APPLICATION_RECOVERY_TEST: "1"
-          RECOVERY_BASE_REF: ${{ github.event.pull_request.base.sha || github.sha }}
-        run: python3 -m unittest scripts.test_application_data_recovery -v

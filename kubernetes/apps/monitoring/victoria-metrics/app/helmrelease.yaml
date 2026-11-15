@@ -48,7 +48,7 @@ spec:
           labels:
             monitoring.finnes.dev/enabled: "true"
         retentionPeriod: 1y
-        # The shared VolSync component owns the PVC and restores it before binding.
+        # The claim is declared in persistentvolumeclaim.yaml, not by the chart.
         storage: null
         volumes:
           - name: data

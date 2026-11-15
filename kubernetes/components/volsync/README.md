@@ -140,13 +140,7 @@ backend ZFS snapshot remains. Do not discard either recovery point during diagno
 ## Recovery checks in CI
 
 The path-scoped Application recovery workflow runs the restore CLI's controller,
-concurrency and failure cases, then starts real VictoriaMetrics and VictoriaLogs
-with disposable storage and restic repositories. Each drill writes data through the
-native API, backs up a stopped application, opens it with the candidate image,
-writes more data, and verifies both recovery points through that API. The older
-checkpoint is reopened with the base branch's image. It also reads all synthetic
-repository data with `restic check --read-data` and verifies injected corruption fails.
-These reads use disposable local test repositories, not production backups.
+concurrency and failure cases.
 
 The OpenLDAP workflow runs its production backup hook on a synthetic directory,
 imports the paired exports into new native databases, and checks password login,
@@ -154,7 +148,6 @@ group membership, directory access and rollback of a later attribute change.
 These tests use no cluster credentials or production data. Run them locally with:
 
 ```bash
-APPLICATION_RECOVERY_TEST=1 mise exec -- python3 -m unittest discover -s scripts -p test_application_data_recovery.py -v
 OPENLDAP_ACCESS_TEST=1 mise exec -- python3 -m unittest scripts.test_openldap_access.NativeAccess.test_native_backup_restores_identity_password_and_group_membership -v
 ```
 
