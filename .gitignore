@@ -6,14 +6,18 @@
 *.pub
 *.key
 *.decrypted~*.yaml
+*.kubeconfig
 # Terraform/OpenTofu
 .terraform/
 *.tfstate*
 # Misc.
+.ansible/
 .private/
 .secure/
 .task/
 .venv/
+.worktrees/
 .pytest_cache/
+__pycache__/
 .DS_Store
 Thumbs.db
