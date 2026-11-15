@@ -7,7 +7,7 @@ SPDX-License-Identifier: 0BSD
 # CLAUDE.md
 
 Single-node RKE2 Kubernetes cluster (`nas`) on Ansible-managed Ubuntu, with workloads
-managed by Flux from this repo on Codeberg (Forgejo, not GitHub).
+managed by Flux from this repo on GitHub.
 
 ## Values
 
