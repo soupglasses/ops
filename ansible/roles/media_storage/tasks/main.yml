@@ -201,7 +201,7 @@
     owner: root
     group: "{{ media_storage_group }}"
     mode: "2770"
-  loop: [library, library/movies, library/tv, library/music]
+  loop: [library, library/movies, library/tv, library/music, library/anime]
   when: not ansible_check_mode or media_storage_existing_dataset.rc == 0
 
 - name: Create NFS configuration directories

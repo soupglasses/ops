@@ -8,7 +8,7 @@ SPDX-License-Identifier: MIT
 
 Media lives in the dedicated ZFS dataset `zfspool/media`, mounted at `/srv/media` on
 `nas`. It is separate from Kubernetes PVC datasets and Jellyfin's configuration and
-database. The library directories are `library/movies`, `library/tv` and `library/music`.
+database. Jellyfin's libraries are directories under `library/`.
 
 ## Host configuration
 
@@ -73,7 +73,7 @@ sudo mount -t nfs -o vers=4.2,hard,nosuid,nodev \
 ```
 
 Use a client user in group `2000` for writes. A client root user is squashed and does
-not gain administrator access. Import media into `movies`, `tv` or `music`, write
+not gain administrator access. Import media into a library directory, write
 uploads under temporary names, then atomically rename completed files into place.
 
 
