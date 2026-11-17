@@ -53,6 +53,12 @@ spec:
         - ports:
             - port: "636"
               protocol: TCP
+    - toFQDNs:
+        - matchName: api.anidb.net
+      toPorts:
+        - ports:
+            - port: "9001"
+              protocol: TCP
     - toEntities: [world]
       toPorts:
         - ports:
