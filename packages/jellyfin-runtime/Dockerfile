@@ -7,9 +7,8 @@ USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-ARG LDAP_PLUGIN_VERSION
-COPY --from=ldap-plugin . /opt/jellyfin/plugins/LDAP-Auth_${LDAP_PLUGIN_VERSION}/
-COPY --from=ldap-license /LICENSE /usr/share/licenses/jellyfin-ldap/LICENSE
+COPY --from=plugins plugins/ /opt/jellyfin/plugins/
+COPY --from=plugins licenses/ /usr/share/licenses/jellyfin-plugins/
 COPY runtime.py health.py /usr/local/lib/jellyfin/
 ENV JELLYFIN_DATA_DIR=/config/server \
     JELLYFIN_CONFIG_DIR=/config/server/config \

@@ -22,11 +22,9 @@ def seed_plugins(source, distribution=Path("/opt/jellyfin/plugins")):
             raise RuntimeError("unexpected retired image-managed plugin path")
         shutil.rmtree(retired)
     for plugin in distribution.iterdir():
-        prefix = next(
-            (name for name in ("LDAP-Auth_",) if plugin.name.startswith(name)),
-            None,
-        )
-        if prefix is None or not plugin.is_dir() or plugin.is_symlink():
+        name, separator, _ = plugin.name.rpartition("_")
+        prefix = name + separator
+        if not name or not plugin.is_dir() or plugin.is_symlink():
             raise RuntimeError("unexpected image-managed plugin distribution")
         temporary = plugins / (".seed-" + uuid.uuid4().hex)
         shutil.copytree(plugin, temporary)

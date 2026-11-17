@@ -43,7 +43,7 @@
     },
     {
       description: "Review Jellyfin plugin upgrades with the tested runtime build",
-      matchPackageNames: ["jellyfin/jellyfin-plugin-ldapauth"],
+      matchFileNames: ["packages/jellyfin-runtime/plugins.lock.json"],
       automerge: false,
       pinDigests: true,
     },
@@ -191,11 +191,11 @@
   },
   customManagers: [
     {
-      description: "Jellyfin LDAP release and verified archive checksum",
+      description: "Jellyfin plugin releases and verified archive checksums",
       customType: "regex",
       managerFilePatterns: ["/^packages/jellyfin-runtime/plugins\\.lock\\.json$/"],
       matchStrings: [
-        '"repository":\\s*"(?<depName>jellyfin/jellyfin-plugin-ldapauth)"[\\s\\S]*?"tag":\\s*"(?<currentValue>v[0-9]+)"\\s*,\\s*"sha256":\\s*"(?<currentDigest>[a-f0-9]{64})"',
+        '"repository":\\s*"(?<depName>[^"]+)"[\\s\\S]*?"tag":\\s*"(?<currentValue>v[0-9]+)"\\s*,\\s*"sha256":\\s*"(?<currentDigest>[a-f0-9]{64})"',
       ],
       datasourceTemplate: "github-release-attachments",
       versioningTemplate: "loose",

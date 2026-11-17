@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Jellyfin runtime and recovery
 
-The image starts Jellyfin directly and installs the pinned upstream LDAP plugin. Application
+The image starts Jellyfin directly and installs its pinned upstream plugins. Application
 configuration lives in `/config/server`; `/cache` is disposable. Media is a separate
 read-write mount for media and sidecar metadata. Neither volume is backed up.
 
@@ -19,7 +19,7 @@ preserves live configuration and media volumes and starts directly without resto
 init containers. A new configuration PVC starts an empty installation. Media recovery
 depends on surviving NAS storage or obtaining the files again.
 
-The launcher copies image-owned LDAP plugin binaries into the configuration
+The launcher copies image-owned plugin binaries into the configuration
 volume, preserves plugin settings and unrelated plugins, then replaces itself
 with Jellyfin. Kubernetes sends shutdown signals directly to Jellyfin. Liveness
 uses the native `/health` endpoint. Readiness also checks its response body because
@@ -34,7 +34,7 @@ Dockerfile so the runtime can be rebuilt if its published image becomes unavaila
 The namespaced Upjet provider owns the API settings and libraries declared in
 `kubernetes/apps/media/jellyfin/app/`. The application has no
 configuration sidecar. The runtime contains the plugin launcher, readiness check
-and pinned LDAP plugin distribution. See
+and pinned plugin distributions. See
 [provider documentation](https://github.com/soupglasses/provider-jellyfin) for adoption guidance.
 
 ## Plugin updates
@@ -46,11 +46,10 @@ restart is needed before a newly installed plugin's configuration API is usable.
 Using it here would add install/restart/configuration ordering to an already working
 image rollout. Do not run both image seeding and a managed Plugin for the same binary.
 
-`plugins.lock.json` pins the LDAP release tag and archive SHA-256. Renovate's
-`github-release-attachments` datasource updates both together; its filename mapping
-supports the upstream `ldap-authentication_<version>.zip` convention. Builds verify
-the checksum before extraction and read the plugin GUID/version from the verified
-archive's `meta.json`. There is no separate directory-version pin to forget. The MIT
+`plugins.lock.json` pins each plugin's release tag and archive SHA-256. Renovate's
+`github-release-attachments` datasource updates both together. Builds verify
+the checksum before extraction and read the plugin version from the verified
+archive's `meta.json`. There is no separate directory-version pin to forget. Each
 license is fetched from the separately pinned `licenseRevision`.
 
 After runtime checks and the image build pass, CI publishes the source-SHA
