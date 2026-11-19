@@ -20,5 +20,22 @@ connection failures while Jellyfin starts are retried by its controller.
 
 The provider installation and reusable plugin settings API live with the
 [Crossplane platform](../../crossplane-system/crossplane/providers/jellyfin).
-See the [runtime policy](../../../../packages/jellyfin-runtime/README.md) for
-plugin updates and the intentional absence of configuration and media backups.
+
+## Plugins
+
+`app/plugin.yaml` pins each plugin to a version from Jellyfin's repository. The
+provider installs it, uninstalls other versions and restarts Jellyfin to load it.
+`app/scheduledtask.yaml` removes the triggers of Jellyfin's *Update Plugins* task,
+so only these resources change plugin versions. A plugin that calls an external API
+on a port other than 80 or 443 needs an egress rule in `app/ciliumnetworkpolicy.yaml`.
+
+## Storage
+
+The deployment runs the official image with application data in `/config/server`
+on the `jellyfin` PVC; `/cache` is disposable. Media is a separate read-write NFS
+volume holding the library and its sidecar metadata. Neither volume is backed up,
+because rebuilding them costs less than storing them off-site: a new configuration
+PVC starts an empty installation that Crossplane configures again, and media
+recovery depends on surviving NAS storage. See
+[backup cleanup](../../../../docs/jellyfin-backup-cleanup.md) for removing old backup
+history and controllers.

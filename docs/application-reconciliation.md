@@ -58,9 +58,9 @@ then authenticates normally. The application container needs no bootstrap script
 or administrator credential mount.
 
 Plugin configuration owns declared keys while preserving user mappings and other
-runtime state. Binary plugins are checksum-pinned in the tested container image;
-Crossplane manages their settings. See the
-[runtime policy](../packages/jellyfin-runtime/README.md) and
+runtime state. Crossplane installs plugins at pinned versions from Jellyfin's
+repository and restarts Jellyfin to load them, and manages their settings. See the
+[Jellyfin README](../kubernetes/apps/media/jellyfin/README.md) and
 [provider README](https://github.com/soupglasses/provider-jellyfin).
 
 ## Recovery

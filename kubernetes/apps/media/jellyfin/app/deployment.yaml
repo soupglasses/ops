@@ -36,7 +36,14 @@ spec:
           type: RuntimeDefault
       containers:
         - name: jellyfin
-          image: ghcr.io/soupglasses/ops/jellyfin-runtime:12.4@sha256:1935d42367106c8fed2c8890695e945c4f8c3ed07011f08ba69738245ea72c65
+          image: docker.io/jellyfin/jellyfin:12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
+          env:
+            - name: JELLYFIN_DATA_DIR
+              value: /config/server
+            - name: JELLYFIN_CONFIG_DIR
+              value: /config/server/config
+            - name: JELLYFIN_LOG_DIR
+              value: /config/server/log
           ports:
             - name: http
               containerPort: 8096
@@ -45,15 +52,16 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
+          # /health answers 200 with "Degraded" until startup completes.
           startupProbe:
             exec:
-              command: [python3, /usr/local/lib/jellyfin/health.py]
+              command: [sh, -c, 'curl -fsS --max-time 2 http://127.0.0.1:8096/health | grep -qx Healthy']
             failureThreshold: 60
             periodSeconds: 5
             timeoutSeconds: 3
           readinessProbe:
             exec:
-              command: [python3, /usr/local/lib/jellyfin/health.py]
+              command: [sh, -c, 'curl -fsS --max-time 2 http://127.0.0.1:8096/health | grep -qx Healthy']
             periodSeconds: 10
             failureThreshold: 3
             timeoutSeconds: 3

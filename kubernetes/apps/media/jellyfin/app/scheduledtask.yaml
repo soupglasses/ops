@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: MIT
+
+# Plugins are pinned by their Plugin resources, so Jellyfin must not update them.
+apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+kind: ScheduledTask
+metadata:
+  name: jellyfin-plugin-updates
+  annotations:
+    crossplane.io/external-name: PluginUpdates
+spec:
+  forProvider:
+    triggers: []

@@ -21,6 +21,8 @@ resources:
   - ./networkingconfiguration.yaml
   - ./brandingconfiguration.yaml
   - ./library.yaml
+  - ./scheduledtask.yaml
+  - ./plugin.yaml
   - ./pluginsettings.yaml
 patches:
   - target:
@@ -37,7 +39,7 @@ patches:
         value: media
   - target:
       group: jellyfin.ops.finnes.dev
-      kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library
+      kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library|ScheduledTask|Plugin
     patch: |-
       - op: add
         path: /spec/managementPolicies

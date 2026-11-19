@@ -42,10 +42,9 @@
       pinDigests: true,
     },
     {
-      description: "Review Jellyfin plugin upgrades with the tested runtime build",
-      matchFileNames: ["packages/jellyfin-runtime/plugins.lock.json"],
+      description: "Review Jellyfin plugin upgrades, which restart Jellyfin",
+      matchDatasources: ["custom.jellyfin-plugins"],
       automerge: false,
-      pinDigests: true,
     },
     {
       description: "Vector tag and digest are updated together by its regex manager",
@@ -187,17 +186,24 @@
       "transformTemplates": [
         "{\"releases\": [items[status = \"active\"].{\"version\": version, \"releaseTimestamp\": createdAt, \"sourceUrl\": url}]}"
       ]
+    },
+    "jellyfin-plugins": {
+      "defaultRegistryUrlTemplate": "https://repo.jellyfin.org/files/plugin/manifest.json",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [$[name = \"{{packageName}}\"].versions.{\"version\": version, \"releaseTimestamp\": timestamp}]}"
+      ]
     }
   },
   customManagers: [
     {
-      description: "Jellyfin plugin releases and verified archive checksums",
+      description: "Jellyfin plugin versions from Jellyfin's plugin repository",
       customType: "regex",
-      managerFilePatterns: ["/^packages/jellyfin-runtime/plugins\\.lock\\.json$/"],
+      managerFilePatterns: ["/^kubernetes/apps/media/jellyfin/app/plugin\\.yaml$/"],
       matchStrings: [
-        '"repository":\\s*"(?<depName>[^"]+)"[\\s\\S]*?"tag":\\s*"(?<currentValue>v[0-9]+)"\\s*,\\s*"sha256":\\s*"(?<currentDigest>[a-f0-9]{64})"',
+        "crossplane\\.io/external-name: (?<depName>.+)\\n[\\s\\S]*?version: (?<currentValue>\\S+)",
       ],
-      datasourceTemplate: "github-release-attachments",
+      datasourceTemplate: "custom.jellyfin-plugins",
       versioningTemplate: "loose",
     },
     {
