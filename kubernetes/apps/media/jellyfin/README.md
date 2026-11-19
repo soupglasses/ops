@@ -23,8 +23,8 @@ The provider installation and reusable plugin settings API live with the
 
 ## Plugins
 
-`app/plugin.yaml` pins each plugin to a version from Jellyfin's repository. The
-provider installs it, uninstalls other versions and restarts Jellyfin to load it.
+`app/plugin.yaml` pins each plugin to a version from Jellyfin's repository, which
+`app/pluginrepository.yaml` registers on the server. The provider installs it, uninstalls other versions and restarts Jellyfin to load it.
 `app/scheduledtask.yaml` removes the triggers of Jellyfin's *Update Plugins* task,
 so only these resources change plugin versions. A plugin that calls an external API
 on a port other than 80 or 443 needs an egress rule in `app/ciliumnetworkpolicy.yaml`.
