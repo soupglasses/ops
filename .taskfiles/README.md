@@ -9,6 +9,6 @@ SPDX-License-Identifier: 0BSD
 Checks must preserve application configuration and data; destructive integration
 tests belong in disposable fixtures.
 
-`task app:verify-render` checks Jellyfin's storage, no-backup and private-routing
-contracts in the final Flux render. Both tasks are defined in
+`task app:verify-render` checks VolSync backup and recovery contracts in the final
+Flux render. Both tasks are defined in
 [application.yaml](application.yaml).
