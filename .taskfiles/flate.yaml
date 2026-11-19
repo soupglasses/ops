@@ -17,8 +17,8 @@ vars:
 env:
   FLATE_PATH: '{{.CLUSTER_PATH}}'
   FLATE_KUBE_VERSION: '{{.KUBE_VERSION}}'
-  FLATE_SKIP_CRDS: "false"
-  FLATE_SKIP_SECRETS: "true"
+  FLATE_SKIP_KINDS: Secret
+  FLATE_SUPPLY: .taskfiles/flate-supply.yaml
   FLATE_RESTRICT_EGRESS: "true"
   FLATE_NO_PROGRESS: "true"
 

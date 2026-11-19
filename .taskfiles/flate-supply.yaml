@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: MIT
+
+# Offline stand-ins for SOPS-encrypted Secrets that renders require.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-smtp
+  namespace: monitoring
+stringData:
+  values.yaml: "{}"
