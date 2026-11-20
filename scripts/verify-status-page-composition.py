@@ -27,7 +27,7 @@ refs = [ref for group in xr["spec"]["groups"] for ref in group["monitorRefs"]]
 
 
 def monitors(ids=(101, 202)):
-    return [{"apiVersion": "uptimekuma.ops.finnes.dev/v1alpha1", "kind": ref["kind"],
+    return [{"apiVersion": "uptimekuma.finnes.dev/v1alpha1", "kind": ref["kind"],
              "metadata": {"name": ref["name"], "namespace": "monitoring"},
              "spec": {"providerConfigRef": {"kind": "ProviderConfig", "name": "default"}},
              "status": {"atProvider": {"id": str(identifier)}, "conditions": [

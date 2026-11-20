@@ -39,7 +39,7 @@ patches:
         path: /metadata/namespace
         value: media
   - target:
-      group: jellyfin.ops.finnes.dev
+      group: jellyfin.finnes.dev
       kind: SystemConfiguration|NetworkingConfiguration|BrandingConfiguration|Library|ScheduledTask|PluginRepository|Plugin
     patch: |-
       - op: add

@@ -5,7 +5,7 @@ kind: Provider
 metadata:
   name: uptimekuma
 spec:
-  package: ghcr.io/soupglasses/provider-uptimekuma:v0.1.0@sha256:b9840adb3d1a30741a152e1b9c55db973c8e1d22a36af9c1245e377d579a210f
+  package: ghcr.io/soupglasses/provider-uptimekuma:v0.2.0@sha256:1535688418e12ba2c7198df797e6a2c4bd11bb0fbb13e3f74e8c7b2c7c0679c6
   revisionHistoryLimit: 2
   runtimeConfigRef:
     name: uptimekuma

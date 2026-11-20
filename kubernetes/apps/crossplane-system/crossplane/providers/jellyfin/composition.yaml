@@ -110,7 +110,7 @@ spec:
             {{- end }}
             {{- if or $settingsCurrent $managed }}
             ---
-            apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+            apiVersion: jellyfin.finnes.dev/v1alpha1
             kind: PluginConfiguration
             metadata:
               namespace: {{ $namespace }}

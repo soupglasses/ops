@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class LocalSchemaTests(unittest.TestCase):
     def test_generated_jellyfin_schema_rejects_non_boolean_network_setting(self):
-        resource = {"apiVersion": "jellyfin.ops.finnes.dev/v1alpha1",
+        resource = {"apiVersion": "jellyfin.finnes.dev/v1alpha1",
                     "kind": "NetworkingConfiguration", "metadata": {"name": "jellyfin"},
                     "spec": {"managementPolicies": ["Observe"],
                              "providerConfigRef": {"kind": "ProviderConfig", "name": "jellyfin"},

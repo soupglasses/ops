@@ -32,7 +32,7 @@ spec:
               {{- $monitors := list -}}
               {{- range $ref := $group.monitorRefs -}}
                 {{- $key := printf "monitor-%s" (sha256sum (printf "%s/%s" $ref.kind $ref.name)) -}}
-                {{- $_ := set $requirements $key (dict "apiVersion" "uptimekuma.ops.finnes.dev/v1alpha1" "kind" $ref.kind "matchName" $ref.name "namespace" $namespace) -}}
+                {{- $_ := set $requirements $key (dict "apiVersion" "uptimekuma.finnes.dev/v1alpha1" "kind" $ref.kind "matchName" $ref.name "namespace" $namespace) -}}
                 {{- $items := dig $key "items" (list) $extra -}}
                 {{- if ne (len $items) 1 -}}
                   {{- $resolved = false -}}
@@ -79,7 +79,7 @@ spec:
             {{/* Retain the last working page if a referenced monitor is pending or missing. */}}
             {{- if or $resolved $page }}
             ---
-            apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+            apiVersion: uptimekuma.finnes.dev/v1alpha1
             kind: StatusPage
             metadata:
               name: {{ printf "status-page-%s" $xr.metadata.name }}

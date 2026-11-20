@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
 # SPDX-License-Identifier: MIT
-apiVersion: uptimekuma.ops.finnes.dev/v1alpha1
+apiVersion: uptimekuma.finnes.dev/v1alpha1
 kind: GameMonitor
 metadata:
   name: minecraft
