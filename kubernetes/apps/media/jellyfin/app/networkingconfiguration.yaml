@@ -6,7 +6,7 @@ kind: NetworkingConfiguration
 metadata:
   name: jellyfin
   annotations:
-    crossplane.io/external-name: network
+    crossplane.io/external-name: networking
 spec:
   forProvider:
     enableUpnp: false
