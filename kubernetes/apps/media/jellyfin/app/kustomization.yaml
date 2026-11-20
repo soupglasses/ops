@@ -27,7 +27,7 @@ resources:
   - ./pluginsettings.yaml
 patches:
   - target:
-      group: jellyfin.ops.finnes.dev
+      group: jellyfin.finnes.dev|jellyfin.ops.finnes.dev
     patch: |-
       - op: add
         path: /metadata/namespace
