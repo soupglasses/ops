@@ -36,7 +36,8 @@ task ansible:test
 
 Use console access for networking changes. Never override `ansible_host` during the
 handoff: `initial_ansible_host` lets the play reconnect at the final address.
-`nas.home.finnes.dev` must have a verified entry in the controller's SSH `known_hosts`.
+The controller's SSH configuration must resolve `nas` to the host, its login and its
+identity, and its `known_hosts` must hold a verified key for every address it connects to.
 
 Routine apply does not manage networking, router configuration or host-firewall mode.
 An installed RKE2 version mismatch fails with instructions to use the upgrade task.
@@ -68,10 +69,8 @@ The host adapter maintains `cilium-bgp-ipv4-auth` and `cilium-bgp-ipv6-auth` in
 passwords unchanged. Rotation uses the procedure in
 [RouterOS operations](../docs/routeros-bgp-config.md).
 
-Host tasks use the existing `sofie` administrator account and `~/.ssh/gpg.pub`.
-The public key selects the hardware-backed SSH identity provided by the GPG agent;
-keep that agent available and unlock the key when needed. The account must already
-have sudo access. Ansible does not create another login or manage Sofie's keys.
+Host tasks connect as the account and key that the controller's SSH configuration gives
+`nas`. The account must already have sudo access. Ansible does not create another login or manage Sofie's keys.
 
 On a replacement OS, establish this login through the installer or console before
 running host setup. Keep its public key and recovery access independently available.

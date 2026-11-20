@@ -16,10 +16,8 @@ mkdir -p "$(dirname "$output")"
 temporary=$(mktemp "${output}.XXXXXX")
 trap 'rm -f "$temporary"' EXIT
 
-ssh -n -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 \
-    -i "$HOME/.ssh/gpg.pub" -o StrictHostKeyChecking=yes \
-    -o HostKeyAlias=nas.home.finnes.dev sofie@172.21.71.10 \
-    'sudo -n cat /etc/rancher/rke2/rke2.yaml' > "$temporary"
+ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+    nas 'sudo -n cat /etc/rancher/rke2/rke2.yaml' > "$temporary"
 yq -i '.clusters[].cluster.server = "https://k8s.home.finnes.dev:6443"' "$temporary"
 
 # Keep working credentials until their replacement passes an authenticated API request.

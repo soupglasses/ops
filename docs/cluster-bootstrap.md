@@ -35,7 +35,7 @@ independently of the cluster before removing it:
 - The repository, including the existing encrypted host inventory and Kubernetes Secrets.
 - The SOPS recovery identity capable of decrypting those files, supplied through your
   normal protected operator environment.
-- Your `sofie` login, sudo access and GPG-backed SSH identity (`~/.ssh/gpg.pub`).
+- Your login with sudo access, reachable as `nas` through your SSH configuration.
 - Access to the S3 application repositories, with their existing restic passwords and
   credentials recoverable from the encrypted cluster configuration.
 - Access to the pinned images and charts or a tested artifact mirror. VolSync restores
@@ -126,13 +126,12 @@ Pass Ansible options after `--` when overriding the inventory connection, for ex
 
 ```bash
 task rke2:bootstrap -- -i inventories/home/hosts.yml \
-  -e ansible_user=sofie \
-  -e ansible_ssh_private_key_file="$HOME/.ssh/gpg.pub"
+  -e ansible_host=<address>
 ```
 
 The playbook runs from `ansible/`, so inventory paths above are relative to that directory.
-The default inventory already uses `sofie` and `~/.ssh/gpg.pub`; overrides are only
-needed for a different prepared host. Bootstrap does not perform a network-address handoff.
+The default inventory connects to `nas` and leaves the address, login and key to your SSH
+configuration; overrides are only needed for a different prepared host. Bootstrap does not perform a network-address handoff.
 
 ## 4. Watch and validate recovery
 
