@@ -32,7 +32,7 @@ krew="https://github.com/soupglasses/mise-krew"
 "aqua:dandavison/delta" = "0.22.0"
 "pipx:reuse" = "6.3.0"
 "github:home-operations/flate" = "0.7.3"
-"aqua:restic/restic" = "0.19.1"
+"aqua:restic/restic" = "0.20.0"
 "aqua:google/yamlfmt" = "v0.21.0"
 "aqua:pre-commit/pre-commit" = "4.7.0"
 "go:github.com/jkulzer/kubefetch" = { version = "0.8.1", version_prefix = "" }
