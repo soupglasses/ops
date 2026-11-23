@@ -71,6 +71,8 @@ if kubectl run psa-rejection --namespace ldap-test --restart=Never --dry-run=ser
     exit 1
 fi
 grep -q 'violates PodSecurity "restricted:v1.34"' "$work_dir/psa-rejection.log"
+# Crossplane reapplies cached XR conditions, which can open the default circuit breaker.
+# Drop the burst once a release includes https://github.com/crossplane/crossplane/pull/8080.
 helm upgrade --install crossplane crossplane --repo https://charts.crossplane.io/stable \
     --version 2.4.2 --namespace crossplane-system \
     --set-json 'securityContextCrossplane={"runAsNonRoot":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"seccompProfile":{"type":"RuntimeDefault"}}' \
