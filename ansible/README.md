@@ -32,6 +32,7 @@ task ansible:test
 | `ansible:apply` | Maintain the host at its pinned RKE2 version |
 | `ansible:upgrade -- -e rke2_recovery_verified=true -e rke2_upgrade_reviewed=true` | Upgrade after recovery and release review |
 | `ansible:verify` | Read-only host and platform checks |
+| `ansible:firewall:configure` | Load the host firewall with a timed rollback |
 | `ansible:firewall:verify` | Fresh dual-stack connections and enforced policy checks |
 
 Use console access for networking changes. Never override `ansible_host` during the

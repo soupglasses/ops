@@ -7,6 +7,11 @@ network_ipv4_address: 172.21.71.10/24
 network_ipv4_gateway: 172.21.71.1
 network_ipv6_address: 2a13:e745:1ee8:71::10/64
 network_ipv6_gateway: 2a13:e745:1ee8:71::1
+network_management_cidrs:
+  - 172.21.69.0/24
+  - 172.21.70.0/24
+  - 2a13:e745:1ee8:69::/64
+  - 2a13:e745:1ee8:70::/64
 network_dns_servers:
   - 172.21.71.1
   - 2a13:e745:1ee8:71::1

@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+destroy table inet host_firewall
+
+table inet host_firewall {
+  set management_ipv4 {
+    type ipv4_addr
+    flags interval
+    elements = { {{ network_management_cidrs | reject('search', ':') | join(', ') }} }
+  }
+
+  set management_ipv6 {
+    type ipv6_addr
+    flags interval
+    elements = { {{ network_management_cidrs | select('search', ':') | join(', ') }} }
+  }
+
+  set pods_ipv4 {
+    type ipv4_addr
+    flags interval
+    elements = { {{ rke2_cluster_cidrs | reject('search', ':') | join(', ') }} }
+  }
+
+  set pods_ipv6 {
+    type ipv6_addr
+    flags interval
+    elements = { {{ rke2_cluster_cidrs | select('search', ':') | join(', ') }} }
+  }
+
+  chain input {
+    type filter hook input priority filter; policy accept;
+
+    iifname "lo" accept
+    ct state established,related accept
+
+    # Cilium marks Gateway and DNS proxy traffic 0x200 and excludes it from conntrack.
+    meta mark & 0x00000f00 == 0x00000200 accept
+
+    icmp type { destination-unreachable, time-exceeded, parameter-problem, echo-request } accept
+    icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, echo-request } accept
+    icmpv6 type { nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert, mld-listener-query } ip6 hoplimit { 1, 255 } accept
+
+    ip saddr @management_ipv4 tcp dport { {{ host_firewall_management_tcp_ports | join(', ') }} } accept
+    ip6 saddr @management_ipv6 tcp dport { {{ host_firewall_management_tcp_ports | join(', ') }} } accept
+
+    iifname != "{{ network_interface }}" ip saddr @pods_ipv4 tcp dport { {{ host_firewall_pod_tcp_ports | join(', ') }} } accept
+    iifname != "{{ network_interface }}" ip6 saddr @pods_ipv6 tcp dport { {{ host_firewall_pod_tcp_ports | join(', ') }} } accept
+
+    limit rate 10/second burst 20 packets log prefix "host-firewall: "
+    counter {{ 'drop' if host_firewall_enforce else 'accept' }}
+  }
+}

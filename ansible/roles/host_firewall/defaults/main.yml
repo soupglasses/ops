@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+#
+# SPDX-License-Identifier: 0BSD
+
+# While false, traffic that enforcement would drop is logged and accepted.
+host_firewall_enforce: false
+host_firewall_management_tcp_ports: [22, 2049, 6443, 9345, 10250]
+host_firewall_pod_tcp_ports: [4240, 4244, 6443, 9100, 9964, 9965, 10250]

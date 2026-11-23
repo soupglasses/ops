@@ -55,6 +55,13 @@ tasks:
     cmds:
       - ansible-playbook playbooks/verify.yml
 
+  firewall:configure:
+    desc: Load the host firewall with a timed rollback during a console-backed maintenance window
+    env:
+      ANSIBLE_VARS_ENABLED: host_group_vars
+    cmds:
+      - ansible-playbook playbooks/host-firewall.yml {{.CLI_ARGS}}
+
   firewall:verify:
     desc: Verify enforced Flux host policy through fresh dual-stack connections
     cmds:
