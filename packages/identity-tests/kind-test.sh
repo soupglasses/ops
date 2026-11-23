@@ -75,7 +75,7 @@ helm upgrade --install crossplane crossplane --repo https://charts.crossplane.io
     --version 2.4.2 --namespace crossplane-system \
     --set-json 'securityContextCrossplane={"runAsNonRoot":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"seccompProfile":{"type":"RuntimeDefault"}}' \
     --set-json 'securityContextRBACManager={"runAsNonRoot":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"seccompProfile":{"type":"RuntimeDefault"}}' \
-    --set 'args[0]=--poll-interval=2s' --wait --timeout 4m
+    --set 'args[0]=--poll-interval=2s' --set 'args[1]=--circuit-breaker-burst=1000' --wait --timeout 4m
 # Reuse production runtime and compositions, changing only fixture addresses.
 kubectl kustomize "$repo_dir/kubernetes/apps/identity/ldap-provider/app" > "$work_dir/production.yaml"
 yq 'select(.kind == "Provider" or .kind == "DeploymentRuntimeConfig" or .kind == "ClusterRole" or .kind == "ClusterRoleBinding")' "$work_dir/production.yaml" > "$work_dir/provider.yaml"
