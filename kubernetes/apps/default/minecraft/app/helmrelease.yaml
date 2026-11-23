@@ -11,7 +11,7 @@ spec:
   chart:
     spec:
       chart: minecraft
-      version: 5.3.1
+      version: 5.4.0
       sourceRef:
         kind: HelmRepository
         name: minecraft-server-charts
@@ -27,10 +27,10 @@ spec:
   values:
     image:
       repository: itzg/minecraft-server
-      tag: latest@sha256:e528e38848e1456d683a60c624ce2b1a5ae15d1b221d368108fa05853388285a
+      tag: latest@sha256:dc15f05423064860968043de873316dbd0c027a7d9c8354826229d7c20dd4619
     initContainers:
       - name: require-restored-world
-        image: itzg/minecraft-server:latest@sha256:e528e38848e1456d683a60c624ce2b1a5ae15d1b221d368108fa05853388285a
+        image: itzg/minecraft-server:latest@sha256:dc15f05423064860968043de873316dbd0c027a7d9c8354826229d7c20dd4619
         command: [/bin/sh, -ec]
         args:
           - test -s /data/world/level.dat || { echo 'Minecraft world missing; restore a verified backup.'
