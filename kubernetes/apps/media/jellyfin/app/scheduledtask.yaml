@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 # Plugins are pinned by their Plugin resources, so Jellyfin must not update them.
-apiVersion: jellyfin.ops.finnes.dev/v1alpha1
+apiVersion: jellyfin.finnes.dev/v1alpha1
 kind: ScheduledTask
 metadata:
   name: jellyfin-plugin-updates

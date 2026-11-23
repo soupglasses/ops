@@ -15,7 +15,7 @@ spec:
   chart:
     spec:
       chart: victoria-metrics-k8s-stack
-      version: 0.98.1
+      version: 0.99.0
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -43,7 +43,7 @@ spec:
       spec:
         image:
           repository: victoriametrics/victoria-metrics
-          tag: v1.156.0@sha256:da8a90ac0912f16589be2b96a6441a2fca4bca415c83783d972d92e3b5b66970
+          tag: v1.157.0@sha256:322a7a92fdcc269280e9c38af94c83bc76827a31b792acbc60e44394e7f29c20
         managedMetadata:
           labels:
             monitoring.finnes.dev/enabled: "true"
@@ -132,9 +132,9 @@ spec:
           receiver: monitoring-email
           group_by:
             - alertname
-          group_wait: 30s
-          group_interval: 5m
-          repeat_interval: 12h
+          group_wait: 5m
+          group_interval: 1h
+          repeat_interval: 24h
         receivers:
           - name: monitoring-email
             email_configs:

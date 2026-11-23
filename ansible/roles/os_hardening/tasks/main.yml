@@ -191,6 +191,10 @@
       fs.protected_hardlinks = 1
       fs.protected_regular = 2
       fs.protected_symlinks = 1
+      # Restricting unconfined processes stacks container AppArmor labels, and
+      # containerd's default profile then denies signals inside every container
+      # (containerd/containerd#14485).
+      kernel.apparmor_restrict_unprivileged_unconfined = 0
       kernel.core_uses_pid = 1
       kernel.dmesg_restrict = 1
       kernel.keys.root_maxbytes = 25000000

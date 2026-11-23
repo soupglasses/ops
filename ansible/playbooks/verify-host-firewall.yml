@@ -22,19 +22,17 @@
         argv:
           - ssh
           - "-{{ item.family }}"
-          - -F
-          - /dev/null
+          - -S
+          - none
           - -o
           - BatchMode=yes
           - -o
           - StrictHostKeyChecking=yes
-          - -i
-          - "{{ ansible_ssh_private_key_file }}"
           - -o
           - ConnectTimeout=10
           - -o
-          - HostKeyAlias=nas.home.finnes.dev
-          - "{{ ansible_user }}@{{ item.address }}"
+          - "HostName={{ item.address }}"
+          - "{{ inventory_hostname }}"
           - /bin/true
       loop: "{{ firewall_addresses }}"
       loop_control:

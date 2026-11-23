@@ -194,14 +194,7 @@ func TestServiceAccountComposition(t *testing.T) {
 
 	update := func(key, value string) {
 		t.Helper()
-		current, err := accounts.Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_ = unstructured.SetNestedField(current.Object, value, "spec", key)
-		if _, err := accounts.Update(ctx, current, metav1.UpdateOptions{}); err != nil {
-			t.Fatal(err)
-		}
+		patch(accounts, name, map[string]any{"spec": map[string]any{key: value}})
 	}
 	update("cn", "service.renamed")
 	// A previous Ready status can remain briefly after an XR spec update; verify
