@@ -61,6 +61,8 @@
           - -o
           - ConnectTimeout=10
           - -o
+          - "HostKeyAlias={{ network_ipv4_address.split('/')[0] }}"
+          - -o
           - "HostName={{ item.address }}"
           - "{{ inventory_hostname }}"
           - /bin/true
