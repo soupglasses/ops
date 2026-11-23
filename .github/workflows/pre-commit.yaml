@@ -31,7 +31,7 @@ jobs:
       - name: Install check tools
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.7
+          version: 2026.11.11
           install_args: >-
             python aqua:go-task/task aqua:pre-commit/pre-commit aqua:editorconfig-checker/editorconfig-checker
             aqua:helm aqua:crossplane/cli aqua:google/yamlfmt aqua:yannh/kubeconform aqua:fluxcd/flux2

@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.7
+          version: 2026.11.11
           install_args: aqua:restic/restic aqua:mikefarah/yq
       - name: Exercise restore failures and controller holds
         run: python3 -m unittest scripts.test_volsync_restore -v

@@ -40,7 +40,7 @@ jobs:
       - name: Install Helm and kubectl
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.7
+          version: 2026.11.11
           install_args: aqua:helm aqua:kubernetes/kubectl aqua:mikefarah/yq
       - name: Render plugin settings with synthetic credentials
         run: python3 scripts/verify-jellyfin-composition.py
