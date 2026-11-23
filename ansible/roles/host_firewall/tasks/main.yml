@@ -49,43 +49,11 @@
 
     - name: Open a fresh SSH session from the controller
       ansible.builtin.command:
-        argv:
-          - ssh
-          - "-{{ item.family }}"
-          - -S
-          - none
-          - -o
-          - BatchMode=yes
-          - -o
-          - StrictHostKeyChecking=yes
-          - -o
-          - ConnectTimeout=10
-          - -o
-          - "HostKeyAlias={{ network_ipv4_address.split('/')[0] }}"
-          - -o
-          - "HostName={{ item.address }}"
-          - "{{ inventory_hostname }}"
-          - /bin/true
-      loop:
-        - family: 4
-          address: "{{ network_ipv4_address.split('/')[0] }}"
-        - family: 6
-          address: "{{ network_ipv6_address.split('/')[0] }}"
-      loop_control:
-        label: "IPv{{ item.family }}: {{ item.address }}"
+        argv: [ssh, -S, none, -o, BatchMode=yes, "{{ inventory_hostname }}", /bin/true]
+      timeout: 30
       delegate_to: localhost
       become: false
       changed_when: false
-
-    - name: Open the Kubernetes API and NFS ports from the controller
-      ansible.builtin.wait_for:
-        host: "{{ item[0].split('/')[0] }}"
-        port: "{{ item[1] }}"
-        connect_timeout: 5
-        timeout: 15
-      loop: "{{ [network_ipv4_address, network_ipv6_address] | product([6443, 2049]) | list }}"
-      delegate_to: localhost
-      become: false
 
     - name: Keep the firewall by stopping the rollback
       ansible.builtin.systemd_service:

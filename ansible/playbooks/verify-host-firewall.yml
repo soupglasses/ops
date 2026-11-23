@@ -19,37 +19,21 @@
   tasks:
     - name: Open a fresh SSH session from the controller
       ansible.builtin.command:
-        argv:
-          - ssh
-          - "-{{ item.family }}"
-          - -S
-          - none
-          - -o
-          - BatchMode=yes
-          - -o
-          - StrictHostKeyChecking=yes
-          - -o
-          - ConnectTimeout=10
-          - -o
-          - "HostName={{ item.address }}"
-          - "{{ inventory_hostname }}"
-          - /bin/true
-      loop: "{{ firewall_addresses }}"
-      loop_control:
-        label: "IPv{{ item.family }}: {{ item.address }}"
+        argv: [ssh, -S, none, -o, BatchMode=yes, "{{ inventory_hostname }}", /bin/true]
+      timeout: 30
       delegate_to: localhost
       become: false
       changed_when: false
 
-    - name: Open a TCP connection to the Kubernetes API from the controller
+    - name: Open TCP connections to SSH and the Kubernetes API from the controller
       ansible.builtin.wait_for:
-        host: "{{ item.address }}"
-        port: 6443
+        host: "{{ item[0].address }}"
+        port: "{{ item[1] }}"
         connect_timeout: 5
         timeout: 15
-      loop: "{{ firewall_addresses }}"
+      loop: "{{ firewall_addresses | product([22, 6443]) | list }}"
       loop_control:
-        label: "IPv{{ item.family }}: {{ item.address }}"
+        label: "IPv{{ item[0].family }}: {{ item[0].address }} port {{ item[1] }}"
       delegate_to: localhost
       become: false
 
