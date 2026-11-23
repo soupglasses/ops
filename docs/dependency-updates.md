@@ -41,8 +41,10 @@ Generated and historical artifacts have separate maintenance paths:
 - `kubernetes/clusters/*/flux-system/` is excluded from Renovate. Upgrade Flux by
   regenerating `gotk-components.yaml` with the selected Flux CLI's
   `flux install --export`, preserving the existing components and reviewing the
-  resulting RBAC/CRD changes. `task flux:install` and `task flux:bootstrap` apply the
-  committed manifests, they do not select a newer controller release.
+  resulting RBAC/CRD changes. Before a minor upgrade, run `flux migrate` so that no
+  object stays stored in an API version the new release drops. `task flux:install` and
+  `task flux:bootstrap` apply the committed manifests, they do not select a newer
+  controller release.
 - `vector-k8s-monitoring.json` is a reviewed, vendored dashboard. When updating the
   VictoriaLogs chart, compare its upstream dashboard with this copy and preserve
   the documented query and display changes.
